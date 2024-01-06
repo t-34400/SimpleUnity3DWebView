@@ -126,3 +126,7 @@ Sample prefabs are located at `Assets/SamplePrefabs` for reference.
 ## License
 
 [MIT License](./LICENSE)
+
+## Acknowledgments
+
+The button icons used in the sample prefabs are borrowed from [Evericons](http://evericons.com) under the CC0 1.0 Universal license. We sincerely appreciate their generosity and the availability of these icons for use in our project.

@@ -124,3 +124,7 @@ Simple Unity 3D WebViewは，UnityのAndroidビルドアプリ上で3D WebView�
 
 ## ライセンス
 [MITライセンス](./LICENSE)
+
+## 謝辞
+
+サンプルプレハブのボタンアイコンは、[Evericons](http://evericons.com)よりCC0 1.0 Universalライセンスのもとでお借りしています．Evericonsのご厚意に感謝申し上げます．
