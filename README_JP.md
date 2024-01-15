@@ -121,6 +121,8 @@ Simple Unity 3D WebViewは，UnityのAndroidビルドアプリ上で3D WebView�
 ## 注意
 - AndroidのネイティブからUnityへのWebViewテクスチャ渡しはシンプルにCPUで行っているため，テクスチャサイズが大きかったり更新頻度が早すぎると処理が重くなる可能性がある．
 - キーボードの文字入力については，inputタグとtextareaタグについては対応しているが，やや不安定．
+- OpenXRを使用している場合は，`Project Settings` > `OpenXR` > `Meta Quest Support`の`Force Remove Internet`のチェックを外す.
+<img src="./Image/openxr_force_remove_internet.png" width=400>
 
 ## ライセンス
 [MITライセンス](./LICENSE)

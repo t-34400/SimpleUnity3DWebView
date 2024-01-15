@@ -122,6 +122,8 @@ Sample prefabs are located at `Assets/SamplePrefabs` for reference.
 
 - WebView texture transfer from Android native to Unity is simple and CPU-based, so heavy processing may occur with large texture sizes or excessively frequent updates.
 - Text input with the keyboard is supported for input and textarea tags but may be somewhat unstable.
+- If you are developing a project using OpenXR, uncheck `Force Remove Internet` under `Project Settings` > `OpenXR` > `Meta Quest Support`.
+<img src="./Image/openxr_force_remove_internet.png" width=400>
 
 ## License
 
