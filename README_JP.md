@@ -123,6 +123,11 @@ Simple Unity 3D WebViewは，UnityのAndroidビルドアプリ上で3D WebView�
 - キーボードの文字入力については，inputタグとtextareaタグについては対応しているが，やや不安定．
 - OpenXRを使用している場合は，`Project Settings` > `OpenXR` > `Meta Quest Support`の`Force Remove Internet`のチェックを外す.
 <img src="./Image/openxr_force_remove_internet.png" width=400>
+- Meta Quest上で使用する場合は，`AndroidManifest.xml`に以下のpermissionを追加する．
+    ```xml
+    <uses-feature android:name="oculus.software.overlay_keyboard" 
+                  android:required="true" />
+    ```
 
 ## ライセンス
 [MITライセンス](./LICENSE)
