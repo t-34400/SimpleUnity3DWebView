@@ -24,34 +24,14 @@ public class WebViewJavaScriptConstants
         "       });" +
         "       input._eventHandlersAdded = true;" +
         "    });" +
-        "    var textareas = document.querySelectorAll('textarea');" +
-        "    textareas.forEach(function(textarea) {" +
-        "       if(textarea._eventHandlersAdded) {" +
-        "          return;" +
-        "       }" +
-        "       textarea.addEventListener('focus', function() {" +
-        "           currentFocusedInput = textarea;" +
-        "           console.log('onInputFocusAcquired()');" +
-        "           " + ANDROID_INTERFACE_INSTANCE_NAME + ".onInputFocusAcquired('text', textarea.value);" +
-        "       });" +
-        "       textarea.addEventListener('blur', function() {" +
-        "           currentFocusedInput = null;" +
-        "           console.log('onInputFocusLost()');" +
-        "           " + ANDROID_INTERFACE_INSTANCE_NAME + ".onInputFocusLost();" +
-        "       });" +
-        "       textarea._eventHandlersAdded = true;" +
-        "    });" +
         "" +
-        "    function processNode(node, addedInputs, addedTextareas) {" +
+        "    function processNode(node, array) {" +
         "        if(node.tagName === 'INPUT') {" +
-        "            addedInputs.push(node);" +
-        "        }" +
-        "        if(node.tagName === 'TEXTAREA') {" +
-        "            addedTextareas.push(node);" +
+        "            array.push(node);" +
         "        }" +
         "        if(node.childNodes) {" +
         "            node.childNodes.forEach((childNode) => {" +
-        "                    processNode(childNode, addedInputs, addedTextareas);" +
+        "                    processNode(childNode, array);" +
         "                });" +
         "        }" +
         "    }" +
@@ -62,8 +42,7 @@ public class WebViewJavaScriptConstants
         "            if (mutation.type === 'childList') {" +
         "                const addedNodes = Array.from(mutation.addedNodes);" +
         "                const addedInputs = [];" +
-        "                const addedTextareas = [];" +
-        "                addedNodes.forEach((addedNode) => processNode(addedNode, addedInputs, addedTextareas));" +
+        "                addedNodes.forEach((addedNode) => processNode(addedNode, addedInputs));" +
         "                " +
         "                for (const addedInput of addedInputs) {" +
         "                    addedInput.addEventListener('focus', function() {" +
@@ -77,20 +56,6 @@ public class WebViewJavaScriptConstants
         "                        " + ANDROID_INTERFACE_INSTANCE_NAME + ".onInputFocusLost();" +
         "                    });" +
         "                    addedInput._eventHandlersAdded = true;" +
-        "                }" +
-        "                " +
-        "                for (const addedTextarea of addedTextareas) {" +
-        "                    addedTextarea.addEventListener('focus', function() {" +
-        "                        currentFocusedInput = input;" +
-        "                        console.log('onInputFocusAcquired()');" +
-        "                        " + ANDROID_INTERFACE_INSTANCE_NAME + ".onInputFocusAcquired('text', addedTextarea.value);" +
-        "                    });" +
-        "                    addedTextarea.addEventListener('blur', function() {" +
-        "                        currentFocusedInput = null;" +
-        "                        console.log('onInputFocusLost()');" +
-        "                        " + ANDROID_INTERFACE_INSTANCE_NAME + ".onInputFocusLost();" +
-        "                    });" +
-        "                    addedTextarea._eventHandlersAdded = true;" +
         "                }" +
         "                " +
         "                const removedInputs = Array.from(mutation.removedNodes).filter(node => node.tagName === 'INPUT');" +
