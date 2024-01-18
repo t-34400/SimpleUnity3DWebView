@@ -76,9 +76,16 @@ public class WebViewJavaScriptConstants
         "} ());";
 
     public static final String SCRIPT__SET_INPUT_VALUE =
-            "var focusedElement = document.activeElement;" +
-                    "if (focusedElement && (focusedElement.tagName === 'INPUT' || focusedElement.tagName === 'TEXTAREA')) {" +
-                    "   focusedElement.value = \"%s\";" +
+            "var newValue = '%s';" +
+                    "var focusedElement = document.activeElement;" +
+                    "if (focusedElement && focusedElement.tagName === 'INPUT') {" +
+                    "   var nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;" +
+                    "   nativeInputValueSetter.call(focusedElement, newValue);" +
+                    "   focusedElement.dispatchEvent(new Event('input', { bubbles: true }));" +
+                    "} else if (focusedElement && focusedElement.tagName === 'TEXTAREA') {" +
+                    "   var nativeTextAreaValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;" +
+                    "   nativeTextAreaValueSetter.call(focusedElement, newValue);" +
+                    "   focusedElement.dispatchEvent(new Event('input', { bubbles: true }));" +
                     "}";
 
     public static final String SCRIPT__REMOVE_FOCUS =
