@@ -41,6 +41,11 @@ namespace WebView
             return (byte[]?) (System.Array?) currentActivity?.Call<sbyte[]>(NATIVE_METHOD_NAME__GET_BITMAP_BYTES);
         }
 
+        internal void OnPaused()
+        {
+            webViewController?.OnDestroy();
+        }
+
         internal void OnDestroy()
         {
             if(currentActivity != null)

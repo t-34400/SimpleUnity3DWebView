@@ -80,11 +80,15 @@ namespace WebView
             webViewController = webViewActivityManager?.GetWebViewController();
         }
 
-        private void OnApplicationFocus(bool focused)
+        private void OnApplicationPause(bool paused)
         {
-            if(focused)
+            if (paused)
             {
-                webViewActivityManager = new(pointerEventSource, gameObject.name,  webViewSize.x, webViewSize.y, textureSize.x, textureSize.y, (long)(intervalSec * 1000));
+                webViewActivityManager?.OnPaused();
+            }
+            else
+            {
+                webViewActivityManager = new(pointerEventSource, gameObject.name, webViewSize.x, webViewSize.y, textureSize.x, textureSize.y, (long)(intervalSec * 1000));
                 webViewController = webViewActivityManager?.GetWebViewController();
             }
         }
