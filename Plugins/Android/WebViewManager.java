@@ -14,6 +14,7 @@ import android.os.Handler;
 import android.os.SystemClock;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.view.InputDevice;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -225,11 +226,32 @@ public class WebViewManager
                 downTime = SystemClock.uptimeMillis();
             }
 
-            int x = Math.round(normalizedX * webView.getWidth());
-            int y = Math.round(normalizedY * webView.getHeight());
+            float x = normalizedX * webView.getWidth();
+            float y = normalizedY * webView.getHeight();
             long eventTime = SystemClock.uptimeMillis();
+            MotionEvent.PointerCoords pointerCoords = new MotionEvent.PointerCoords();
+            pointerCoords.x = x;
+            pointerCoords.y = y;
+            MotionEvent.PointerProperties pointerProperties = new MotionEvent.PointerProperties();
+            pointerProperties.id = 0;
+            pointerProperties.toolType = MotionEvent.TOOL_TYPE_FINGER;
 
-            MotionEvent motionEvent = MotionEvent.obtain(downTime, eventTime, action, x, y, 0);
+            MotionEvent motionEvent = MotionEvent.obtain(
+                    downTime,
+                    eventTime,
+                    action,
+                    1,
+                    new MotionEvent.PointerProperties[]{ pointerProperties },
+                    new MotionEvent.PointerCoords[]{ pointerCoords },
+                    0,
+                    0,
+                    1,
+                    1,
+                    0,
+                    0,
+                    InputDevice.SOURCE_TOUCHSCREEN,
+                    0
+            );
             webView.dispatchTouchEvent(motionEvent);
 
             motionEvent.recycle();

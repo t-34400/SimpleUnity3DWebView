@@ -81,10 +81,12 @@ public class WebViewJavaScriptConstants
                     "if (focusedElement && focusedElement.tagName === 'INPUT') {" +
                     "   var nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;" +
                     "   nativeInputValueSetter.call(focusedElement, newValue);" +
+                    "   focusedElement.value = newValue;" +
                     "   focusedElement.dispatchEvent(new Event('input', { bubbles: true }));" +
                     "} else if (focusedElement && focusedElement.tagName === 'TEXTAREA') {" +
                     "   var nativeTextAreaValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;" +
                     "   nativeTextAreaValueSetter.call(focusedElement, newValue);" +
+                    "   focusedElement.value = newValue;" +
                     "   focusedElement.dispatchEvent(new Event('input', { bubbles: true }));" +
                     "}";
 
