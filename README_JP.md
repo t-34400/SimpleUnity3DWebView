@@ -121,6 +121,8 @@ Simple Unity 3D WebViewは，UnityのAndroidビルドアプリ上で3D WebView�
 ## 注意
 - AndroidのネイティブからUnityへのWebViewテクスチャ渡しはシンプルにCPUで行っているため，テクスチャサイズが大きかったり更新頻度が早すぎると処理が重くなる可能性がある．
 - キーボードの文字入力については，inputタグとtextareaタグについては対応しているが，やや不安定．
+- AndroidのNative側からのメッセージはWebViewBitmapReceiverがアタッチされているGameObject名を対象に送信されるため，シーンの他のオブジェクトと異なる名前にすること．
+    - 同じシーンに複数のWebViewを配置する場合は，それぞれ別の名前にすること
 - OpenXRを使用している場合は，`Project Settings` > `OpenXR` > `Meta Quest Support`の`Force Remove Internet`のチェックを外す.
     - Unity OpenXR 1.9.1以前のバージョンではこのチェックが外れていてもインターネット権限を削除する不具合が存在するため，`Packages/manifest.json`のOpenXRのバージョンを1.9.1にするか，ビルド時にPost gradleを使ってOpenXRが権限を削除した後に再度Manifestに追加する．
 <img src="./Image/openxr_force_remove_internet.png" width=400>
