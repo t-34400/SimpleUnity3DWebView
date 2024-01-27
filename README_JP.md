@@ -126,12 +126,21 @@ Simple Unity 3D WebViewは，UnityのAndroidビルドアプリ上で3D WebView�
 - OpenXRを使用している場合は，`Project Settings` > `OpenXR` > `Meta Quest Support`の`Force Remove Internet`のチェックを外す.
     - Unity OpenXR 1.9.1以前のバージョンではこのチェックが外れていてもインターネット権限を削除する不具合が存在するため，`Packages/manifest.json`のOpenXRのバージョンを1.9.1にするか，ビルド時にPost gradleを使ってOpenXRが権限を削除した後に再度Manifestに追加する．
 <img src="./Image/openxr_force_remove_internet.png" width=400>
+
 - Meta Quest上で使用する場合は，`AndroidManifest.xml`に以下のpermissionを追加する．
+<<<<<<< HEAD
   
    ```xml
    <uses-feature android:name="oculus.software.overlay_keyboard" 
                  android:required="true" />
    ```
+=======
+
+  ```xml
+  <uses-feature android:name="oculus.software.overlay_keyboard" 
+                android:required="true" />
+  ```
+>>>>>>> 99466fc695744b120a0fb5dfbb77ac06207b685f
 
 ## ライセンス
 [MITライセンス](./LICENSE)

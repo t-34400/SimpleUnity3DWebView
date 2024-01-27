@@ -127,8 +127,13 @@ Sample prefabs are located at `Assets/SamplePrefabs` for reference.
 - If you are developing a project using OpenXR, uncheck `Force Remove Internet` under `Project Settings` > `OpenXR` > `Meta Quest Support`.
     - In Unity OpenXR package versions prior to 1.9.1, there is a bug where, even if this checkbox is unchecked, the Internet permission is removed. To address this issue, either update the OpenXR version in `Packages/manifest.json` to 1.9.1, or use Post Gradle during the build process to remove the OpenXR permission and then re-add it to the manifest.
 <img src="./Image/openxr_force_remove_internet.png" width=400>
+
 - When using on Meta Quest, add the following permission to `AndroidManifest.xml.
+<<<<<<< HEAD
   
+=======
+
+>>>>>>> 99466fc695744b120a0fb5dfbb77ac06207b685f
    ```xml
    <uses-feature android:name="oculus.software.overlay_keyboard" 
                  android:required="true" />
