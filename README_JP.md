@@ -128,10 +128,10 @@ Simple Unity 3D WebViewは，UnityのAndroidビルドアプリ上で3D WebView�
 <img src="./Image/openxr_force_remove_internet.png" width=400>
 - Meta Quest上で使用する場合は，`AndroidManifest.xml`に以下のpermissionを追加する．
 
-    ```xml
-    <uses-feature android:name="oculus.software.overlay_keyboard" 
-                  android:required="true" />
-    ```
+  ```xml
+  <uses-feature android:name="oculus.software.overlay_keyboard" 
+                android:required="true" />
+  ```
 
 ## ライセンス
 [MITライセンス](./LICENSE)
