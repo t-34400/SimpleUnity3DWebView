@@ -129,11 +129,7 @@ Sample prefabs are located at `Assets/SamplePrefabs` for reference.
 <img src="./Image/openxr_force_remove_internet.png" width=400>
 
 - When using on Meta Quest, add the following permission to `AndroidManifest.xml.
-<<<<<<< HEAD
   
-=======
-
->>>>>>> 99466fc695744b120a0fb5dfbb77ac06207b685f
    ```xml
    <uses-feature android:name="oculus.software.overlay_keyboard" 
                  android:required="true" />
