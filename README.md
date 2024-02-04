@@ -2,6 +2,9 @@
 
 Simple Unity 3D WebView is a straightforward 3D WebView library designed for the Android platform, enabling seamless integration of web content within Unity projects.
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![CodeFactor](https://www.codefactor.io/repository/github/t-34400/simpleunity3dwebview/badge)](https://www.codefactor.io/repository/github/t-34400/simpleunity3dwebview)
+
 <img src="./Image/google_3d.png" width=200>   <img src="./Image/google_3d_2.png" width=200>
 
 ## Installation
