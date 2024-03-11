@@ -19,6 +19,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.ConsoleMessage;
+import android.webkit.PermissionRequest;
 import android.webkit.WebBackForwardList;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
@@ -135,6 +136,11 @@ public class WebViewManager
                 }
             });
             webView.setWebChromeClient(new WebChromeClient(){
+                @Override
+                public void onPermissionRequest(final PermissionRequest request) {
+                    request.grant(request.getResources());
+                }
+
                 public boolean onConsoleMessage(ConsoleMessage consoleMessage) {
                     switch (consoleMessage.messageLevel()) {
                         case ERROR:
