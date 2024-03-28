@@ -121,7 +121,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 3068531927600033829}
+      - m_Target: {fileID: 5850295248657019402}
         m_TargetAssemblyTypeName: WebView.WebViewControllerClient, WebView
         m_MethodName: GoBack
         m_Mode: 1
@@ -404,7 +404,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 3068531927600033829}
+      - m_Target: {fileID: 5850295248657019402}
         m_TargetAssemblyTypeName: WebView.WebViewControllerClient, WebView
         m_MethodName: Reload
         m_Mode: 1
@@ -563,11 +563,17 @@ MonoBehaviour:
   m_GameObject: {fileID: 6143865338994973306}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1071d5c0f8ce3fe4c885c003ad5250bb, type: 3}
+  m_Script: {fileID: 11500000, guid: 5d868c906b9139349801d7bb2f605aa6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  webViewBitmapReceiver: {fileID: 5850295248657019402}
-  loadUrl: https://www.google.com/
+  image: {fileID: 3504050650859930974}
+  pointerEventSource: {fileID: 7154043111525070803}
+  webViewSize: {x: 600, y: 480}
+  textureSize: {x: 300, y: 240}
+  intervalSec: 0.05
+  dataReceived:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!114 &5850295248657019402
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -577,14 +583,11 @@ MonoBehaviour:
   m_GameObject: {fileID: 6143865338994973306}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: eceb0eefad64a3340b5604b4d4cf5a62, type: 3}
+  m_Script: {fileID: 11500000, guid: 88ec845876c9fb84190efb6969add5de, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  image: {fileID: 3504050650859930974}
-  pointerEventSource: {fileID: 7154043111525070803}
-  webViewSize: {x: 1200, y: 960}
-  textureSize: {x: 300, y: 240}
-  intervalSec: 0.05
+  webViewBitmapReceiver: {fileID: 3068531927600033829}
+  loadUrl: https://www.google.com/
 --- !u!1 &7467136126524975459
 GameObject:
   m_ObjectHideFlags: 0
@@ -667,7 +670,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 7467136126524975459}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 22ea248663e5bf149a4c20424ee9748b, type: 3}
+  m_Script: {fileID: 11500000, guid: 0235dec481cf37942856fdf8fc50438c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   showLogs: 0
@@ -792,7 +795,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 3068531927600033829}
+      - m_Target: {fileID: 5850295248657019402}
         m_TargetAssemblyTypeName: WebView.WebViewControllerClient, WebView
         m_MethodName: GoForward
         m_Mode: 1
