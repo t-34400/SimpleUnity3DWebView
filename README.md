@@ -123,6 +123,7 @@ Sample prefabs are located at `Assets/SamplePrefabs` for reference.
 
 ## Notes
 
+- The output from WebView's JavaScript console is logged to Logcat with the tag `WebViewConsole`.
 - WebView texture transfer from Android native to Unity is simple and CPU-based, so heavy processing may occur with large texture sizes or excessively frequent updates.
 - Text input with the keyboard is supported for input and textarea tags but may be somewhat unstable.
 - Messages from the Native side of Android are sent to the GameObject name to which the WebViewBitmapReceiver is attached, so the name must be different from other objects in the scene.

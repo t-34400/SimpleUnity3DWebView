@@ -122,6 +122,7 @@ Simple Unity 3D WebViewは，UnityのAndroidビルドアプリ上で3D WebView�
     - デフォルトでは，localhostのみこの機能を有効化してある．
 
 ## 注意
+- WebViewのJavaScriptのコンソールへの出力は，Logcatに`WebViewConsole`をタグとして出力される．
 - AndroidのネイティブからUnityへのWebViewテクスチャ渡しはシンプルにCPUで行っているため，テクスチャサイズが大きかったり更新頻度が早すぎると処理が重くなる可能性がある．
 - キーボードの文字入力については，inputタグとtextareaタグについては対応しているが，やや不安定．
 - AndroidのNative側からのメッセージはWebViewBitmapReceiverがアタッチされているGameObject名を対象に送信されるため，シーンの他のオブジェクトと異なる名前にすること．
