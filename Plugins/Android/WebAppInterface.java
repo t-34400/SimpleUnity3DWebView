@@ -96,6 +96,9 @@ public class WebAppInterface {
                 case "tel":
                     inputType = InputType.TYPE_CLASS_PHONE;
                     break;
+                case "textarea":
+                    inputType = InputType.TYPE_CLASS_TEXT;
+                    break;
                 default:
                     return;
             }

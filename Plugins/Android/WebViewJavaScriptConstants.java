@@ -9,7 +9,7 @@ public class WebViewJavaScriptConstants
         "    currentFocusedInput = null;" +
         "}" +
         "(function() {" +
-        "    var inputs = document.querySelectorAll('input');" +
+        "    var inputs = document.querySelectorAll('input, textarea');" +
         "    inputs.forEach(function(input) {" +
         "       if(input._eventHandlersAdded) {" +
         "          return;" +
@@ -28,7 +28,7 @@ public class WebViewJavaScriptConstants
         "    });" +
         "" +
         "    function processNode(node, array) {" +
-        "        if(node.tagName === 'INPUT') {" +
+        "        if(node.tagName === 'INPUT' || node.tagName === 'TEXTAREA') {" +
         "            array.push(node);" +
         "        }" +
         "        if(node.childNodes) {" +
