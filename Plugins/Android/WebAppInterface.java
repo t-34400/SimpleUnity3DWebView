@@ -6,6 +6,7 @@ import android.text.Editable;
 import android.text.InputType;
 import android.text.TextWatcher;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
@@ -33,12 +34,22 @@ public class WebAppInterface {
 
     public WebAppInterface(Activity _activity, ViewGroup _rootView, View _defaultFocusView, WebView _webView, WebViewDataListener _webViewDataListener) {
         activity = _activity;
-
         rootView = _rootView;
         defaultFocusView = _defaultFocusView;
         webView = _webView;
-
         webViewDataListener = _webViewDataListener;
+
+        defaultFocusView.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                if (editText != null) {
+                    webView.getHandler().post( () ->
+                            webView.evaluateJavascript(WebViewJavaScriptConstants.SCRIPT__REMOVE_FOCUS, null)
+                        );
+                }
+                return false;
+            }
+        });
     }
 
     public void onDestroy() {
@@ -96,6 +107,9 @@ public class WebAppInterface {
                 case "tel":
                     inputType = InputType.TYPE_CLASS_PHONE;
                     break;
+                case "textarea":
+                    inputType = InputType.TYPE_CLASS_TEXT;
+                    break;
                 default:
                     return;
             }
@@ -105,6 +119,7 @@ public class WebAppInterface {
             editText = new EditText(activity);
             editText.setInputType(inputType);
             editText.setText(inputValue);
+            editText.setImeOptions(EditorInfo.IME_ACTION_DONE);
             editText.addTextChangedListener(new TextWatcher()
             {
                 @Override
@@ -140,7 +155,8 @@ public class WebAppInterface {
             if(imm == null) {
                 imm = (InputMethodManager) activity.getSystemService(Context.INPUT_METHOD_SERVICE);
             }
-            imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT);
+            // imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT);
+            imm.showSoftInput(editText, 0);
         });
     }
 
