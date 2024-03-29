@@ -104,6 +104,8 @@ public class WebViewManager
             
             presentation.setContentView(webView, new ViewGroup.LayoutParams(webViewWidth, webViewHeight));
 
+            WebView.setWebContentsDebuggingEnabled(true);
+            
             webAppInterface = new WebAppInterface(activity, rootView, defaultFocusView, webView, webViewDataListener);
             webView.addJavascriptInterface(webAppInterface, WebViewJavaScriptConstants.ANDROID_INTERFACE_INSTANCE_NAME);
 
