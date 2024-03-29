@@ -5,7 +5,9 @@ public class WebViewJavaScriptConstants
     public static final String ANDROID_INTERFACE_INSTANCE_NAME = "Android";
 
     public static final String SCRIPT__ADD_INPUT_FOCUS_LISTENER =
-        "let currentFocusedInput;" +
+        "if (typeof currentFocusedInput === 'undefined') {" +
+        "    currentFocusedInput = null;" +
+        "}" +
         "(function() {" +
         "    var inputs = document.querySelectorAll('input');" +
         "    inputs.forEach(function(input) {" +
@@ -95,31 +97,5 @@ public class WebViewJavaScriptConstants
                     "if (focusedElement && (focusedElement.tagName === 'INPUT' || focusedElement.tagName === 'TEXTAREA')) {" +
                     "   document.body.dispatchEvent(new KeyboardEvent('keydown', { bubbles:true, cancelable: true, key: 'Enter' }));" + 
                     "   focusedElement.blur();" +
-                    "}";
-
-    public static final String SCRIPT__INSERT_INPUT_BY_ID =
-                    "var input = document.getElementById('%s');" +
-                            "if(input && (input.tagName === 'INPUT' || input.tagName === 'TEXTAREA')) {" +
-                            "    input.value = '%s';" +
-                            "    input.dispatchEvent(new Event('input', { bubbles: true }));" +
-                            "}";
-        
-    public static final String SCRIPT__INSERT_PASSWORD_INPUT =
-                    "var input = document.querySelector('input[type=\"password\"]');" +
-                            "if(input) {" +
-                            "    input.value = '%s';" +
-                            "    input.dispatchEvent(new Event('input', { bubbles: true }));" +
-                            "}";
-
-    public static final String SCRIPT__CLICK_BUTTON_BY_ID =
-            "var button = document.getElementById('login-button');" +
-                    "if(button && button.tagName == 'BUTTON') {" +
-                    "    button.click();" +
-                    "}";
-
-    public static final String SCRIPT__TRY_CLICK_SUBMIT_BUTTON =
-            "var submitElement = document.querySelector('input[type=\"submit\"], button[type=\"submit\"]');" +
-                    "if(submitElement) {" +
-                    "    submitElement.click();" +
                     "}";
 }
