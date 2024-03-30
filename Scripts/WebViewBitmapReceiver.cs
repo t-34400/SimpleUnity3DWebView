@@ -86,11 +86,7 @@ namespace WebView
 
         private void OnApplicationPause(bool paused)
         {
-            if (paused)
-            {
-                webViewActivityManager?.OnPaused();
-            }
-            else
+            if (!paused)
             {
                 webViewActivityManager = new(pointerEventSource, gameObject.name, webViewSize.x, webViewSize.y, textureSize.x, textureSize.y, (long)(intervalSec * 1000));
                 webViewController = webViewActivityManager?.GetWebViewController();

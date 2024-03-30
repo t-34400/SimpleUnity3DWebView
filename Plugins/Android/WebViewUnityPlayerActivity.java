@@ -42,11 +42,13 @@ public class WebViewUnityPlayerActivity extends UnityPlayerActivity
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        Log.i("WebView", "onCreate()");
         super.onCreate(savedInstanceState);
         currentWebViewActivity = this;
 
         if(savedInstanceState != null) {
             int webviewCount = savedInstanceState.getInt(WEBVIEW_COUNT_BUNDLE_KEY);
+            Log.i("WebView", "Webview Count = " + webviewCount);
             for(int index = 0; index < webviewCount; ++index) {
                 String gameObjectName = savedInstanceState.getString(String.format(GAMEOBJECT_NAME_BUNDLE_KEY_FORMAT, index));
                 int webViewWidth = savedInstanceState.getInt(String.format(WEBVIEW_WIDTH_BUNDLE_KEY_FORMAT, index));
@@ -67,7 +69,7 @@ public class WebViewUnityPlayerActivity extends UnityPlayerActivity
     @Override
     public void onDestroy() {
         super.onDestroy();
-        Log.d("WebView", "onDestroy()");
+        Log.i("WebView", "onDestroy()");
         webViewManagers.forEach( (gameObjectName, webViewManager) -> {
             webViewManager.stopUpdate();
             webViewManager.onDestroy();
@@ -78,7 +80,7 @@ public class WebViewUnityPlayerActivity extends UnityPlayerActivity
     @Override
     public void onPause() {
         super.onPause();
-        Log.d("WebView", "onPause()");
+        Log.i("WebView", "onPause()");
         webViewManagers.forEach( (gameObjectName, webViewManager) -> {
             webViewManager.stopUpdate();
         });
@@ -87,16 +89,16 @@ public class WebViewUnityPlayerActivity extends UnityPlayerActivity
     @Override
     public void onResume() {
         super.onResume();
-        Log.d("WebView", "onResume()");
+        Log.i("WebView", "onResume()");
         webViewManagers.forEach( (gameObjectName, webViewManager) -> {
-            webViewManager.startUpdate();
+            webViewManager.onResume();
         });
     }
 
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        Log.d("WebView", "onSaveInstanceState()");
+        Log.i("WebView", "onSaveInstanceState()");
         
         int webviewCount = webViewManagers.size();
         if(webviewCount == 1) {
@@ -120,10 +122,13 @@ public class WebViewUnityPlayerActivity extends UnityPlayerActivity
     }
 
     public WebViewManager generateWebViewTextureProvider(String gameObjectName, int webViewWidth, int webViewHeight, int outputWidth, int outputHeight, long intervalMSec) {
+        Log.i("WebView", "generateWebViewTextureProvider: GameObject Name = " + gameObjectName);
         if(webViewManagers.containsKey(gameObjectName)) {
+            Log.i("WebView", "generateWebViewTextureProvider: WebViewManager already exists.");
             return webViewManagers.get(gameObjectName);
         }
         else {
+            Log.i("WebView", "generateWebViewTextureProvider: WebViewManager not exists.");
             WebViewManager webViewManager = new WebViewManager(
                 this, webViewWidth, webViewHeight, outputWidth, outputHeight, intervalMSec, 
                 (bitmapBytes) -> sendUpdateCallbackMessage(gameObjectName, bitmapBytes), 
@@ -153,6 +158,7 @@ public class WebViewUnityPlayerActivity extends UnityPlayerActivity
         synchronized(resultByteLock) {
             resultBytes = bitmapBytes;
         }
+        Log.v("WebView", "sendUpdateCallbackMessage: GameObject Name = " + gameObjectName + ", Bitmap Size = " + bitmapBytes.length);
 
         UnityPlayer.UnitySendMessage(gameObjectName, "ReceiveUpdateCallback", "");
     }
