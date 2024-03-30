@@ -43,6 +43,9 @@ public class WebViewManager
     public final int webViewHeight;
     public final int outputWidth;
     public final int outputHeight;
+    public final long intervalMSec;
+
+    private final WebViewBitmapListener bitmapListener;
 
     private ImageReader imageReader;
     private VirtualDisplay virtualDisplay;
@@ -56,16 +59,18 @@ public class WebViewManager
     private boolean isRunning = true;
     private long downTime = 0;
 
-    public WebViewManager(Activity activity, int _webViewWidth, int _webViewHeight, int _outputWidth, int _outputHeight, long intervalMSec,
+    public WebViewManager(Activity activity, int webViewWidth, int webViewHeight, int outputWidth, int outputHeight, long intervalMSec,
                           WebViewBitmapListener bitmapListener, 
                           WebViewUrlChangeListener urlListener,
                           WebAppInterface.WebViewDataListener webViewDataListener,
                           ViewGroup rootView, View defaultFocusView)
     {
-        webViewWidth = _webViewWidth;
-        webViewHeight = _webViewHeight;
-        outputWidth = _outputWidth;
-        outputHeight = _outputHeight;
+        this.webViewWidth = webViewWidth;
+        this.webViewHeight = webViewHeight;
+        this.outputWidth = outputWidth;
+        this.outputHeight = outputHeight;
+        this.intervalMSec = intervalMSec;
+        this.bitmapListener = bitmapListener;
 
         mainHandler = new Handler(activity.getMainLooper());
 
@@ -73,28 +78,6 @@ public class WebViewManager
             WebView.enableSlowWholeDocumentDraw();
             
             imageReader = ImageReader.newInstance(outputWidth, outputHeight, PixelFormat.RGBA_8888, 2);
-            imageReader.setOnImageAvailableListener(imageReader -> {
-                synchronized (this)
-                {
-                    if (!isRunning)
-                    {
-                        return;
-                    }
-                }
-
-                Image image = imageReader.acquireNextImage();
-
-                Bitmap bitmap = convertToBitmap(image);
-
-                image.close();
-
-                ByteArrayOutputStream stream = new ByteArrayOutputStream();
-                if(bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream))
-                {
-                    byte[] bitmapArray = stream.toByteArray();
-                    bitmapListener.onWebViewUpdated(bitmapArray);
-                }
-            }, mainHandler);
 
             DisplayManager displayManager = (DisplayManager)activity.getSystemService(Context.DISPLAY_SERVICE);
 
@@ -166,25 +149,16 @@ public class WebViewManager
             });
 
             presentation.show();
+            mainHandler.post(() -> sendWebViewBitmapIfNeeded());
         });
     }
 
     public void onDestroy() {
+        isRunning = false;
         virtualDisplay.release();
         presentation.dismiss();
         imageReader.close();
         webAppInterface.onDestroy();
-    }
-
-    public void onResume() {
-        // Ensure ImageReader resumes receiving new images after the activity resumes from sleep mode.
-        mainHandler.post( () -> {
-            Image image = imageReader.acquireNextImage();
-            if (image != null) {
-                image.close();
-            }
-        });
-        startUpdate();
     }
 
     public void startUpdate() {
@@ -193,6 +167,7 @@ public class WebViewManager
                 isRunning = true;
             }
         }
+        mainHandler.post(() -> sendWebViewBitmapIfNeeded());
     }
 
     public void stopUpdate() {
@@ -294,6 +269,33 @@ public class WebViewManager
             webView.addJavascriptInterface(webAppInterface, WebViewJavaScriptConstants.ANDROID_INTERFACE_INSTANCE_NAME);
         });
         return webBackForwardList;
+    }
+
+    private void sendWebViewBitmapIfNeeded () {
+        synchronized (this)
+        {
+            if (!isRunning)
+            {
+                return;
+            }
+        }
+
+        Image image = imageReader.acquireNextImage();
+        
+        if (image != null) {
+            Bitmap bitmap = convertToBitmap(image);
+    
+            image.close();
+    
+            ByteArrayOutputStream stream = new ByteArrayOutputStream();
+            if(bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream))
+            {
+                byte[] bitmapArray = stream.toByteArray();
+                bitmapListener.onWebViewUpdated(bitmapArray);
+            }
+        }
+
+        mainHandler.postDelayed(() -> sendWebViewBitmapIfNeeded(), intervalMSec);
     }
 
     private static Bitmap convertToBitmap(Image image) {
