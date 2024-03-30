@@ -35,6 +35,9 @@ public class WebViewManager
     public interface WebViewBitmapListener {
         void onWebViewUpdated(byte[] bytes);
     }
+    public interface WebViewUrlChangeListener {
+        void onUrlChanged(String url);
+    }
 
     public final int webViewWidth;
     public final int webViewHeight;
@@ -54,7 +57,9 @@ public class WebViewManager
     private long downTime = 0;
 
     public WebViewManager(Activity activity, int _webViewWidth, int _webViewHeight, int _outputWidth, int _outputHeight, long intervalMSec,
-                          WebViewBitmapListener listener, WebAppInterface.WebViewDataListener webViewDataListener,
+                          WebViewBitmapListener bitmapListener, 
+                          WebViewUrlChangeListener urlListener,
+                          WebAppInterface.WebViewDataListener webViewDataListener,
                           ViewGroup rootView, View defaultFocusView)
     {
         webViewWidth = _webViewWidth;
@@ -87,7 +92,7 @@ public class WebViewManager
                 if(bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream))
                 {
                     byte[] bitmapArray = stream.toByteArray();
-                    listener.onWebViewUpdated(bitmapArray);
+                    bitmapListener.onWebViewUpdated(bitmapArray);
                 }
             }, mainHandler);
 
@@ -131,6 +136,7 @@ public class WebViewManager
                 public void onPageFinished(WebView view, String url) {
                     webAppInterface.Reset();
                     webView.evaluateJavascript(WebViewJavaScriptConstants.SCRIPT__ADD_INPUT_FOCUS_LISTENER, null);
+                    urlListener.onUrlChanged(url);
                 }
                 @Override
                 public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {

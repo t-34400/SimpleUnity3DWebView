@@ -127,6 +127,7 @@ public class WebViewUnityPlayerActivity extends UnityPlayerActivity
             WebViewManager webViewManager = new WebViewManager(
                 this, webViewWidth, webViewHeight, outputWidth, outputHeight, intervalMSec, 
                 (bitmapBytes) -> sendUpdateCallbackMessage(gameObjectName, bitmapBytes), 
+                (url) -> sendUrlChangedCallbackMessage(gameObjectName, url),
                 (dataType, data) -> sendJsonData(gameObjectName, dataType, data),
                 (ViewGroup)getWindow().getDecorView().getRootView(), mUnityPlayer);
             webViewManagers.put(gameObjectName, webViewManager);
@@ -154,6 +155,10 @@ public class WebViewUnityPlayerActivity extends UnityPlayerActivity
         }
 
         UnityPlayer.UnitySendMessage(gameObjectName, "ReceiveUpdateCallback", "");
+    }
+
+    private void sendUrlChangedCallbackMessage(String gameObjectName, String url) {
+        UnityPlayer.UnitySendMessage(gameObjectName, "ReceiveNewUrl", url);
     }
 
     private void sendJsonData(String gameObjectName, String dataType, String data) {
