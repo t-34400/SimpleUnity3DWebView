@@ -9,7 +9,7 @@ Simple Unity 3D WebView is a straightforward 3D WebView library designed for the
 
 ## Installation
 
-1. [Install the package](https://docs.unity3d.com/Manual/upm-ui-local.html).
+1. Install [the package](https://github.com/t-34400/SimpleUnity3DWebView/releases)([Official Manual](https://docs.unity3d.com/Manual/upm-ui-local.html)).
 2. Select Android from File > Build Settings > Platform and press the Switch Platform button.
 3. Press the Player Settings button, check Custom Main Manifest under Publishing Settings > Build, and verify the path below.
 4. Open the generated `AndroidManifest.xml` at the confirmed path and make the following changes:

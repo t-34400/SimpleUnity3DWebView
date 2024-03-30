@@ -9,7 +9,7 @@ Simple Unity 3D WebViewは，UnityのAndroidビルドアプリ上で3D WebView�
 
 ## 導入
 
-1. [パッケージをインストールする](https://docs.unity3d.com/Manual/upm-ui-local.html)．
+1. [パッケージ](https://github.com/t-34400/SimpleUnity3DWebView/releases)をインストールする([公式マニュアル](https://docs.unity3d.com/Manual/upm-ui-local.html))．
 2. File > Build Settings > PlatformからAndroidを選択し，Switch Platformボタンを押す．
 3. Player Settingsボタンを押し，AndroidタブのPublishing Settings > Build > Custom Main Manifestにチェックを入れ，下のパスを確認する.
 4. 確認したパスに生成された`AndroidManifest.xml`を開き，以下を変更する．
