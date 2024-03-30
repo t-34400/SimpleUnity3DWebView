@@ -8,6 +8,7 @@ namespace WebView
     public class WebViewControllerClient : MonoBehaviour
     {
         [SerializeField] private WebViewBitmapReceiver webViewBitmapReceiver = default!;
+        [SerializeField] private bool loadOnFirstFrame = true;
         [SerializeField] private string loadUrl = "https://www.google.com/";
 
         private IWebViewController? webViewController;
@@ -31,7 +32,10 @@ namespace WebView
             yield return null;
             webViewController = webViewBitmapReceiver.WebViewController;
             webViewController?.StartUpdate();
-            webViewController?.LoadUrl(loadUrl);
+            if (loadOnFirstFrame)
+            {
+                webViewController?.LoadUrl(loadUrl);
+            }
         }
     }
 }

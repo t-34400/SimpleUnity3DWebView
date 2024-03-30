@@ -25,6 +25,7 @@ namespace WebView
         [SerializeField] private Vector2Int webViewSize = new Vector2Int(600, 480);
         [SerializeField] private Vector2Int textureSize = new Vector2Int(300, 240);
         [SerializeField] private float intervalSec = 0.05f;
+        [SerializeField] private UnityEvent<string> urlChanged = default!;
         [SerializeField] private UnityEvent<string, string> dataReceived = default!;
 
         private IWebViewController? webViewController;
@@ -37,6 +38,9 @@ namespace WebView
         private bool isUpdated = false;
         private object bitmapByteArrayLock = new object();
         private byte[]? bitmapByteArray;
+
+        private object newUrlLock = new object();
+        private string? newUrl = null;
 
         private object receivedDataLock = new object();
         private List<ReceivedData> receivedDataList = new List<ReceivedData>();
@@ -95,15 +99,23 @@ namespace WebView
 
         private void Update()
         {
-            lock(receivedDataLock)
+            lock (receivedDataLock)
             {
-                foreach(var receivedData in receivedDataList)
+                foreach (var receivedData in receivedDataList)
                 {
                     Debug.Log($"Data received: {receivedData.type} {receivedData.data}");
                     InvokeDataReceivedEvent(receivedData);
                     dataReceived?.Invoke(receivedData.type, receivedData.data);
                 }
                 receivedDataList.Clear();
+            }
+            lock (newUrlLock)
+            {
+                if (newUrl != null)
+                {
+                    urlChanged?.Invoke(newUrl);
+                    newUrl = null;
+                }
             }
 
             UpdateTextureIfNeeded();
@@ -148,6 +160,14 @@ namespace WebView
                 bitmapByteArray = webViewActivityManager?.GetBitmapBytes();
             }
             IsUpdated = true;
+        }
+
+        public void ReceiveNewUrl(string url)
+        {
+            lock (newUrlLock)
+            {
+                newUrl = url;
+            }
         }
 
         public void ReceiveJsonData(string json)
