@@ -32,6 +32,7 @@ public class WebViewUnityPlayerActivity extends UnityPlayerActivity
     private static final String WEBVIEW_HEIGHT_BUNDLE_KEY_FORMAT = "WebViewHeight_%d";
     private static final String OUTPUT_WIDTH_BUNDLE_KEY_FORMAT = "OutputWidth_%d";
     private static final String OUTPUT_HEIGHT_BUNDLE_KEY_FORMAT = "OutputHeight_%d";
+    private static final String INTERVAL_BUNDLE_KEY_FORMAT = "Interval_%d";
 
     public static WebViewUnityPlayerActivity currentWebViewActivity;
 
@@ -55,8 +56,9 @@ public class WebViewUnityPlayerActivity extends UnityPlayerActivity
                 int webViewHeight = savedInstanceState.getInt(String.format(WEBVIEW_HEIGHT_BUNDLE_KEY_FORMAT, index));
                 int outputWidth = savedInstanceState.getInt(String.format(OUTPUT_WIDTH_BUNDLE_KEY_FORMAT, index));
                 int outputHeight = savedInstanceState.getInt(String.format(OUTPUT_HEIGHT_BUNDLE_KEY_FORMAT, index));
+                long intervalMSec = savedInstanceState.getLong(String.format(INTERVAL_BUNDLE_KEY_FORMAT, index));
 
-                generateWebViewTextureProvider(gameObjectName, webViewWidth, webViewHeight, outputWidth, outputHeight, 100L);
+                generateWebViewTextureProvider(gameObjectName, webViewWidth, webViewHeight, outputWidth, outputHeight, intervalMSec);
             }
 
             if(webViewManagers.size() == 1) {
@@ -91,7 +93,7 @@ public class WebViewUnityPlayerActivity extends UnityPlayerActivity
         super.onResume();
         Log.i("WebView", "onResume()");
         webViewManagers.forEach( (gameObjectName, webViewManager) -> {
-            webViewManager.onResume();
+            webViewManager.startUpdate();
         });
     }
 
@@ -117,6 +119,7 @@ public class WebViewUnityPlayerActivity extends UnityPlayerActivity
             outState.putInt(String.format(WEBVIEW_HEIGHT_BUNDLE_KEY_FORMAT, index), webViewManager.webViewHeight);
             outState.putInt(String.format(OUTPUT_WIDTH_BUNDLE_KEY_FORMAT, index), webViewManager.outputWidth);
             outState.putInt(String.format(OUTPUT_HEIGHT_BUNDLE_KEY_FORMAT, index), webViewManager.outputHeight);
+            outState.putLong(String.format(INTERVAL_BUNDLE_KEY_FORMAT, index), webViewManager.outputHeight);
             ++index;
         }
     }
