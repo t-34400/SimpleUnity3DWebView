@@ -114,6 +114,7 @@ namespace WebView
                 if (newUrl != null)
                 {
                     urlChanged?.Invoke(newUrl);
+                    newUrl = null;
                 }
             }
 
