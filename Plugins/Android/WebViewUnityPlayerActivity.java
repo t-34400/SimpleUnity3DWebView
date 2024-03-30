@@ -91,7 +91,7 @@ public class WebViewUnityPlayerActivity extends UnityPlayerActivity
         super.onResume();
         Log.i("WebView", "onResume()");
         webViewManagers.forEach( (gameObjectName, webViewManager) -> {
-            webViewManager.startUpdate();
+            webViewManager.onResume();
         });
     }
 
@@ -158,7 +158,7 @@ public class WebViewUnityPlayerActivity extends UnityPlayerActivity
         synchronized(resultByteLock) {
             resultBytes = bitmapBytes;
         }
-        Log.b("WebView", "sendUpdateCallbackMessage: Bitmap Size = " + bitmapBytes.length);
+        Log.v("WebView", "sendUpdateCallbackMessage: GameObject Name = " + gameObjectName + ", Bitmap Size = " + bitmapBytes.length);
 
         UnityPlayer.UnitySendMessage(gameObjectName, "ReceiveUpdateCallback", "");
     }

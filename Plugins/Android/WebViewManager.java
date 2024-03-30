@@ -176,6 +176,17 @@ public class WebViewManager
         webAppInterface.onDestroy();
     }
 
+    public void onResume() {
+        // Ensure ImageReader resumes receiving new images after the activity resumes from sleep mode.
+        mainHandler.post( () -> {
+            Image image = imageReader.acquireNextImage();
+            if (image != null) {
+                image.close();
+            }
+        });
+        startUpdate();
+    }
+
     public void startUpdate() {
         synchronized (this) {
             if (!isRunning) {
