@@ -116,8 +116,14 @@ public class WebViewManager
                 }
 
                 @Override
+                public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                    Log.e("WebView", "shouldOverrideUrlLoading: URL = " + url);
+                    webAppInterface.reset();
+                    return false;
+                }
+
+                @Override
                 public void onPageFinished(WebView view, String url) {
-                    webAppInterface.Reset();
                     webView.evaluateJavascript(WebViewJavaScriptConstants.SCRIPT__ADD_INPUT_FOCUS_LISTENER, null);
                     urlListener.onUrlChanged(url);
                 }
