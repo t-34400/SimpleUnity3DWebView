@@ -38,7 +38,6 @@ public class WebViewJavaScriptConstants
         "        }" +
         "    }" +
         "" +
-        "    const parentElement = document.getElementsByTagName('BODY')[0];" +
         "    const mutationCallback = (mutationsList, observer) => {" +
         "        for (const mutation of mutationsList) {" +
         "            if (mutation.type === 'childList') {" +
@@ -74,7 +73,15 @@ public class WebViewJavaScriptConstants
         "" +
         "    const observer = new MutationObserver(mutationCallback);" +
         "    const config = { childList: true, subtree: true };" +
-        "    observer.observe(parentElement, config);" +
+        "    var parentElement = document.getElementsByTagName('BODY')[0];" +
+        "    if (typeof parentElement === 'undefined') {" +
+        "        document.addEventListener('DOMContentLoaded', function() {" +
+        "            parentElement = document.getElementsByTagName('BODY')[0];" +
+        "            observer.observe(parentElement, config);" +
+        "        });" +
+        "    } else {" +
+        "        observer.observe(parentElement, config);" +
+        "    }" +
         "} ());";
 
     public static final String SCRIPT__SET_INPUT_VALUE =
