@@ -19,7 +19,7 @@ public class WebAppInterface {
     public interface WebViewDataListener {
         void sendJsonData(String dataType, String data);
     }
-    
+
     private static InputMethodManager imm;
 
     private Activity activity;
@@ -32,7 +32,8 @@ public class WebAppInterface {
 
     private WebViewDataListener webViewDataListener;
 
-    public WebAppInterface(Activity _activity, ViewGroup _rootView, View _defaultFocusView, WebView _webView, WebViewDataListener _webViewDataListener) {
+    public WebAppInterface(Activity _activity, ViewGroup _rootView, View _defaultFocusView, WebView _webView,
+            WebViewDataListener _webViewDataListener) {
         activity = _activity;
         rootView = _rootView;
         defaultFocusView = _defaultFocusView;
@@ -44,9 +45,8 @@ public class WebAppInterface {
             public boolean onTouch(View v, MotionEvent event) {
                 Log.d("WebView", "onTouch: EditText is null?: " + (editText == null));
                 if (editText != null) {
-                    webView.getHandler().post( () ->
-                            webView.evaluateJavascript(WebViewJavaScriptConstants.SCRIPT__REMOVE_FOCUS, null)
-                        );
+                    webView.getHandler().post(
+                            () -> webView.evaluateJavascript(WebViewJavaScriptConstants.SCRIPT__REMOVE_FOCUS, null));
                 }
                 return false;
             }
@@ -63,7 +63,7 @@ public class WebAppInterface {
 
     public void reset() {
         Log.d("WebView", "reset");
-        if(editText != null) {
+        if (editText != null) {
             setIMMIfNeeded();
             imm.hideSoftInputFromWindow(editText.getWindowToken(), 0);
             rootView.removeView(editText);
@@ -74,15 +74,14 @@ public class WebAppInterface {
 
     @JavascriptInterface
     public void onInputFocusAcquired(String type, String currentValue) {
-        activity.runOnUiThread( () -> {
+        activity.runOnUiThread(() -> {
             Log.d("WebView", String.format("onInputFocusAcquired(type: %s, value: %s)", type, currentValue));
             reset();
 
             int inputType = 0;
             String inputValue = currentValue;
 
-            switch (type)
-            {
+            switch (type) {
                 case "text":
                     inputType = InputType.TYPE_CLASS_TEXT;
                     break;
@@ -118,8 +117,7 @@ public class WebAppInterface {
             editText.setInputType(inputType);
             editText.setText(inputValue);
             editText.setImeOptions(EditorInfo.IME_ACTION_DONE);
-            editText.addTextChangedListener(new TextWatcher()
-            {
+            editText.addTextChangedListener(new TextWatcher() {
                 @Override
                 public void beforeTextChanged(CharSequence charSequence, int start, int before, int count) {
                 }
@@ -130,17 +128,16 @@ public class WebAppInterface {
 
                 @Override
                 public void afterTextChanged(Editable editable) {
-                    webView.getHandler().post( () ->
-                            webView.evaluateJavascript(String.format(WebViewJavaScriptConstants.SCRIPT__SET_INPUT_VALUE, editable.toString()), null)
-                    );
+                    webView.getHandler().post(() -> webView.evaluateJavascript(
+                            String.format(WebViewJavaScriptConstants.SCRIPT__SET_INPUT_VALUE, editable.toString()),
+                            null));
                 }
             });
             editText.setOnEditorActionListener((v, actionId, event) -> {
                 boolean handled = false;
                 if (actionId == EditorInfo.IME_ACTION_DONE) {
-                    webView.getHandler().post( () ->
-                            webView.evaluateJavascript(WebViewJavaScriptConstants.SCRIPT__REMOVE_FOCUS, null)
-                        );
+                    webView.getHandler().post(
+                            () -> webView.evaluateJavascript(WebViewJavaScriptConstants.SCRIPT__REMOVE_FOCUS, null));
                     handled = true;
                 }
                 return handled;
@@ -149,7 +146,7 @@ public class WebAppInterface {
             rootView.addView(editText);
             editText.setElevation(-1);
             editText.requestFocus();
-            
+
             setIMMIfNeeded();
             // imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT);
             imm.showSoftInput(editText, 0);
@@ -158,13 +155,12 @@ public class WebAppInterface {
 
     @JavascriptInterface
     public void onInputFocusLost() {
-        activity.runOnUiThread( () -> {
+        activity.runOnUiThread(() -> {
             Log.d("WebView", String.format("onInputFocusLost(); EditText is null?: %b", editText == null));
-            if (editText != null)
-            {
+            if (editText != null) {
                 editText.clearFocus();
                 defaultFocusView.requestFocus();
-                
+
                 setIMMIfNeeded();
                 imm.hideSoftInputFromWindow(editText.getWindowToken(), 0);
 
@@ -180,7 +176,7 @@ public class WebAppInterface {
     }
 
     private void setIMMIfNeeded() {
-        if(imm == null) {
+        if (imm == null) {
             imm = (InputMethodManager) activity.getSystemService(Context.INPUT_METHOD_SERVICE);
         }
     }
