@@ -38,7 +38,6 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 705507994}
-  m_IndirectSpecularColor: {r: 0.18028334, g: 0.22571328, b: 0.3069217, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -860,6 +859,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 144208709}
     m_Modifications:
+    - target: {fileID: 1552131580332238112, guid: c39e3a2e852a32e4197f3343ebdcee21, type: 3}
+      propertyPath: loadUrl
+      value: https://www.geogebra.org/calculator
+      objectReference: {fileID: 0}
     - target: {fileID: 3068531927600033829, guid: c39e3a2e852a32e4197f3343ebdcee21, type: 3}
       propertyPath: textureSize.x
       value: 1200
