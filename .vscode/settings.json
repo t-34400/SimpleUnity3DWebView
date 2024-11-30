@@ -51,5 +51,5 @@
         "temp/": true,
         "Temp/": true
     },
-    "dotnet.defaultSolution": "WebViewGitHub.sln"
+    "dotnet.defaultSolution": "SimpleUnity3DWebView.sln"
 }
