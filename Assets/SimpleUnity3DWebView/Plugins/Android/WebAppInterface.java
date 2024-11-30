@@ -22,6 +22,8 @@ public class WebAppInterface {
     
     private static InputMethodManager imm;
 
+    public boolean keyboardEnabled = true;
+
     private Activity activity;
 
     private View defaultFocusView;
@@ -77,6 +79,10 @@ public class WebAppInterface {
         activity.runOnUiThread( () -> {
             Log.d("WebView", String.format("onInputFocusAcquired(type: %s, value: %s)", type, currentValue));
             reset();
+
+            if (!keyboardEnabled) {
+                return;
+            }
 
             int inputType = 0;
             String inputValue = currentValue;

@@ -209,6 +209,12 @@ public class WebViewManager {
         });
     }
 
+    public void setKeyboardInputEnabled(boolean isEnabled) {
+        mainHandler.post(() -> {
+            webAppInterface.keyboardEnabled = isEnabled;
+        });
+    }
+
     public void invokeDownEvent(float normalizedX, float normalizedY) {
         invokeMotionEvent(normalizedX, normalizedY, MotionEvent.ACTION_DOWN);
     }

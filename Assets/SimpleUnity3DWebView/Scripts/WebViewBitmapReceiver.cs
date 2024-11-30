@@ -15,6 +15,7 @@ namespace WebView
         void Reload();
         void GoBack();
         void GoForward();
+        void SetKeyboardInputEnabled(bool isEnabled);
         void EvaluateJavascript(string script);
     }
 
@@ -25,6 +26,7 @@ namespace WebView
         [SerializeField] private Vector2Int webViewSize = new Vector2Int(600, 480);
         [SerializeField] private Vector2Int textureSize = new Vector2Int(300, 240);
         [SerializeField] private float intervalSec = 0.05f;
+        [SerializeField] private bool keyboardEnabled = true;
         [SerializeField] private UnityEvent<string> urlChanged = default!;
         [SerializeField] private UnityEvent<string, string> dataReceived = default!;
 
@@ -82,6 +84,7 @@ namespace WebView
         {
             webViewActivityManager = new(pointerEventSource, gameObject.name,  webViewSize.x, webViewSize.y, textureSize.x, textureSize.y, (long)(intervalSec * 1000));
             webViewController = webViewActivityManager?.GetWebViewController();
+            webViewController?.SetKeyboardInputEnabled(keyboardEnabled);
         }
 
         private void OnApplicationPause(bool paused)
@@ -90,6 +93,7 @@ namespace WebView
             {
                 webViewActivityManager = new(pointerEventSource, gameObject.name, webViewSize.x, webViewSize.y, textureSize.x, textureSize.y, (long)(intervalSec * 1000));
                 webViewController = webViewActivityManager?.GetWebViewController();
+                webViewController?.SetKeyboardInputEnabled(keyboardEnabled);
             }
         }
 
