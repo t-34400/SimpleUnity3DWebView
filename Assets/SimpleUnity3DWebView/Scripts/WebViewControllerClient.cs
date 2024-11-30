@@ -20,6 +20,7 @@ namespace WebView
         public void Reload() => webViewController?.Reload();
         public void GoBack() => webViewController?.GoBack();
         public void GoForward() => webViewController?.GoForward();
+        public void SetKeyboardInputEnabled(bool isEnabled) => webViewController?.SetKeyboardInputEnabled(isEnabled);
         public void EvaluateJavascript(string script) => webViewController?.EvaluateJavascript(script);
 
         private void Start()
