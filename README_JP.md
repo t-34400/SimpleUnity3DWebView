@@ -63,6 +63,7 @@ Simple Unity 3D WebViewは，UnityのAndroidビルドアプリ上で3D WebView�
     - `void Reload()`: リロード
     - `void GoBack()`: 戻る
     - `void GoForward()`: 進む
+    - `void SetKeyboardInputEnabled(bool isEnabled)`: キーボード入力の有効化/無効化
     - `void EvaluateJavascript(string script)`: JavaScriptの実行
     - `void StartUpdate()`: 画面の更新の開始
     - `void StopUpdate()`: 画面の更新の停止

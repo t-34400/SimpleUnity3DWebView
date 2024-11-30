@@ -63,6 +63,7 @@ Sample prefabs are located at `Assets/SamplePrefabs` for reference.
   - `void Reload()`: Reload the page.
   - `void GoBack()`: Go back.
   - `void GoForward()`: Go forward.
+  - `void SetKeyboardInputEnabled(bool isEnabled)`: Enable/Disable keyboard input
   - `void EvaluateJavascript(string script)`: Execute JavaScript.
   - `void StartUpdate()`: Start screen updates.
   - `void StopUpdate()`: Stop screen updates.
