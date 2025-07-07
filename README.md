@@ -7,114 +7,186 @@ Simple Unity 3D WebView is a straightforward 3D WebView library designed for the
 
 <img src="./Image/google_3d.png" width=200>   <img src="./Image/google_3d_2.png" width=200>
 
+## 🚀 What's New (v2.0.0)
+
+This release includes key improvements for compatibility and developer experience:
+* **Support for Unity 2023.1 and Later**
+  Adapted to breaking changes in `UnityPlayer` introduced in Unity 2023.1 and newer versions.
+* **No More Subclassing of UnityPlayerActivity**
+  The implementation no longer relies on subclassing `UnityPlayerActivity` or `UnityPlayerGameActivity`, improving cross-version compatibility.
+* **Android Code Now Packaged as AAR**
+  All Android-side JVM code is consolidated into a single `.aar` file, streamlining integration and enhancing build efficiency.
+
 ## Installation
 
+### Unity 2022 or Earlier
+
 1. Install [the package](https://github.com/t-34400/SimpleUnity3DWebView/releases) ([Official Manual](https://docs.unity3d.com/Manual/upm-ui-local.html)).
-2. Select Android from File > Build Settings > Platform and press the Switch Platform button.
-3. Press the Player Settings button, check Custom Main Manifest under Publishing Settings > Build, and verify the path below.
-4. Open the generated `AndroidManifest.xml` at the confirmed path and make the following changes:
-   - Add `<uses-permission android:name="android.permission.INTERNET" />` tag inside the manifest tag.
-   - Add `android:networkSecurityConfig="@xml/network_security_config"` and `android:hardwareAccelerated="true"` inside the application tag.
-   - Change the android:name of the activity tag to `com.t34400.webviewtexture.WebViewUnityPlayerActivity`.
-   - Sample:
-     ```xml
-     <?xml version="1.0" encoding="utf-8"?>
-     <manifest
-         xmlns:android="http://schemas.android.com/apk/res/android"
-         package="com.unity3d.player"
-         xmlns:tools="http://schemas.android.com/tools">
-         <uses-permission android:name="android.permission.INTERNET" />
-         <application android:networkSecurityConfig="@xml/network_security_config"
-                     android:hardwareAccelerated="true">
-             <activity android:name="com.t34400.webviewtexture.WebViewUnityPlayerActivity"
-                     android:theme="@style/UnityThemeSelector">
-                 <intent-filter>
-                     <action android:name="android.intent.action.MAIN" />
-                     <category android:name="android.intent.category.LAUNCHER" />
-                 </intent-filter>
-                 <meta-data android:name="unityplayer.UnityActivity" android:value="true" />
-             </activity>
-         </application>
-     </manifest>
-     ```
+2. Go to `File` > `Build Settings`, select **Android** as the platform, and click **Switch Platform**.
+3. Click **Player Settings**, then under `Publishing Settings` > `Build`, enable both `Custom Main Manifest` and `Custom Main Gradle Template`. Note the paths shown.
+4. Open the generated `AndroidManifest.xml` at the specified path and make the following changes:
+    - Add the following tag inside the `<manifest>` element:
+      ```xml
+      <uses-permission android:name="android.permission.INTERNET" />
+      ```
+    - Inside the `<application>` element, add:
+      ```xml
+      android:networkSecurityConfig="@xml/network_security_config"
+      android:hardwareAccelerated="true"
+      ```
+5. Open the generated `mainTemplate.gradle` at the same path and modify it as follows:
+    - In the `dependencies` block, add:
+      ```gradle
+      implementation "org.jetbrains.kotlin:kotlin-stdlib:2.0.21"
+      ```
+
+- [AndroidManifest.xml Sample](Assets/SimpleUnity3DWebView/Plugins/Android/AndroidManifest_2022_sample.xml)
+- [mainTemplate.gradle Sample](Assets/SimpleUnity3DWebView/Plugins/Android/mainTemplate_sample.gradle)
+
+---
+
+### Unity 2023 or Later
+
+1. Install [the package](https://github.com/t-34400/SimpleUnity3DWebView/releases) ([Official Manual](https://docs.unity3d.com/Manual/upm-ui-local.html)).
+2. Go to `File` > `Build Settings`, select **Android** as the platform, and click **Switch Platform**.
+3. In **Player Settings**, under `Other Settings` > `Configuration`, check `GameActivity` and uncheck `Activity`.
+4. Under `Publishing Settings` > `Build`, enable both `Custom Main Manifest` and `Custom Main Gradle Template`. Note the paths shown.
+5. Open the generated `AndroidManifest.xml` and make the following changes:
+    - Remove the `<activity>` tag for `UnityPlayerActivity`.
+    - Add the following tag inside the `<manifest>` element:
+      ```xml
+      <uses-permission android:name="android.permission.INTERNET" />
+      ```
+    - Inside the `<application>` element, add:
+      ```xml
+      android:networkSecurityConfig="@xml/network_security_config"
+      android:hardwareAccelerated="true"
+      ```
+6. Open the generated `mainTemplate.gradle` and add the following line in the `dependencies` block:
+    ```gradle
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:2.0.21"
+    ```
+
+- [AndroidManifest.xml Sample](Assets/SimpleUnity3DWebView/Plugins/Android/AndroidManifest_2023_sample.xml)
+- [mainTemplate.gradle Sample](Assets/SimpleUnity3DWebView/Plugins/Android/mainTemplate_sample.gradle)
+
 
 ## Usage
 
-1. Create a `RawImage` object on a suitable `Canvas` and add the `PointerEventSource` component.
-2. Add the `WebViewBitmapReceiver` component to a GameObject and update the inspector as follows:
-   - Attach the previously created `RawImage` to Image and Pointer Event Source.
-   - Specify the screen size (in pixels) of the web browser in Web View Size (affecting the layout of the website).
-   - Specify the size (in pixels) of the texture-mapped web page in Texture Size.
-   - Set the highest frequency of texture updates in Interval Sec.
-3. Add the `WebViewControllerClient` component to a GameObject and update the inspector as follows:
-   - Attach the previously created GameObject to Web View Bitmap Receiver.
-   - Specify the initial URL in Load Url.
-4. Depending on the device, add the necessary components for UI interaction (XR Interaction Toolkit, Oculus Interaction SDK, etc.).
+1. Create a `RawImage` object on a suitable `Canvas`, and add the `PointerEventSource` component.
+2. Add the `WebViewManager` component to a GameObject, and update the Inspector as follows:
+   - Assign the previously created `RawImage` to both **Web View Image** and **Pointer Event Source**.
+   - Set **Texture Width** to the width (in pixels) of the texture used to render the web content.
+   - Set **Interval MSec** to the update interval of the texture in milliseconds.
+   - Set **Default Url** to the initial URL to load (leave blank to skip automatic loading).
+   - Set **Normalized Touch Slop** to adjust the drag sensitivity, normalized by texture size. (Note: this setting is currently not fully functional.)
 
-Sample prefabs are located at `Assets/SamplePrefabs` for reference.
+3. Depending on the target device, add any required input or interaction components (e.g., XR Interaction Toolkit, Oculus Interaction SDK) to enable UI interaction.
+
+Sample prefabs are available in `Assets/SamplePrefabs` for reference.
+
 
 ## Web Browser Interaction
 
-- Click and drag on the `RawImage` to perform touch operations.
-  - Additionally, add UI operation components (e.g., XR Interaction Toolkit, Oculus Interaction SDK) compatible with the device to operate based on those UI interactions.
-    - To be more specific, UI operations corresponding to `IPointerExitHandler`, `IPointerDownHandler`, `IPointerUpHandler`, and `IDragHandler` in the `UnityEngine.EventSystems` namespace allow control of the browser.
-- Various operations such as loading URLs, reloading, going back or forward, executing JavaScript, and starting/stopping screen updates can be performed through the methods of `WebViewControllerClient`.
-  - `void LoadUrl(string url)`: Load a URL.
-  - `void Reload()`: Reload the page.
-  - `void GoBack()`: Go back.
-  - `void GoForward()`: Go forward.
-  - `void SetKeyboardInputEnabled(bool isEnabled)`: Enable/Disable keyboard input
-  - `void EvaluateJavascript(string script)`: Execute JavaScript.
-  - `void StartUpdate()`: Start screen updates.
-  - `void StopUpdate()`: Stop screen updates.
+- Click and drag on the `RawImage` to perform touch interactions.
+  - Additionally, attach UI input components (e.g., XR Interaction Toolkit, Oculus Interaction SDK) appropriate to your target device to enable interaction with the web view.
+    - Specifically, the system responds to Unity UI events such as `IPointerExitHandler`, `IPointerDownHandler`, `IPointerUpHandler`, and `IDragHandler` in the `UnityEngine.EventSystems` namespace.
+
+- You can control browser behavior through the public methods of the `WebViewManager` component:
+  - `void LoadUrl(string url)`: Loads the specified URL.
+  - `void Reload()`: Reloads the current page.
+  - `void GoBack()`: Navigates back in the browser history.
+  - `void GoForward()`: Navigates forward in the browser history.
+  - `void SetKeyboardInputEnabled(bool isEnabled)`: Enables or disables keyboard input.
+  - `void EvaluateJavascript(string script)`: Executes JavaScript in the current page.
+
+- To start or stop screen updates, enable or disable the `WebViewManager` component itself:
+  - `webViewManager.enabled = true;` enables texture updates.
+  - `webViewManager.enabled = false;` stops texture updates.
+
 
 ## Retrieving Values from Web Pages
 
-- Call `Android.sendJsonData('type string', 'data string')` in JavaScript to trigger the `UnityEvent<string, string> dataReceived` event in `WebViewBitmapReceiver`.
-  - The event arguments correspond to the arguments sent with `Android.sendJsonData('type string', 'data string')`.
-  - Define a method in the component handling the event in the format `public void DoSomething(string type, string dataString)`; register it as a listener for `dataReceived` in the inspector of `WebViewBitmapReceiver`.
-  - Sample:
-    ```c#
-    using UnityEngine;
-    using WebView;
+The `WebViewManager` component provides UnityEvents for communicating from JavaScript running inside the WebView:
 
-    public class TestComponent : MonoBehaviour
+- `urlChanged`: Invoked when the current page URL changes.
+  - Signature: `UnityEvent<string>` — receives the new URL as a string.
+
+- `dataReceived`: Invoked when JavaScript calls `Android.sendJsonData(...)`.
+  - Signature: `UnityEvent<ReceivedData>` — receives a structured data object from JavaScript.
+
+### Sending Data from JavaScript
+
+To send data from the web page, call the following in JavaScript:
+
+```javascript
+Android.sendJsonData('YOUR_TYPE', JSON.stringify({ id: 100, name: 't34400' }));
+```
+
+This will trigger the `dataReceived` event on the `WebViewManager`. The event receives a `ReceivedData` object with the following structure:
+
+```c#
+namespace WebView
+{
+    [System.Serializable]
+    public struct ReceivedData
     {
-        private const string MY_SCRIPT = 
-            "const data = { id: 100, name: 't34400' };" +
-            "try {" +
-            "   const dataJson = JSON.stringify(data);" +
-            "   Android.sendJsonData('YOUR_TYPE', dataJson);" + 
-            "} catch(e) {" +
-            "   console.error(e.message);" +
-            "}";
-        
-        [SerializeField] private WebViewControllerClient webViewControllerClient;
+        public string type;
+        public string data;
+    }
+}
+```
 
-        // Process received data (register this method as a listener for `WebViewBitmapReceiver`'s `dataReceived`)
-        public void DataReceived(string type, string data)
-        {
-            if(type.Equals("YOUR_TYPE"))
-            {
-                var idNameData = JsonUtility.FromJson<IdNameData>(data);
-                Debug.Log($"ID: {idNameData.id}, Name: {idNameData.name}");
-            }
-        }
+### Example Unity Component
 
-        private void Update()
-        {
-            // Call Android.sendJsonData() in JavaScript
-            webViewControllerClient.EvaluateJavascript(MY_SCRIPT);
-        }
+<details>
+<summary>Click to expand</summary>
 
-        [System.Serializable]
-        public struct IdNameData
+```c#
+using UnityEngine;
+using WebView;
+
+public class TestComponent : MonoBehaviour
+{
+    private const string MY_SCRIPT = 
+        "const data = { id: 100, name: 't34400' };" +
+        "try {" +
+        "   const dataJson = JSON.stringify(data);" +
+        "   Android.sendJsonData('YOUR_TYPE', dataJson);" +
+        "} catch(e) {" +
+        "   console.error(e.message);" +
+        "}";
+
+    [SerializeField] private WebViewManager webViewManager;
+
+    // Register this method to WebViewManager.dataReceived in the Inspector
+    public void OnDataReceived(ReceivedData received)
+    {
+        if (received.type == "YOUR_TYPE")
         {
-            public int id;
-            public string name;
+            var idNameData = JsonUtility.FromJson<IdNameData>(received.data);
+            Debug.Log($"ID: {idNameData.id}, Name: {idNameData.name}");
         }
     }
-    ```
+
+    private void Update()
+    {
+        // Call Android.sendJsonData() in JavaScript
+        webViewManager.EvaluateJavascript(MY_SCRIPT);
+    }
+
+    [System.Serializable]
+    public struct IdNameData
+    {
+        public int id;
+        public string name;
+    }
+}
+```
+</details>
+
+To handle the `urlChanged` event, define a method like `public void OnUrlChanged(string url)` and register it in the Inspector.
+
 
 ## Enabling Specific APIs for Non-SSL Connections
 
@@ -127,18 +199,22 @@ Sample prefabs are located at `Assets/SamplePrefabs` for reference.
 - The output from WebView's JavaScript console is logged to Logcat with the tag `WebViewConsole`.
 - WebView texture transfer from Android native to Unity is simple and CPU-based, so heavy processing may occur with large texture sizes or excessively frequent updates.
 - Text input with the keyboard is supported for input and textarea tags but may be somewhat unstable.
-- Messages from the Native side of Android are sent to the GameObject name to which the WebViewBitmapReceiver is attached, so the name must be different from other objects in the scene.
-    - If multiple WebViews are placed in the same scene, use different names for each.
 - If you are developing a project using OpenXR, uncheck `Force Remove Internet` under `Project Settings` > `OpenXR` > `Meta Quest Support`.
     - In Unity OpenXR package versions prior to 1.9.1, there is a bug where, even if this checkbox is unchecked, the Internet permission is removed. To address this issue, either update the OpenXR version in `Packages/manifest.json` to 1.9.1, or use Post Gradle during the build process to remove the OpenXR permission and then re-add it to the manifest.
 <img src="./Image/openxr_force_remove_internet.png" width=400>
 
-- When using on Meta Quest, add the following permission to `AndroidManifest.xml.
+- When using on Meta Quest, add the following permission to `AndroidManifest.xml`:
   
    ```xml
    <uses-feature android:name="oculus.software.overlay_keyboard" 
                  android:required="true" />
    ```
+
+## Android AAR Source Code
+
+The Android-side implementation bundled as an `.aar` is open source and available here:
+
+- [View AAR Source Code](https://github.com/t-34400/UnityWebViewLib)
 
 ## License
 
