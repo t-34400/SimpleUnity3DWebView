@@ -62,7 +62,7 @@ namespace WebView
             textureUpdater = new WebViewTextureUpdater(bridge, texture);
 
             pointerEventSource.OnPointerDown += bridge.SendTouchDown;
-            pointerEventSource.OnPointerUp += bridge.SendTouchMove;
+            pointerEventSource.OnPointerUp += bridge.SendTouchUp;
             pointerEventSource.OnDrag += bridge.SendTouchMove;
 
             if (!string.IsNullOrEmpty(defaultUrl))
@@ -103,7 +103,7 @@ namespace WebView
             if (pointerEventSource != null && bridge != null)
             {
                 pointerEventSource.OnPointerDown -= bridge.SendTouchDown;
-                pointerEventSource.OnPointerUp -= bridge.SendTouchMove;
+                pointerEventSource.OnPointerUp -= bridge.SendTouchUp;
                 pointerEventSource.OnDrag -= bridge.SendTouchMove;
             }
 
