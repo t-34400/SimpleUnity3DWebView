@@ -121,8 +121,8 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1552131580332238112}
-        m_TargetAssemblyTypeName: WebView.WebViewControllerClient, WebView
+      - m_Target: {fileID: 4072674907923421904}
+        m_TargetAssemblyTypeName: WebView.WebViewManager, WebView
         m_MethodName: GoBack
         m_Mode: 1
         m_Arguments:
@@ -765,8 +765,8 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1552131580332238112}
-        m_TargetAssemblyTypeName: WebView.WebViewControllerClient, WebView
+      - m_Target: {fileID: 4072674907923421904}
+        m_TargetAssemblyTypeName: WebView.WebViewManager, WebView
         m_MethodName: Reload
         m_Mode: 1
         m_Arguments:
@@ -789,7 +789,7 @@ GameObject:
   - component: {fileID: 5492664071833546373}
   - component: {fileID: 2581470424967816478}
   - component: {fileID: 2071599930249632893}
-  - component: {fileID: 3519250826916463308}
+  - component: {fileID: 6388268802695704887}
   m_Layer: 5
   m_Name: GoToButton
   m_TagString: Untagged
@@ -899,9 +899,9 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 3519250826916463308}
-        m_TargetAssemblyTypeName: UrlSwitcher, Assembly-CSharp
-        m_MethodName: SwitchUrl
+      - m_Target: {fileID: 6388268802695704887}
+        m_TargetAssemblyTypeName: WebView.AddressBarButtonHandler, Assembly-CSharp
+        m_MethodName: OnClicked
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -911,7 +911,7 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
---- !u!114 &3519250826916463308
+--- !u!114 &6388268802695704887
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -920,10 +920,11 @@ MonoBehaviour:
   m_GameObject: {fileID: 3933349907746328203}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 31b27420e32480644b2f2187cf64a605, type: 3}
+  m_Script: {fileID: 11500000, guid: 4dc2c53eaced5cd4e9cbb929a9b3270c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  controller: {fileID: 1552131580332238112}
+  addressBarInput: {fileID: 2157208705271011078}
+  webViewManager: {fileID: 4072674907923421904}
 --- !u!1 &5072560123050676015
 GameObject:
   m_ObjectHideFlags: 0
@@ -1211,10 +1212,9 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5181964029551139157}
-  - component: {fileID: 3068531927600033829}
-  - component: {fileID: 1552131580332238112}
+  - component: {fileID: 4072674907923421904}
   m_Layer: 0
-  m_Name: WebViewControllerClient
+  m_Name: WebViewManager
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1235,7 +1235,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 8146639814982666013}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &3068531927600033829
+--- !u!114 &4072674907923421904
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1244,15 +1244,13 @@ MonoBehaviour:
   m_GameObject: {fileID: 6143865338994973306}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5c496361e807dda4fae4277a8aeac025, type: 3}
+  m_Script: {fileID: 11500000, guid: a9f37f30bf214b649834a1304050ed5e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  image: {fileID: 3504050650859930974}
+  webViewImage: {fileID: 3504050650859930974}
   pointerEventSource: {fileID: 7154043111525070803}
-  webViewSize: {x: 1200, y: 1200}
-  textureSize: {x: 300, y: 300}
-  intervalSec: 0.05
-  keyboardEnabled: 1
+  textureWidth: 1280
+  intervalMSec: 100
   urlChanged:
     m_PersistentCalls:
       m_Calls:
@@ -1271,21 +1269,6 @@ MonoBehaviour:
   dataReceived:
     m_PersistentCalls:
       m_Calls: []
---- !u!114 &1552131580332238112
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6143865338994973306}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1c92cbc119b1f6e4490794817b663ad0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  webViewBitmapReceiver: {fileID: 3068531927600033829}
-  loadOnFirstFrame: 1
-  loadUrl: https://www.google.com/
 --- !u!1 &6739791196876909686
 GameObject:
   m_ObjectHideFlags: 0
@@ -1443,7 +1426,7 @@ MonoBehaviour:
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 3519250826916463308}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: UrlSwitcher, Assembly-CSharp
         m_MethodName: SetTargetUrl
         m_Mode: 0
@@ -1835,8 +1818,8 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1552131580332238112}
-        m_TargetAssemblyTypeName: WebView.WebViewControllerClient, WebView
+      - m_Target: {fileID: 4072674907923421904}
+        m_TargetAssemblyTypeName: WebView.WebViewManager, WebView
         m_MethodName: GoForward
         m_Mode: 1
         m_Arguments:
@@ -2018,8 +2001,8 @@ MonoBehaviour:
   onValueChanged:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1552131580332238112}
-        m_TargetAssemblyTypeName: WebView.WebViewControllerClient, WebView
+      - m_Target: {fileID: 4072674907923421904}
+        m_TargetAssemblyTypeName: WebView.WebViewManager, WebView
         m_MethodName: SetKeyboardInputEnabled
         m_Mode: 0
         m_Arguments:

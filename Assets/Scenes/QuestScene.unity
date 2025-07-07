@@ -875,6 +875,10 @@ PrefabInstance:
       propertyPath: textureSize.y
       value: 1200
       objectReference: {fileID: 0}
+    - target: {fileID: 4072674907923421904, guid: c39e3a2e852a32e4197f3343ebdcee21, type: 3}
+      propertyPath: textureWidth
+      value: 1920
+      objectReference: {fileID: 0}
     - target: {fileID: 7518887404996998715, guid: c39e3a2e852a32e4197f3343ebdcee21, type: 3}
       propertyPath: m_LocalPosition.z
       value: 0

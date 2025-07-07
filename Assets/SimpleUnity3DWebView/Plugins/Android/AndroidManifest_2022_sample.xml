@@ -6,7 +6,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <application android:networkSecurityConfig="@xml/network_security_config"
                  android:hardwareAccelerated="true">
-        <activity android:name="com.t34400.webviewtexture.WebViewUnityPlayerActivity"
+        <activity android:name="com.unity3d.player.UnityPlayerActivity"
                   android:theme="@style/UnityThemeSelector">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
