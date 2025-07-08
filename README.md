@@ -7,6 +7,15 @@ Simple Unity 3D WebView is a straightforward 3D WebView library designed for the
 
 <img src="./Image/google_3d.png" width=200>   <img src="./Image/google_3d_2.png" width=200>
 
+## 🔥 Firebase Setup
+
+Native Firebase libraries (.so) are not included in this repo due to file size limits.
+To build the project, please import the following UnityPackages (version 12.10.1):
+
+- Analytics
+- Auth
+- Firestore
+
 ## 🚀 What's New (v2.0.0)
 
 This release includes key improvements for compatibility and developer experience:

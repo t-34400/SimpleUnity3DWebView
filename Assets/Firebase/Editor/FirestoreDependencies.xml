@@ -1,0 +1,22 @@
+<!-- Copyright (C) 2019 Google Inc. All Rights Reserved.
+
+FirebaseFirestore iOS and Android Dependencies.
+-->
+
+<dependencies>
+  <iosPods>
+    <iosPod name="Firebase/Firestore" version="11.14.0" minTargetSdk="13.0">
+    </iosPod>
+  </iosPods>
+  <androidPackages>
+    <androidPackage spec="com.google.firebase:firebase-firestore:25.1.3">
+    </androidPackage>
+    <androidPackage spec="com.google.firebase:firebase-analytics:22.4.0">
+    </androidPackage>
+    <androidPackage spec="com.google.firebase:firebase-firestore-unity:12.10.1">
+      <repositories>
+        <repository>Assets/Firebase/m2repository</repository>
+      </repositories>
+    </androidPackage>
+  </androidPackages>
+</dependencies>
