@@ -16,6 +16,12 @@ namespace WebView
         [SerializeField] private string defaultUrl = "https://www.google.com/";
         [SerializeField] private Vector2 normalizedTouchSlop = Vector2.one * 0.05f;
 
+        [Header("Texture Properties")]
+        [SerializeField] private bool defaultMipChain = true;
+        [SerializeField] private FilterMode defaultFilterMode = FilterMode.Trilinear;
+        [Range(0, 16)]
+        [SerializeField] private int defaultAnisoLebel = 8;
+
         [Header("Events")]
         [SerializeField] private UnityEvent<string> urlChanged = default!;
         [SerializeField] private UnityEvent<ReceivedData> dataReceived = default!;
@@ -23,6 +29,8 @@ namespace WebView
         private WebViewJavaBridge? bridge;
         private WebViewDataReceiver? receiver;
         private WebViewTextureUpdater? textureUpdater;
+
+        public Texture Texture => webViewImage.texture;
 
         public void LoadUrl(string url) => bridge?.LoadUrl(url);
         public void Reload() => bridge?.Reload();
@@ -56,7 +64,9 @@ namespace WebView
                 WebViewDataReceiver.JsonMessageMethodName
             );
 
-            var texture = new Texture2D(textureWidth, textureHeight);
+            var texture = new Texture2D(textureWidth, textureHeight, TextureFormat.RGBA32, defaultMipChain);
+            texture.filterMode = defaultFilterMode;
+            texture.anisoLevel = defaultAnisoLebel;
             webViewImage.texture = texture;
 
             textureUpdater = new WebViewTextureUpdater(bridge, texture);
