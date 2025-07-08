@@ -37,7 +37,7 @@ namespace WebView
 
             var imageRectSize = webViewImage.rectTransform.sizeDelta;
             var aspect = imageRectSize.y / imageRectSize.x;
-            var textureHeight = (int)(textureWidth * aspect);
+            var textureHeight = (int) Mathf.Abs(textureWidth * aspect);
 
             var receiverObject = new GameObject(id);
             receiverObject.transform.parent = transform;
