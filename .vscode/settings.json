@@ -51,5 +51,5 @@
         "temp/": true,
         "Temp/": true
     },
-    "dotnet.defaultSolution": "SimpleUnity3DWebView.sln"
+    "dotnet.defaultSolution": "SimpleUnity3DWebView.slnx"
 }
