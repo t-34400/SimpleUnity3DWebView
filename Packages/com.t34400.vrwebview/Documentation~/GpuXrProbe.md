@@ -1,7 +1,7 @@
-# GPU / 同一Unity Activity / XR検証（GX1）
+# GPU / 同一Unity Activity / XR検証（GX2）
 
 H1の`Window draw: off`でスクロール・入力・動画音声が動くことはQuest 3で利用者が確認済み。
-GX1はその方式をUnityのVulkanまたはOpenGL ES 3テクスチャへ接続する**新しい実験**であり、H1の成功を引き継いで合格とはしない。
+GX2はその方式をUnityのVulkanまたはOpenGL ES 3テクスチャへ接続する**新しい実験**であり、H1の成功を引き継いで合格とはしない。
 Unity Editorのimport/build、実機GPU共有、同一Unity WindowのIME、XRの継続動作は未検証。
 
 ## 構成
@@ -17,6 +17,8 @@ Unity Editorのimport/build、実機GPU共有、同一Unity WindowのIME、XRの
 これは最適化前の検証経路。フェンスのCPU側poll、画像ごとのimport、30 fps producerにより遅延が増える可能性がある。外部format/YUV、保護動画、fullscreen custom viewは扱わない。
 
 既存のVulkanXrProbeシーンも互換クラスでそのまま使用できる。シーン再生成は任意。GLESの条件・SDK設定・調査結果は[GlesSupport.md](GlesSupport.md)を参照。
+
+Vulkan初期化の旧エラーへの修正内容と再ビルド手順は[VulkanInitialization.md](VulkanInitialization.md)を参照。
 
 ## ビルドと操作
 
@@ -43,7 +45,13 @@ Unity Editorのimport/build、実機GPU共有、同一Unity WindowのIME、XRの
 ## 診断の読み方
 
 - `backend=Vulkan / OpenGLES3`: Unityが選択した描画API。capabilityはrender threadで確認するため、device selectedだけではimportや画素表示の成功を意味しない。
-- `Required extensions not enabled...`: preloadのタイミングまたはデバイス拡張が成立していない。プラグイン設定・完全再起動後も再現するなら、その表示を報告する。
+- `backend=none`: backendの初期化が成立していない。次の理由の行と`vkHook`の行を記録する。
+- `vkHook=V2/accepted callback=1 create=1 fallback=0`: V2で登録され、初期化callbackとデバイス作成hookが実行された。カウンターは端末・プラグイン構成で変わり得る。実画素の成功とは別。
+- `registration rejected / unavailable`: 初期化hookの登録が拒否された、またはinterfaceがない。遅いロードの可能性を含む。
+- `accepted but not invoked`: 登録は受理されたが初期化callbackが呼ばれていない。
+- `vkCreateDevice was not intercepted`: 初期化callbackは呼ばれたが、デバイス作成は観測されていない。
+- `Missing device extension`: 実際に列挙したデバイス拡張に必要項目がない。再起動だけでの解決を前提にしない。
+- `Probe extension request rejected: VkResult=...`: 追加拡張付きの作成が失敗し、Unity側は元の設定で継続した。WebView用backendは使わない。
 - `GPU copies / acquired / inFlight / slots`: GPU転送・取得・返却待ち画像数。copiesはcommand記録回数で、画面表示完了の証明ではない。
 - `fenceWait / producerSkipped`: フェンス未完了や画像数制限による待ち。増加し続けてcopiesが止まるならその状態を報告する。
 - `sameActivity`: 現在のUnity Activityのクラス名。

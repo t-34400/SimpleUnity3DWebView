@@ -6,7 +6,7 @@ namespace T34400.VRWebView
 {
     internal static class VulkanProbeNative
     {
-        private const string Library = "vrwebview_vulkan";
+        private const string Library = "GfxPluginVRWebView";
         [DllImport(Library)] internal static extern IntPtr VrGetRenderEvent();
         [DllImport(Library)] internal static extern int VrGetEventId();
         [DllImport(Library)] internal static extern ulong VrCreate(int width, int height, IntPtr target);

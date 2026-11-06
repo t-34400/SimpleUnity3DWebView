@@ -3,6 +3,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import tempfile
@@ -32,8 +33,16 @@ def main():
     library = ROOT / native['path']
     assert hashlib.sha256(library.read_bytes()).hexdigest() == native['sha256']
     readelf = ndk / 'toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf'
-    info = subprocess.check_output([str(readelf), '-h', '-l', '--dyn-syms', str(library)], text=True)
+    info = subprocess.check_output([str(readelf), '-h', '-l', '-d', '--dyn-syms', str(library)], text=True)
     assert 'AArch64' in info
+    # The CMake output, Unity P/Invoke name, Java loader name and preloaded ELF
+    # must refer to one library, not independent copies of plugin state.
+    load_name = re.search(r'const string Library = "([^"]+)"', (package / 'Runtime/VulkanProbe/VulkanProbeNative.cs').read_text())[1]
+    java = (ROOT / 'Android~/webview/src/main/java/com/t34400/vrwebview/VulkanProbe.java').read_text()
+    assert library.name == 'lib' + load_name + '.so' and load_name.startswith('GfxPlugin')
+    assert 'System.loadLibrary("' + load_name + '")' in java
+    assert library.name in info
+    assert not (library.parent / 'libvrwebview_vulkan.so').exists()
     for symbol in ('UnityPluginLoad', 'VrCreate', 'VrGetRenderEvent', 'VrAlive', 'VrStatus',
                    'Java_com_t34400_vrwebview_VulkanProbe_nativeSurface'):
         assert symbol in info
@@ -42,7 +51,7 @@ def main():
             assert int(line.split()[-1], 16) >= 16384
     meta = library.with_name(library.name + '.meta').read_text()
     assert 'isPreloaded: 1' in meta and 'CPU: ARM64' in meta
-    print('PASS arm64 ELF exports, 16 KiB segment alignment, native provenance and Unity preload metadata')
+    print('PASS arm64 ELF exports, 16 KiB segment alignment, native provenance and matched early-load/Java/PInvoke names')
     print('NOT RUN: real Android buffers/fences, Unity plugin loading/graphics contexts, Vulkan/EGL image import, Quest/OpenXR/IME')
 
 

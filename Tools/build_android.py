@@ -36,10 +36,10 @@ def main():
         subprocess.run([cmake, "--build", native_build], check=True)
         prebuilt = "windows-x86_64" if sys.platform == "win32" else "darwin-x86_64" if sys.platform == "darwin" else "linux-x86_64"
         strip = ndk / "toolchains/llvm/prebuilt" / prebuilt / "bin" / ("llvm-strip.exe" if sys.platform == "win32" else "llvm-strip")
-        subprocess.run([str(strip), "--strip-debug", str(Path(native_build) / "libvrwebview_vulkan.so")], check=True)
-        target_native = ROOT / "Packages/com.t34400.vrwebview/Runtime/Plugins/Android/arm64-v8a/libvrwebview_vulkan.so"
+        subprocess.run([str(strip), "--strip-debug", str(Path(native_build) / "libGfxPluginVRWebView.so")], check=True)
+        target_native = ROOT / "Packages/com.t34400.vrwebview/Runtime/Plugins/Android/arm64-v8a/libGfxPluginVRWebView.so"
         target_native.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(Path(native_build) / "libvrwebview_vulkan.so", target_native)
+        shutil.copy2(Path(native_build) / "libGfxPluginVRWebView.so", target_native)
     wrapper = ROOT / "Android~" / ("gradlew.bat" if sys.platform == "win32" else "gradlew")
     command = [args.gradle or str(wrapper), "--no-daemon", ":webview:assembleRelease", ":webview:lintRelease", "--console=plain"]
     if args.offline:

@@ -6,33 +6,54 @@
 #include <algorithm>
 #include <cstring>
 #include <vector>
+#include <mutex>
+#include <set>
+#include <sstream>
 
 namespace vrwebview {
 namespace vulkan_detail {
 PFN_vkGetInstanceProcAddr loader = nullptr;
 PFN_vkCreateDevice createDevice = nullptr;
 VkInstance loaderInstance = VK_NULL_HANDLE;
-VkDevice configuredDevice = VK_NULL_HANDLE;
+std::set<VkDevice> configuredDevices;
+std::mutex bootstrapMutex;
+std::string hookApi = "none", stage = "Vulkan initialization hook not registered";
+bool hookAccepted = false, usedFallback = false;
+unsigned callbackCount = 0, createCount = 0;
 bool hasExtension(const std::vector<VkExtensionProperties>& available, const char* name) {
     return std::any_of(available.begin(), available.end(), [name](const auto& p) { return !strcmp(name, p.extensionName); });
 }
 VKAPI_ATTR VkResult VKAPI_CALL hookCreateDevice(VkPhysicalDevice physical, const VkDeviceCreateInfo* info,
         const VkAllocationCallbacks* alloc, VkDevice* device) {
-    configuredDevice = VK_NULL_HANDLE;
-    auto enumerate = reinterpret_cast<PFN_vkEnumerateDeviceExtensionProperties>(loader(loaderInstance, "vkEnumerateDeviceExtensionProperties"));
-    auto properties = reinterpret_cast<PFN_vkGetPhysicalDeviceProperties>(loader(loaderInstance, "vkGetPhysicalDeviceProperties"));
+    PFN_vkCreateDevice originalCreate;
+    VkInstance sourceInstance;
+    {
+        std::lock_guard<std::mutex> guard(bootstrapMutex);
+        originalCreate = createDevice; sourceInstance = loaderInstance;
+        ++createCount; usedFallback = false;
+    }
+    auto enumerate = reinterpret_cast<PFN_vkEnumerateDeviceExtensionProperties>(loader(sourceInstance, "vkEnumerateDeviceExtensionProperties"));
+    auto properties = reinterpret_cast<PFN_vkGetPhysicalDeviceProperties>(loader(sourceInstance, "vkGetPhysicalDeviceProperties"));
     uint32_t count = 0;
     VkPhysicalDeviceProperties p{};
     if (properties) properties(physical, &p);
     std::vector<VkExtensionProperties> available;
+    std::string reason;
     if (enumerate && enumerate(physical, nullptr, &count, nullptr) == VK_SUCCESS) {
         available.resize(count);
-        if (enumerate(physical, nullptr, &count, available.data()) != VK_SUCCESS) available.clear();
-    }
+        if (enumerate(physical, nullptr, &count, available.data()) != VK_SUCCESS) reason = "Vulkan device extension enumeration failed";
+    } else reason = "Vulkan device extension enumeration unavailable";
     const char* required[] = { VK_ANDROID_EXTERNAL_MEMORY_ANDROID_HARDWARE_BUFFER_EXTENSION_NAME,
                               VK_EXT_QUEUE_FAMILY_FOREIGN_EXTENSION_NAME };
-    bool supported = p.apiVersion >= VK_API_VERSION_1_1;
-    for (auto name : required) supported = supported && hasExtension(available, name);
+    bool supported = reason.empty() && p.apiVersion >= VK_API_VERSION_1_1;
+    if (reason.empty() && p.apiVersion < VK_API_VERSION_1_1) reason = "Vulkan 1.1 device support required";
+    for (auto name : required) {
+        if (!hasExtension(available, name)) {
+            supported = false;
+            if (reason.empty()) reason = "Missing device extension: "; else reason += "; ";
+            reason += name;
+        }
+    }
     VkDeviceCreateInfo changed = *info;
     std::vector<const char*> enabled;
     for (uint32_t i = 0; i < info->enabledExtensionCount; ++i) enabled.push_back(info->ppEnabledExtensionNames[i]);
@@ -42,18 +63,30 @@ VKAPI_ATTR VkResult VKAPI_CALL hookCreateDevice(VkPhysicalDevice physical, const
         changed.enabledExtensionCount = static_cast<uint32_t>(enabled.size());
         changed.ppEnabledExtensionNames = enabled.data();
     }
-    VkResult result = createDevice(physical, &changed, alloc, device);
-    // Keep the normal Unity device path usable even when this probe cannot run.
+    VkResult result = originalCreate(physical, &changed, alloc, device);
+    bool fallback = false;
+    // Keep Unity usable if the probe's extra extension request fails.
     if (result != VK_SUCCESS && supported) {
-        supported = false;
-        result = createDevice(physical, info, alloc, device);
+        supported = false; fallback = true;
+        reason = "Probe extension request rejected: VkResult=" + std::to_string(result) + "; Unity used original device settings";
+        result = originalCreate(physical, info, alloc, device);
     }
-    if (result == VK_SUCCESS && supported) configuredDevice = *device;
+    {
+        std::lock_guard<std::mutex> guard(bootstrapMutex);
+        usedFallback = fallback;
+        if (result == VK_SUCCESS) {
+            configuredDevices.erase(*device); // handles may be reused after device recreation
+            if (supported) configuredDevices.insert(*device);
+        }
+        stage = supported && result == VK_SUCCESS ? "Vulkan AHB extensions enabled" : reason;
+        if (stage.empty()) stage = "Vulkan device creation failed: VkResult=" + std::to_string(result);
+    }
     return result;
 }
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL hookGetProc(VkInstance instance, const char* name) {
     auto result = loader(instance, name);
     if (!strcmp(name, "vkCreateDevice") && result) {
+        std::lock_guard<std::mutex> guard(bootstrapMutex);
         loaderInstance = instance;
         createDevice = reinterpret_cast<PFN_vkCreateDevice>(result);
         return reinterpret_cast<PFN_vkVoidFunction>(hookCreateDevice);
@@ -61,7 +94,9 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL hookGetProc(VkInstance instance, const 
     return result;
 }
 PFN_vkGetInstanceProcAddr UNITY_INTERFACE_API intercept(PFN_vkGetInstanceProcAddr original, void*) {
-    loader = original;
+    std::lock_guard<std::mutex> guard(bootstrapMutex);
+    loader = original; ++callbackCount;
+    stage = "Vulkan init callback ran; waiting for vkCreateDevice";
     return hookGetProc;
 }
 
@@ -90,7 +125,17 @@ public:
         if (!api) { error = "Vulkan graphics interface unavailable"; return false; }
         instance = api->Instance();
         if (!instance.device || !instance.getInstanceProcAddr) { error = "Waiting for Unity Vulkan device"; return false; }
-        if (instance.device != vulkan_detail::configuredDevice) { error = "Required extensions not enabled: restart with preloaded native plugin"; return false; }
+        {
+            std::lock_guard<std::mutex> guard(vulkan_detail::bootstrapMutex);
+            if (!vulkan_detail::configuredDevices.count(instance.device)) {
+                if (!vulkan_detail::hookAccepted) error = "Vulkan init hook registration rejected or unavailable (possibly loaded too late)";
+                else if (!vulkan_detail::callbackCount) error = "Vulkan init hook accepted but not invoked before device initialization";
+                else if (!vulkan_detail::createCount) error = "Vulkan init callback ran but vkCreateDevice was not intercepted";
+                else if (vulkan_detail::configuredDevices.empty()) error = vulkan_detail::stage;
+                else error = "Unity Vulkan device was not observed by the initialization hook";
+                return false;
+            }
+        }
         auto get = reinterpret_cast<PFN_vkGetDeviceProcAddr>(instance.getInstanceProcAddr(instance.instance, "vkGetDeviceProcAddr"));
         if (!get) { error = "Vulkan device loader unavailable"; return false; }
 #define LOAD(name) name = reinterpret_cast<PFN_##name>(get(instance.device, #name)); if (!name) { error = "Missing " #name; return false; }
@@ -206,6 +251,32 @@ std::shared_ptr<GpuBackend> CreateVulkanBackend(IUnityInterfaces* interfaces, in
     return backend;
 }
 void InstallVulkanIntercept(IUnityInterfaces* interfaces) {
-    if (auto api = interfaces->Get<IUnityGraphicsVulkan>()) api->InterceptInitialization(vulkan_detail::intercept, nullptr);
+    // V1 occupies/replaces the single highest-priority slot. Prefer V2 priority 0
+    // so XR and other graphics plugins can keep their own initialization hooks.
+    {
+        std::lock_guard<std::mutex> guard(vulkan_detail::bootstrapMutex);
+        if (vulkan_detail::hookAccepted) return; // duplicate load notification must not replace a valid hook
+    }
+    bool accepted = false;
+    std::string apiName = "none";
+    if (auto api = interfaces->Get<IUnityGraphicsVulkanV2>()) {
+        apiName = "V2";
+        accepted = api->AddInterceptInitialization(vulkan_detail::intercept, nullptr, 0);
+    } else if (auto api = interfaces->Get<IUnityGraphicsVulkan>()) {
+        apiName = "V1";
+        accepted = api->InterceptInitialization(vulkan_detail::intercept, nullptr);
+    }
+    std::lock_guard<std::mutex> guard(vulkan_detail::bootstrapMutex);
+    vulkan_detail::hookApi = apiName; vulkan_detail::hookAccepted = accepted;
+    vulkan_detail::stage = accepted ? "Vulkan init hook registered; waiting for initialization"
+                                   : "Vulkan init hook registration rejected or unavailable";
+}
+std::string VulkanBootstrapStatus() {
+    std::lock_guard<std::mutex> guard(vulkan_detail::bootstrapMutex);
+    std::ostringstream text;
+    text << "vkHook=" << vulkan_detail::hookApi << "/" << (vulkan_detail::hookAccepted ? "accepted" : "rejected")
+         << " callback=" << vulkan_detail::callbackCount << " create=" << vulkan_detail::createCount
+         << " fallback=" << vulkan_detail::usedFallback;
+    return text.str();
 }
 }

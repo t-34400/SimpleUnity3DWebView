@@ -19,7 +19,7 @@ import java.util.Map;
 
 /** Same Unity Activity, fixed local assets, native Vulkan consumer. Experimental, not a browser API. */
 public final class VulkanProbe {
-    static { System.loadLibrary("vrwebview_vulkan"); }
+    static { System.loadLibrary("GfxPluginVRWebView"); }
     private static final Handler UI = new Handler(Looper.getMainLooper());
     private static final Map<Long, Host> HOSTS = new HashMap<>(); // UI thread only
     private static volatile String status = "Host not created";

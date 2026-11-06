@@ -158,8 +158,9 @@ UNITY_INTERFACE_EXPORT int VrStatus(uint64_t id, char* output, int capacity) {
     if (!output || capacity < 1) return 0;
     std::lock_guard<std::mutex> guard(mutex); std::ostringstream text; auto s = find(id);
     auto backend = s ? s->backend : activeBackend;
-    text << "GPU AHB probe GX1 backend=" << (backend ? backend->Name() : "none") << "\n"
+    text << "GPU AHB probe GX2 backend=" << (backend ? backend->Name() : "none") << "\n"
          << (deviceError.empty() ? "device selected; capabilities checked on render thread" : deviceError);
+    if (graphics && graphics->GetRenderer() == kUnityGfxRendererVulkan) text << "\n" << VulkanBootstrapStatus();
     if (!s && !creationError.empty()) text << "\n" << creationError;
     if (s) text << "\nGPU copies=" << s->copies << " acquired=" << s->acquired << " inFlight=" << s->frames.size()
                 << " slots=" << s->outstanding << " fenceWait=" << s->fenceWaits << " producerSkipped=" << s->skipped

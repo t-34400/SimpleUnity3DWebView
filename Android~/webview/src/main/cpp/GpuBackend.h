@@ -27,4 +27,5 @@ public:
 std::shared_ptr<GpuBackend> CreateVulkanBackend(IUnityInterfaces* interfaces, int eventId, std::string& error);
 std::shared_ptr<GpuBackend> CreateGlesBackend();
 void InstallVulkanIntercept(IUnityInterfaces* interfaces);
+std::string VulkanBootstrapStatus();
 }

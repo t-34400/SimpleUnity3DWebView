@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "aarSha256": "177585fc67382a8bb9fb0d4a12cdd7e009fbfa0b3c18ba9f0b411b27520f5c98",
+  "aarSha256": "b64495efd5b8ddccec0acbc27d24503b30922dda5321c603a3b7970ef52f4bd6",
   "sources": {
     "Android~/build.gradle.kts": "30319db7ac75762e50cc423c2245d8bc704df111839e5be6fd9393f906db67af",
     "Android~/gradle/wrapper/gradle-wrapper.jar": "498495120a03b9a6ab5d155f5de3c8f0d986a449153702fb80fc80e134484f17",
@@ -15,16 +15,16 @@
     "Android~/webview/src/main/assets/vrwebview-ime-probe.html": "a20bcaf42287cdb058adaf2f7cd20fc4ee9bd014b648f83cb8183f1d1bb52d5b",
     "Android~/webview/src/main/assets/vrwebview-probe-video.json": "246aedfc0d878b141dc138c82f8a0da070446cd66674c36f0382fb7af0e2883b",
     "Android~/webview/src/main/assets/vrwebview-probe-video.mp4": "40b6751cafaeacf866ecd0b15fdea9d7b301dfaa1f017c43f77bcf06fcf368d0",
-    "Android~/webview/src/main/cpp/CMakeLists.txt": "22888b5e94c578069190bcbf89cf6d8190b570501910c272ed8c558c291d0b7f",
+    "Android~/webview/src/main/cpp/CMakeLists.txt": "50b5fc727751ccc7e028ff1c735b1dc642270cc263167c332720b69f6b36ac08",
     "Android~/webview/src/main/cpp/GlesBackend.cpp": "e5b4732040d32eb567c129a3eb368a1bbf2875d8ab24113f44d5d05f763733cc",
-    "Android~/webview/src/main/cpp/GpuBackend.h": "8526b6a8bea87939a271d7e1edd80e28f615b658cb9e1d7d902229345435cec7",
-    "Android~/webview/src/main/cpp/GpuProbe.cpp": "c535359b62bbe31d5bd33e536595401f8ec5e43650811dd93885fe0b4b1914df",
+    "Android~/webview/src/main/cpp/GpuBackend.h": "be898cd927e0e16e12865a557ff090c423ee3c4ab695d743278b4633c1b9b175",
+    "Android~/webview/src/main/cpp/GpuProbe.cpp": "27a363844fc5e221a4542ce0514ed4857c7b519c016618728fe1070e930ad570",
     "Android~/webview/src/main/cpp/Unity/IUnityGraphics.h": "e95a8ac359897b5746494db84ae594d6f59f3709c2ec20bd869d592ed4bbf4f7",
     "Android~/webview/src/main/cpp/Unity/IUnityGraphicsVulkan.h": "afbab9b55d9db3a7c583d9417fdc604e82f4515f6fe450d13ffa9c6d55ea09ee",
     "Android~/webview/src/main/cpp/Unity/IUnityInterface.h": "e23e267b57c049b438307542d62c30fbcd3fa77b6dac3b08842eae0df10b8239",
     "Android~/webview/src/main/cpp/Unity/PROVENANCE.md": "78ed1c61852e0a021cd411e8b2a3fc5615099bbffdf3c50097562a8b4404572a",
     "Android~/webview/src/main/cpp/Unity/Repository-LICENSE.txt": "8ff2aeedfc43211d085e27fc057a2c4c58d665808e2369a97cc43099dc390afb",
-    "Android~/webview/src/main/cpp/VulkanBackend.cpp": "069f26ee89b7fdb5c4e5babf2a4a92886e257d7ce8c0700df465dfaa018f457b",
+    "Android~/webview/src/main/cpp/VulkanBackend.cpp": "193f89b6140e705e381343fb2b06def4338efd478d2e34ff08e17d3a8535f4b4",
     "Android~/webview/src/main/java/com/t34400/vrwebview/GpuProbe.java": "2dee4d4fc2f243bae69ee102702047f968dedac5efcf70cfefff0c60132a8a84",
     "Android~/webview/src/main/java/com/t34400/vrwebview/GpuProbeActivity.java": "bbac5a87d6096c066ada1ce7260e355fc8cb89c1e5c120cd4bd208d69aeb27ec",
     "Android~/webview/src/main/java/com/t34400/vrwebview/GpuProbePreview.java": "1f2720d1f041df103b79247f3b883beb7d59a10f371518c93f4673ae0a345701",
@@ -34,11 +34,11 @@
     "Android~/webview/src/main/java/com/t34400/vrwebview/ProbeGeometry.java": "78b8e28ea7a03ccfb761d13916ac95621e08b9e8e5777464f4a8182a6d51d1b9",
     "Android~/webview/src/main/java/com/t34400/vrwebview/ProbeRange.java": "d768dddd6d7ea7b05aca21b91064749c635c6c41fb538ef9b41cb179f4a4f617",
     "Android~/webview/src/main/java/com/t34400/vrwebview/ProbeWebView.java": "d020ce6897dfc239d11c947088eac93e2f0ac629049e710de41af36fc3896dee",
-    "Android~/webview/src/main/java/com/t34400/vrwebview/VulkanProbe.java": "cc3f25988a21991ec3ddf43ca452954960043988507ea695c3c158292fe66f66"
+    "Android~/webview/src/main/java/com/t34400/vrwebview/VulkanProbe.java": "bbe97727802a1c102229ad78dcb08393eae5ab62f143222ee8701c49f31104e2"
   },
   "nativeLibrary": {
-    "path": "Packages/com.t34400.vrwebview/Runtime/Plugins/Android/arm64-v8a/libvrwebview_vulkan.so",
-    "sha256": "a281ec6680fa6b302e0c62d74d33e5ebde0926e7091f280ff0dc44136e56ab0f",
+    "path": "Packages/com.t34400.vrwebview/Runtime/Plugins/Android/arm64-v8a/libGfxPluginVRWebView.so",
+    "sha256": "1afe4534322370cb526dc2888e7edda6c9094d45afb5a49215bf36314fda6512",
     "abi": "arm64-v8a",
     "ndk": "27.2.12479018"
   },

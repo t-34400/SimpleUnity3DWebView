@@ -20,7 +20,7 @@ Vulkanと同じ`WebView → hardware Canvas → AImageReader / AHardwareBuffer`�
 
 nativeの`GpuBackend`がBeginFrame / Submit / Complete / Release / Shutdownを定義する。`GpuProbe.cpp`はAPI固有のVkImage・EGLImage・GL texture型を持たず、キュー・画像寿命・JNIだけを管理する。Vulkan/GLES実装は別ファイル。GLESのcontext情報はセッション単位なので、Recreateで現在のUnity contextを取得し直し、旧世代は旧backendで返却を待つ。
 
-C#の本体は`GpuWebViewProbe`。既存の`VulkanWebViewProbe`はGUIDとserialized fieldを保つ互換クラスとして残す。nativeライブラリ名・JNIクラス・一部helper名のVulkan表記も既存の読込契約として維持するが、実行APIはUnityのrendererから選ぶ。二つの描画経路を同時に動かすものではなく、実行中にUnityのGraphics APIを切り替えない。
+C#の本体は`GpuWebViewProbe`。既存の`VulkanWebViewProbe`はGUIDとserialized fieldを保つ互換クラスとして残す。JNIクラス・一部helper名のVulkan表記は既存呼出との互換性のため残す。nativeライブラリは早期ロード用の`libGfxPluginVRWebView.so`に統一し、C#とJavaも同じ名前で読み込むが、実行APIはUnityのrendererから選ぶ。二つの描画経路を同時に動かすものではなく、実行中にUnityのGraphics APIを切り替えない。
 
 ## GLESの条件
 

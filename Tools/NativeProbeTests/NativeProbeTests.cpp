@@ -63,6 +63,7 @@ bool UNITY_INTERFACE_API target(void*, const VkImageSubresource*, VkImageLayout 
 }
 bool deviceUnsupported = false, rejectAddedExtensions = false;
 int createCalls = 0;
+VkDevice createdHandle = reinterpret_cast<VkDevice>(0x100);
 std::vector<std::string> enabledExtensions;
 VkResult VKAPI_CALL enumerate(VkPhysicalDevice, const char*, uint32_t* count, VkExtensionProperties* out) {
     if (!out) { *count = deviceUnsupported ? 0 : 2; return VK_SUCCESS; }
@@ -74,13 +75,58 @@ VkResult VKAPI_CALL device(VkPhysicalDevice, const VkDeviceCreateInfo* info, con
     ++createCalls; enabledExtensions.clear();
     for (uint32_t i = 0; i < info->enabledExtensionCount; ++i) enabledExtensions.push_back(info->ppEnabledExtensionNames[i]);
     if (rejectAddedExtensions && info->enabledExtensionCount > 1) return VK_ERROR_EXTENSION_NOT_PRESENT;
-    *out = reinterpret_cast<VkDevice>(0x100); return VK_SUCCESS;
+    *out = createdHandle; return VK_SUCCESS;
 }
 PFN_vkVoidFunction VKAPI_CALL getProc(VkInstance, const char* name) {
     if (!strcmp(name, "vkEnumerateDeviceExtensionProperties")) return reinterpret_cast<PFN_vkVoidFunction>(enumerate);
     if (!strcmp(name, "vkGetPhysicalDeviceProperties")) return reinterpret_cast<PFN_vkVoidFunction>(properties);
     return nullptr;
 }
+bool exposeV2 = true, registrationAccepted = true;
+int v2Registrations = 0, v1Registrations = 0;
+IUnityGraphicsVulkanV2 registrationV2{};
+IUnityGraphicsVulkan registrationV1{};
+void resetBootstrap() {
+    std::lock_guard<std::mutex> guard(bootstrapMutex);
+    hookApi = "none"; hookAccepted = false; callbackCount = 0; createCount = 0;
+    usedFallback = false; stage = "not registered"; configuredDevices.clear();
+}
+bool UNITY_INTERFACE_API addInit(UnityVulkanInitCallback callback, void*, int32_t priority) {
+    assert(callback == vulkan_detail::intercept && priority == 0); ++v2Registrations; return registrationAccepted;
+}
+bool UNITY_INTERFACE_API legacyInit(UnityVulkanInitCallback callback, void*) {
+    assert(callback == vulkan_detail::intercept); ++v1Registrations; return registrationAccepted;
+}
+IUnityInterface* UNITY_INTERFACE_API lookup(UnityInterfaceGUID guid) {
+    if (guid == GetUnityInterfaceGUID<IUnityGraphicsVulkanV2>()) return exposeV2 ? &registrationV2 : nullptr;
+    if (guid == GetUnityInterfaceGUID<IUnityGraphicsVulkan>()) return &registrationV1;
+    return nullptr;
+}
+UnityVulkanInstance UNITY_INTERFACE_API failureInstance() {
+    UnityVulkanInstance instance{}; instance.device = createdHandle; instance.getInstanceProcAddr = getProc; return instance;
+}
+std::string initializationFailure() {
+    auto backend = std::make_shared<VulkanBackend>(); IUnityGraphicsVulkan api{}; api.Instance = failureInstance;
+    std::string error; assert(!backend->Initialize(&api, 1, error)); return error;
+}
+void testRegistration() {
+    IUnityInterfaces registry{}; registry.GetInterface = lookup;
+    registrationV2.AddInterceptInitialization = addInit; registrationV1.InterceptInitialization = legacyInit;
+    resetBootstrap(); InstallVulkanIntercept(&registry);
+    assert(hookAccepted && hookApi == "V2" && v2Registrations == 1 && v1Registrations == 0);
+    assert(initializationFailure().find("not invoked") != std::string::npos);
+    InstallVulkanIntercept(&registry); assert(v2Registrations == 1); // no late re-registration
+    vulkan_detail::intercept(getProc, nullptr);
+    assert(initializationFailure().find("vkCreateDevice was not intercepted") != std::string::npos);
+    resetBootstrap(); registrationAccepted = false; InstallVulkanIntercept(&registry);
+    assert(!hookAccepted && v2Registrations == 2 && v1Registrations == 0); // preserve another plugin's V1 slot
+    assert(initializationFailure().find("registration rejected") != std::string::npos);
+    resetBootstrap(); exposeV2 = false; registrationAccepted = true; InstallVulkanIntercept(&registry);
+    assert(hookAccepted && hookApi == "V1" && v1Registrations == 1);
+    resetBootstrap(); exposeV2 = true;
+    std::cout << "PASS additive V2 hook registration, V1-only fallback, rejection and missing-callback diagnostics\n";
+}
+
 void setup() {
     static IUnityGraphicsVulkan api{};
     auto v = std::make_shared<VulkanBackend>(); v->api = &api;
@@ -118,19 +164,30 @@ jobject ANativeWindow_toSurface(JNIEnv*, ANativeWindow*) { return nullptr; }
 void runGlesTests();
 int main() {
     using namespace test;
+    testRegistration();
     loader = getProc; createDevice = device;
     const char* existing[] = {VK_EXT_QUEUE_FAMILY_FOREIGN_EXTENSION_NAME};
     VkDeviceCreateInfo deviceInfo{}; deviceInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     deviceInfo.enabledExtensionCount = 1; deviceInfo.ppEnabledExtensionNames = existing;
     VkDevice out;
     assert(hookCreateDevice(VK_NULL_HANDLE, &deviceInfo, nullptr, &out) == VK_SUCCESS);
-    assert(createCalls == 1 && enabledExtensions.size() == 2 && configuredDevice == out);
-    deviceUnsupported = true; configuredDevice = VK_NULL_HANDLE;
+    assert(createCalls == 1 && enabledExtensions.size() == 2 && configuredDevices.count(out));
+    deviceUnsupported = true;
     assert(hookCreateDevice(VK_NULL_HANDLE, &deviceInfo, nullptr, &out) == VK_SUCCESS);
-    assert(createCalls == 2 && enabledExtensions.size() == 1 && configuredDevice == VK_NULL_HANDLE);
+    assert(createCalls == 2 && enabledExtensions.size() == 1 && configuredDevices.empty());
+    hookAccepted = true; callbackCount = 1;
+    assert(initializationFailure().find("Missing device extension") != std::string::npos);
     deviceUnsupported = false; rejectAddedExtensions = true;
     assert(hookCreateDevice(VK_NULL_HANDLE, &deviceInfo, nullptr, &out) == VK_SUCCESS);
-    assert(createCalls == 4 && enabledExtensions.size() == 1 && configuredDevice == VK_NULL_HANDLE);
+    assert(createCalls == 4 && enabledExtensions.size() == 1 && configuredDevices.empty());
+    assert(usedFallback && initializationFailure().find("extension request rejected") != std::string::npos);
+    rejectAddedExtensions = false;
+    assert(hookCreateDevice(VK_NULL_HANDLE, &deviceInfo, nullptr, &out) == VK_SUCCESS);
+    createdHandle = reinterpret_cast<VkDevice>(0x200);
+    assert(hookCreateDevice(VK_NULL_HANDLE, &deviceInfo, nullptr, &out) == VK_SUCCESS);
+    assert(configuredDevices.count(reinterpret_cast<VkDevice>(0x100)) && configuredDevices.count(createdHandle));
+    createdHandle = reinterpret_cast<VkDevice>(0x100);
+    std::cout << "PASS physical-capability vs extension-request failure diagnostics and per-device extension tracking\n";
     std::cout << "PASS extension negotiation, deduplication, unsupported device and Unity device-creation fallback\n";
     setup();
     assert(VrCreate(0, 768, reinterpret_cast<void*>(1)) == 0);
