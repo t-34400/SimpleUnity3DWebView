@@ -1,4 +1,4 @@
-"""Execute production Vulkan lifetime logic with fake endpoints; inspect the arm64 ELF."""
+"""Execute shared Vulkan/GLES lifetime logic with fake endpoints; inspect the arm64 ELF."""
 import argparse
 import hashlib
 import json
@@ -22,7 +22,7 @@ def main():
         program = str(Path(temp) / 'native-probe-tests')
         subprocess.run([args.cxx, '-std=c++17', '-Wall', '-Wextra', '-Werror', '-O1', '-g',
                         '-fsanitize=address,undefined', '-fno-omit-frame-pointer',
-                        '-D_Nonnull=', '-D_Nullable=', '-D__INTRODUCED_IN(x)=', '-D__DEPRECATED_IN(x)=',
+                        '-DANDROID', '-D_Nonnull=', '-D_Nullable=', '-D__INTRODUCED_IN(x)=', '-D__DEPRECATED_IN(x)=',
                         '-idirafter', str(headers), '-I', str(jdk / 'include'), '-I', str(jdk / 'include/linux'),
                         str(ROOT / 'Tools/NativeProbeTests/NativeProbeTests.cpp'), '-o', program], check=True)
         subprocess.run([program], env={**os.environ, 'ASAN_OPTIONS': 'detect_leaks=1'}, check=True)
@@ -43,7 +43,7 @@ def main():
     meta = library.with_name(library.name + '.meta').read_text()
     assert 'isPreloaded: 1' in meta and 'CPU: ARM64' in meta
     print('PASS arm64 ELF exports, 16 KiB segment alignment, native provenance and Unity preload metadata')
-    print('NOT RUN: real Android buffers/fences, Unity plugin loading/extension interception, Vulkan validation layers, Quest/OpenXR/IME')
+    print('NOT RUN: real Android buffers/fences, Unity plugin loading/graphics contexts, Vulkan/EGL image import, Quest/OpenXR/IME')
 
 
 if __name__ == '__main__':

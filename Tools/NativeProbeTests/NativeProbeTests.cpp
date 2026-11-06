@@ -1,10 +1,14 @@
-// Executes the production bridge with fake Android/Vulkan endpoints. No GPU claim.
-#include "../../Android~/webview/src/main/cpp/VulkanProbe.cpp"
+// Executes production shared transport and GPU backends with fake endpoints. No GPU claim.
+#include "../../Android~/webview/src/main/cpp/VulkanBackend.cpp"
+#include "../../Android~/webview/src/main/cpp/GlesBackend.cpp"
+#include "../../Android~/webview/src/main/cpp/GpuProbe.cpp"
+using namespace vrwebview;
+using namespace vrwebview::vulkan_detail;
 #include <cassert>
 #include <deque>
 #include <iostream>
 
-struct AHardwareBuffer { AHardwareBuffer_Desc description{}; };
+struct AHardwareBuffer { AHardwareBuffer_Desc description{}; unsigned char pixels[4] = {17, 128, 239, 64}; };
 struct AImage { AHardwareBuffer buffer; bool deleted = false; };
 struct AImageReader { std::deque<std::pair<AImage*, int>> queued; };
 namespace test {
@@ -78,13 +82,14 @@ PFN_vkVoidFunction VKAPI_CALL getProc(VkInstance, const char* name) {
     return nullptr;
 }
 void setup() {
-    static IUnityGraphicsVulkan api{}; vulkan = &api;
+    static IUnityGraphicsVulkan api{};
+    auto v = std::make_shared<VulkanBackend>(); v->api = &api;
     api.CommandRecordingState = recording; api.AccessTexture = target;
-    unity.device = reinterpret_cast<VkDevice>(0x100); unity.queueFamilyIndex = 7;
-    vkGetAndroidHardwareBufferPropertiesANDROID = ahb; vkCreateImage = createImage;
-    vkDestroyImage = destroyImage; vkAllocateMemory = allocate; vkFreeMemory = freeMemory;
-    vkBindImageMemory = bind; vkCmdPipelineBarrier = barrier; vkCmdCopyImage = copy;
-    memoryProperties = memoryTypes; deviceError.clear();
+    v->instance.device = reinterpret_cast<VkDevice>(0x100); v->instance.queueFamilyIndex = 7;
+    v->vkGetAndroidHardwareBufferPropertiesANDROID = ahb; v->vkCreateImage = createImage;
+    v->vkDestroyImage = destroyImage; v->vkAllocateMemory = allocate; v->vkFreeMemory = freeMemory;
+    v->vkBindImageMemory = bind; v->vkCmdPipelineBarrier = barrier; v->vkCmdCopyImage = copy;
+    v->memoryProperties = memoryTypes; activeBackend = v; deviceActive = true; deviceError.clear();
 }
 }
 extern "C" {
@@ -110,6 +115,7 @@ media_status_t AImage_getTimestamp(const AImage*, int64_t* out) { *out = 1234567
 media_status_t AImageReader_getWindow(AImageReader*, ANativeWindow**) { return AMEDIA_ERROR_UNKNOWN; }
 jobject ANativeWindow_toSurface(JNIEnv*, ANativeWindow*) { return nullptr; }
 }
+void runGlesTests();
 int main() {
     using namespace test;
     loader = getProc; createDevice = device;
@@ -184,4 +190,167 @@ int main() {
     assert(VrAlive(id)); deviceEvent(kUnityGfxDeviceEventShutdown);
     assert(!VrAlive(id) && image->deleted);
     std::cout << "PASS graphics shutdown retires acknowledged generations\n";
+    runGlesTests();
+}
+
+namespace gles_test {
+EGLContext currentContext = reinterpret_cast<EGLContext>(0x401);
+EGLDisplay currentDisplay = reinterpret_cast<EGLDisplay>(0x402);
+const char* eglExtensions = "EGL_ANDROID_get_native_client_buffer EGL_ANDROID_image_native_buffer EGL_KHR_image_base EGL_KHR_fence_sync";
+std::vector<const char*> glExtensions = {"GL_OES_EGL_image", "GL_EXT_copy_image"};
+int minorVersion = 0;
+GLint binding = 77;
+GLuint nextTexture = 1000;
+GLenum glError = GL_NO_ERROR;
+bool gpuDone = false, fenceError = false, failImport = false, failFence = false;
+int copies = 0, imagesCreated = 0, imagesDestroyed = 0, texturesDeleted = 0, syncsDestroyed = 0, finishes = 0, flushes = 0;
+unsigned char destination[4] = {};
+struct Image { AHardwareBuffer* buffer; };
+struct Sync {};
+std::unordered_map<GLuint, Image*> textures;
+std::string copyProc;
+EGLClientBuffer EGLAPIENTRY native(const AHardwareBuffer* buffer) { return reinterpret_cast<EGLClientBuffer>(const_cast<AHardwareBuffer*>(buffer)); }
+EGLImageKHR EGLAPIENTRY image(EGLDisplay display, EGLContext ctx, EGLenum target, EGLClientBuffer buffer, const EGLint*) {
+    assert(display == reinterpret_cast<EGLDisplay>(0x402) && ctx == EGL_NO_CONTEXT && target == EGL_NATIVE_BUFFER_ANDROID);
+    ++imagesCreated; return reinterpret_cast<EGLImageKHR>(new Image{reinterpret_cast<AHardwareBuffer*>(buffer)});
+}
+EGLBoolean EGLAPIENTRY destroyImage(EGLDisplay, EGLImageKHR image) { delete reinterpret_cast<Image*>(image); ++imagesDestroyed; return EGL_TRUE; }
+void GL_APIENTRY target(GLenum target, GLeglImageOES image) {
+    assert(target == GL_TEXTURE_2D);
+    if (failImport) { glError = GL_INVALID_OPERATION; return; }
+    textures[static_cast<GLuint>(binding)] = reinterpret_cast<Image*>(image);
+}
+void GL_APIENTRY copy(GLuint src, GLenum srcTarget, GLint srcLevel, GLint x, GLint y, GLint z,
+        GLuint dst, GLenum dstTarget, GLint dstLevel, GLint dx, GLint dy, GLint dz, GLsizei width, GLsizei height, GLsizei depth) {
+    assert(srcTarget == GL_TEXTURE_2D && dstTarget == GL_TEXTURE_2D && dst == 1);
+    assert(!srcLevel && !dstLevel && !x && !y && !z && !dx && !dy && !dz);
+    assert(width == 1024 && height == 768 && depth == 1 && binding == 77);
+    memcpy(destination, textures.at(src)->buffer->pixels, 4); ++copies;
+}
+EGLSyncKHR EGLAPIENTRY sync(EGLDisplay, EGLenum type, const EGLint*) {
+    assert(type == EGL_SYNC_FENCE_KHR);
+    return failFence ? EGL_NO_SYNC_KHR : reinterpret_cast<EGLSyncKHR>(new Sync);
+}
+EGLBoolean EGLAPIENTRY destroySync(EGLDisplay, EGLSyncKHR sync) { delete reinterpret_cast<Sync*>(sync); ++syncsDestroyed; return EGL_TRUE; }
+EGLint EGLAPIENTRY wait(EGLDisplay, EGLSyncKHR, EGLint flags, EGLTimeKHR timeout) {
+    assert(flags == 0 && timeout == 0);
+    return fenceError ? EGL_FALSE : gpuDone ? EGL_CONDITION_SATISFIED_KHR : EGL_TIMEOUT_EXPIRED_KHR;
+}
+UnityGfxRenderer UNITY_INTERFACE_API renderer() { return kUnityGfxRendererOpenGLES30; }
+void setup() {
+    static IUnityGraphics api{}; api.GetRenderer = renderer; graphics = &api;
+    deviceEvent(kUnityGfxDeviceEventInitialize);
+    assert(activeBackend && std::string(activeBackend->Name()) == "OpenGLES3");
+}
+}
+extern "C" {
+EGLDisplay EGLAPIENTRY eglGetCurrentDisplay() { return gles_test::currentDisplay; }
+EGLContext EGLAPIENTRY eglGetCurrentContext() { return gles_test::currentContext; }
+const char* EGLAPIENTRY eglQueryString(EGLDisplay, EGLint name) { assert(name == EGL_EXTENSIONS); return gles_test::eglExtensions; }
+__eglMustCastToProperFunctionPointerType EGLAPIENTRY eglGetProcAddress(const char* name) {
+    using namespace gles_test;
+#define PROC(text, fn) if (!strcmp(name, text)) return reinterpret_cast<__eglMustCastToProperFunctionPointerType>(gles_test::fn);
+    PROC("eglGetNativeClientBufferANDROID", native)
+    PROC("eglCreateImageKHR", image)
+    PROC("eglDestroyImageKHR", destroyImage)
+    PROC("eglCreateSyncKHR", sync)
+    PROC("eglDestroySyncKHR", destroySync)
+    PROC("eglClientWaitSyncKHR", wait)
+    PROC("glEGLImageTargetTexture2DOES", target)
+#undef PROC
+    if (!strcmp(name, "glCopyImageSubDataEXT") || !strcmp(name, "glCopyImageSubDataOES") || !strcmp(name, "glCopyImageSubData")) {
+        copyProc = name; return reinterpret_cast<__eglMustCastToProperFunctionPointerType>(copy);
+    }
+    return nullptr;
+}
+void GL_APIENTRY glGetIntegerv(GLenum name, GLint* value) {
+    using namespace gles_test;
+    if (name == GL_TEXTURE_BINDING_2D) *value = binding;
+    else if (name == GL_MAJOR_VERSION) *value = 3;
+    else if (name == GL_MINOR_VERSION) *value = minorVersion;
+    else if (name == GL_NUM_EXTENSIONS) *value = static_cast<GLint>(glExtensions.size());
+    else assert(false);
+}
+const GLubyte* GL_APIENTRY glGetStringi(GLenum name, GLuint index) {
+    assert(name == GL_EXTENSIONS); return reinterpret_cast<const GLubyte*>(gles_test::glExtensions.at(index));
+}
+GLboolean GL_APIENTRY glIsTexture(GLuint name) { return name == 1 ? GL_TRUE : GL_FALSE; }
+GLenum GL_APIENTRY glGetError() { auto error = gles_test::glError; gles_test::glError = GL_NO_ERROR; return error; }
+void GL_APIENTRY glGenTextures(GLsizei count, GLuint* textures) { assert(count == 1); *textures = gles_test::nextTexture++; }
+void GL_APIENTRY glBindTexture(GLenum target, GLuint texture) { assert(target == GL_TEXTURE_2D); gles_test::binding = texture; }
+void GL_APIENTRY glTexParameteri(GLenum target, GLenum, GLint) { assert(target == GL_TEXTURE_2D); }
+void GL_APIENTRY glDeleteTextures(GLsizei count, const GLuint* texture) {
+    assert(count == 1); ++gles_test::texturesDeleted; gles_test::textures.erase(*texture);
+}
+void GL_APIENTRY glFlush() { ++gles_test::flushes; }
+void GL_APIENTRY glFinish() { ++gles_test::finishes; }
+}
+void runGlesTests() {
+    using namespace gles_test;
+    setup();
+    auto id = VrCreate(1024, 768, reinterpret_cast<void*>(1)); auto image = test::post(id);
+    render(0, nullptr); assert(copies == 1 && binding == 77 && !image->deleted && flushes == 1 && finishes == 0);
+    assert(copyProc == "glCopyImageSubDataEXT" && !memcmp(destination, image->buffer.pixels, 4));
+    Java_com_t34400_vrwebview_VulkanProbe_nativeStop(nullptr, nullptr, id);
+    render(0, nullptr); assert(VrAlive(id) && !image->deleted && texturesDeleted == 0);
+    fenceError = true; render(0, nullptr); assert(VrAlive(id) && !image->deleted && find(id)->error.find("fence wait failed") != std::string::npos); fenceError = false;
+    gpuDone = true; render(0, nullptr); assert(!VrAlive(id) && image->deleted && imagesDestroyed == 1 && texturesDeleted == 1 && syncsDestroyed == 1);
+    std::cout << "PASS shared GLES transport, raw bytes, Unity binding preservation, asynchronous fence ownership\n";
+
+    failImport = true; gpuDone = false;
+    id = VrCreate(1024, 768, reinterpret_cast<void*>(1)); image = test::post(id); render(0, nullptr);
+    assert(image->deleted && binding == 77 && copies == 1 && imagesCreated == imagesDestroyed);
+    VrAbandon(id); render(0, nullptr); assert(!VrAlive(id)); failImport = false;
+    failFence = true;
+    id = VrCreate(1024, 768, reinterpret_cast<void*>(1)); image = test::post(id); render(0, nullptr);
+    assert(!image->deleted && finishes == 1);
+    VrAbandon(id); render(0, nullptr); assert(!VrAlive(id) && image->deleted); failFence = false;
+    std::cout << "PASS GLES import and completion-fence failure cleanup\n";
+
+    // A device/context change must never delete the new context's reused GL name.
+    id = VrCreate(1024, 768, reinterpret_cast<void*>(1)); image = test::post(id); render(0, nullptr);
+    int beforeDeletes = texturesDeleted;
+    deviceEvent(kUnityGfxDeviceEventShutdown);
+    assert(VrAlive(id) && !image->deleted);
+    currentContext = reinterpret_cast<EGLContext>(0x499);
+    Java_com_t34400_vrwebview_VulkanProbe_nativeStop(nullptr, nullptr, id);
+    render(0, nullptr); assert(VrAlive(id)); gpuDone = true; render(0, nullptr);
+    assert(!VrAlive(id) && image->deleted && texturesDeleted == beforeDeletes);
+    textures.clear(); // old context destruction frees its GL names; never touch the replacement context
+    std::cout << "PASS GLES shutdown keeps in-flight AHB; replacement context's GL names remain untouched\n";
+
+    // Capability checks happen on the render thread, including exact extension tokens.
+    currentContext = reinterpret_cast<EGLContext>(0x401);
+    glExtensions = {"GL_OES_EGL_image"}; setup();
+    id = VrCreate(1024, 768, reinterpret_cast<void*>(1)); test::post(id); render(0, nullptr);
+    assert(find(id)->error.find("copy_image") != std::string::npos);
+    VrAbandon(id); render(0, nullptr); assert(!VrAlive(id)); deviceEvent(kUnityGfxDeviceEventShutdown);
+    assert(!gles_detail::extension("EGL_KHR_image_base_extra", "EGL_KHR_image_base"));
+    assert(gles_detail::extension("A EGL_KHR_image_base B", "EGL_KHR_image_base"));
+    std::cout << "PASS unsupported GLES capability fails closed and exact extension matching\n";
+
+    glExtensions = {"GL_OES_EGL_image", "GL_OES_copy_image"}; setup();
+    id = VrCreate(1024, 768, reinterpret_cast<void*>(1)); test::post(id); render(0, nullptr);
+    assert(copyProc == "glCopyImageSubDataOES"); VrAbandon(id); render(0, nullptr); assert(!VrAlive(id)); deviceEvent(kUnityGfxDeviceEventShutdown);
+    glExtensions = {"GL_OES_EGL_image"}; minorVersion = 2; setup();
+    id = VrCreate(1024, 768, reinterpret_cast<void*>(1)); test::post(id); render(0, nullptr);
+    assert(copyProc == "glCopyImageSubData"); VrAbandon(id); render(0, nullptr); assert(!VrAlive(id)); deviceEvent(kUnityGfxDeviceEventShutdown);
+    assert(imagesCreated == imagesDestroyed && sessions.empty());
+    std::cout << "PASS GLES extension/core entry point selection and all generations retired\n";
+    // Recreate in a replacement Unity context without a device reinitialize event.
+    gpuDone = false; setup();
+    auto oldId = VrCreate(1024, 768, reinterpret_cast<void*>(1)); auto oldImage = test::post(oldId); render(0, nullptr);
+    currentContext = reinterpret_cast<EGLContext>(0x499);
+    auto newId = VrCreate(1024, 768, reinterpret_cast<void*>(1)); auto newImage = test::post(newId); render(0, nullptr);
+    assert(!find(oldId)->error.empty() && find(newId)->error.empty());
+    assert(find(newId)->copies == 1 && !oldImage->deleted && !newImage->deleted);
+    beforeDeletes = texturesDeleted;
+    Java_com_t34400_vrwebview_VulkanProbe_nativeStop(nullptr, nullptr, oldId);
+    Java_com_t34400_vrwebview_VulkanProbe_nativeStop(nullptr, nullptr, newId);
+    render(0, nullptr); assert(VrAlive(oldId) && VrAlive(newId));
+    gpuDone = true; render(0, nullptr);
+    assert(!VrAlive(oldId) && !VrAlive(newId) && texturesDeleted == beforeDeletes + 1);
+    assert(imagesCreated == imagesDestroyed && oldImage->deleted && newImage->deleted);
+    textures.clear(); deviceEvent(kUnityGfxDeviceEventShutdown);
+    std::cout << "PASS recreation captures new GLES context while old backend owns pending images\n";
 }

@@ -2,12 +2,14 @@
 
 Session/input foundations and Android WebView GPU, video and IME comparison probes for Unity 6000.4.
 
-This preview includes an experimental AHardwareBuffer-to-Unity Vulkan transfer and a same-Activity XR probe. It is not a production browser backend. Standalone Activity results do not establish the new probe's Unity/XR or IME behavior.
+This preview includes an experimental AHardwareBuffer-to-Unity Vulkan/OpenGL ES 3 transfer and a same-Activity XR probe. It is not a production browser backend. Standalone Activity results do not establish the new probe's Unity/XR or IME behavior.
 
-Use **VRWebView > Create Vulkan XR Probe Scene** for the next Quest test. Keep Vulkan and ARM64 enabled. See `Documentation~/VulkanProbe.md` for controller controls, diagnostics and the device validation sequence.
+Use **VRWebView > Create GPU XR Probe Scene** for the next Quest test. Keep ARM64 enabled and choose Vulkan or OpenGLES3 for comparison. See `Documentation~/GpuXrProbe.md` for controller controls, diagnostics and the device validation sequence.
 
 Import the IME Probe sample through Package Manager, then use **VRWebView > Create IME Probe Scene**. See `Documentation~/ImeProbe.md` for the test matrix and limitations.
 
 For the video/GPU comparison use **VRWebView > Create GPU Probe Scene**; no sample import is required. The native screen switches between normal WebView, host-window hardware Canvas, and VirtualDisplay GPU output without rebuilding. See `Documentation~/GpuProbe.md`. The bundled synthetic H.264/AAC clip makes moving video pixels independently observable; successful capture and IME behavior still require device validation.
 
 Core is independent of Unity and Meta SDK. UnityUI uses uGUI; the sample Android probe uses a bundled AAR built from this repository's `Android~` project. Web permissions are denied by default; probe input is not logged.
+
+Vulkan and GLES share the Java WebView/IME host and native image queue. Only GPU import, copy and completion tracking differ; see `Documentation~/GlesSupport.md` for extension requirements and OpenXR feature limits. Existing Vulkan probe scenes retain their component GUIDs.

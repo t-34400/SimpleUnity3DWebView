@@ -11,7 +11,7 @@ Packages/com.t34400.vrwebview/
   Runtime/Core/          Unityに依存しないセッション・ポインタ・応答管理
   Runtime/UnityUI/       uGUIからの座標変換・ポインタ入力
   Runtime/Android/       独立ActivityのIME/GPUプローブへのJNI入口・自動起動
-  Runtime/VulkanProbe/   同一Unity ActivityのVulkan/XR検証・レイ操作
+  Runtime/VulkanProbe/   同一Unity ActivityのVulkan/GLES/XR検証・レイ操作
   Runtime/Plugins/Android/  ビルド済み検証用AAR・arm64 Vulkanプラグイン
   Editor/                検証シーン作成メニュー
   Tests/EditMode/        Unityで実行するテスト
@@ -25,7 +25,7 @@ Meta SDKはルートの検証プロジェクトの依存で、本体Runtimeの�
 
 ## 次の実機検証
 
-H1のWindow draw offでスクロール・入力・動画音声が動くことはQuest 3で利用者が確認済みです。次は **VRWebView > Create Vulkan XR Probe Scene** で、UnityのVulkanテクスチャ、同一ActivityでのIME、XR継続動作を検証します。Android Vulkan / ARM64を維持してください。[手順と未確認事項](Packages/com.t34400.vrwebview/Documentation~/VulkanProbe.md)を参照してください。
+H1のWindow draw offでスクロール・入力・動画音声が動くことはQuest 3で利用者が確認済みです。次は **VRWebView > Create GPU XR Probe Scene** で、UnityのVulkan/GLESテクスチャ、同一ActivityでのIME、XR継続動作を検証します。既定のAndroid Vulkan / ARM64は維持しています。OpenGLES3も選択でき、[GLES条件と設計](Packages/com.t34400.vrwebview/Documentation~/GlesSupport.md)に比較時のSDK設定をまとめています。[手順と未確認事項](Packages/com.t34400.vrwebview/Documentation~/GpuXrProbe.md)を参照してください。
 
 ## 最初の実機検証
 
@@ -78,7 +78,7 @@ WindowsではユーザーのDownloads、今回指定されたWSL環境では`C:\
 ## 実装範囲
 
 - 実装済み: HTTP(S) URL方針、セッション初期化/破棄、遅延通知排除、要求ID/世代照合、単一ポインタ捕捉/キャンセル、pivot/Overlay Canvas対応の座標変換。
-- 検証用実装済み: 通常ホスト/VirtualDisplayのWebView、IME要求、状態表示、複数行・日本語変換・contenteditableを含むテストページ。同一Windowのhardware Canvas／VirtualDisplayからSurfaceTextureへのGPU取り込み比較と、合成H.264/AAC動画。同一Unity ActivityからAHardwareBuffer経由でUnity Vulkan RenderTextureへ描くVU1検証、XRコントローラーレイ・診断・pause/resize/recreate。
+- 検証用実装済み: 通常ホスト/VirtualDisplayのWebView、IME要求、状態表示、複数行・日本語変換・contenteditableを含むテストページ。同一Windowのhardware Canvas／VirtualDisplayからSurfaceTextureへのGPU取り込み比較と、合成H.264/AAC動画。同一Unity ActivityからAHardwareBuffer経由でUnity Vulkan/GLES RenderTextureへ描くGX1検証、XRコントローラーレイ・診断・pause/resize/recreate。
 - 未実装: 製品ブラウザバックエンド、IME接続の独自中継、製品用XR UI、fullscreen/MSE/DRMの比較経路、履歴/JS通信等の製品API。
 
 旧版のAPI/Prefabとの互換性は維持していません。自作部分はMIT License。Unity Native Plugin API headersの既存ライセンス表示はそのまま保持しています。

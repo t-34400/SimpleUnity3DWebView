@@ -1,8 +1,8 @@
 {
   "name": "com.t34400.vrwebview",
-  "version": "0.1.0-preview.4",
+  "version": "0.1.0-preview.5",
   "displayName": "VRWebView",
-  "description": "Browser foundations, standalone Android comparison probes, and an experimental same-Activity Vulkan/OpenXR WebView probe. Device validation is required.",
+  "description": "Browser foundations and experimental same-Activity Vulkan/OpenGL ES 3 WebView probes for Quest/OpenXR. Device validation is required.",
   "unity": "6000.4",
   "author": {
     "name": "t34400"

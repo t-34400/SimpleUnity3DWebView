@@ -9,19 +9,22 @@ namespace T34400.VRWebView.Editor
 {
     public static class ProbeSceneMenu
     {
+        [MenuItem("VRWebView/Create GPU XR Probe Scene")]
+        public static void CreateGpuXrProbe() { CreateVulkanProbe(); }
+
         [MenuItem("VRWebView/Create Vulkan XR Probe Scene")]
         public static void CreateVulkanProbe()
         {
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
             var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
-            var probe = new GameObject("Vulkan XR Probe", typeof(VulkanWebViewProbe)).GetComponent<VulkanWebViewProbe>();
+            var probe = new GameObject("GPU XR Probe", typeof(GpuWebViewProbe)).GetComponent<GpuWebViewProbe>();
             probe.headCamera = Camera.main;
             if (Camera.main != null) Camera.main.transform.position = Vector3.zero;
             if (!AssetDatabase.IsValidFolder("Assets/VRWebViewPlayground")) AssetDatabase.CreateFolder("Assets", "VRWebViewPlayground");
-            string path = AssetDatabase.GenerateUniqueAssetPath("Assets/VRWebViewPlayground/VulkanXrProbe.unity");
+            string path = AssetDatabase.GenerateUniqueAssetPath("Assets/VRWebViewPlayground/GpuXrProbe.unity");
             EditorSceneManager.SaveScene(scene, path);
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(path, true) };
-            Debug.Log("Created same-Activity Vulkan XR probe. Keep Android Vulkan and ARM64; see VulkanProbe.md for controls and required device checks.");
+            Debug.Log("Created same-Activity GPU XR probe. Select Android Vulkan or OpenGL ES 3, keep ARM64; see GpuXrProbe.md for controls and required device checks.");
         }
 
         [MenuItem("VRWebView/Create GPU Probe Scene")]
