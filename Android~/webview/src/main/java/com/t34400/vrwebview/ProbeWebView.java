@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
+import android.graphics.Rect;
 import android.view.Surface;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
@@ -15,6 +16,9 @@ final class ProbeWebView extends WebView {
     int capturedScrollX, capturedScrollY;
     long draws;
     boolean targetHardware, suppressWindowDraw;
+    // Diagnostic events contain metadata only. Do not pass EditorInfo or connection objects.
+    interface MetadataListener { void onEvent(String event); }
+    MetadataListener metadataListener;
 
     ProbeWebView(Context context) { super(context); }
 
@@ -23,11 +27,23 @@ final class ProbeWebView extends WebView {
         connectionRequests++;
         if (connection != null) nonNullConnections++;
         inputType = info.inputType; imeOptions = info.imeOptions;
+        metadata("connection nonNull=" + (connection != null) + " count=" + connectionRequests
+                + "/" + nonNullConnections + " type=0x" + Integer.toHexString(inputType));
         return connection;
+    }
+
+    @Override protected void onFocusChanged(boolean focused, int direction, Rect previous) {
+        super.onFocusChanged(focused, direction, previous);
+        metadata("webFocus=" + focused);
     }
 
     @Override public void onWindowFocusChanged(boolean focused) {
         windowFocusChanges++; super.onWindowFocusChanged(focused);
+        metadata("windowFocus=" + focused);
+    }
+
+    private void metadata(String event) {
+        if (metadataListener != null) metadataListener.onEvent(event);
     }
 
     @Override public void draw(Canvas canvas) {

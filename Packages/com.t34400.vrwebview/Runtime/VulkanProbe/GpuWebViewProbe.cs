@@ -33,6 +33,8 @@ namespace T34400.VRWebView
         private Vector2 lastPointer;
         private float nextStatus;
         private string failure;
+        private string lastInputDetails;
+        private int focusEvents, pauseEvents;
         private readonly List<XRDisplaySubsystem> displays = new List<XRDisplaySubsystem>();
 
         protected void Start()
@@ -76,6 +78,7 @@ namespace T34400.VRWebView
         }
         private void Close()
         {
+            if (id != 0) TraceFocus("close host=" + id);
             ResetInput();
             if (id != 0)
             {
@@ -94,6 +97,7 @@ namespace T34400.VRWebView
             Close(); width = width == 1024 ? 800 : 1024; height = width == 1024 ? 768 : 600; Open();
         }
         public void RequestIme() { if (id != 0) bridge.CallStatic("requestIme", (long)id); }
+        public void ArmFocusReturn() { if (id != 0) bridge.CallStatic("armFocusReturn", (long)id); }
         public void ReturnFocus() { CancelPointer(); if (id != 0) bridge.CallStatic("releaseFocus", (long)id); }
         public void Reload() { if (id != 0) bridge.CallStatic("reload", (long)id); }
         public void Flip()
@@ -103,12 +107,19 @@ namespace T34400.VRWebView
         }
         protected void OnApplicationPause(bool value)
         {
+            pauseEvents++;
+            TraceFocus("applicationPause=" + value);
             paused = value;
             if (value) Close(); else if (image != null) Open();
         }
         // Keyboard focus changes do not imply application suspension. Keep the WebView
         // and InputConnection alive when the system keyboard takes input focus.
-        protected void OnApplicationFocus(bool value) { if (!value) ResetInput(); }
+        protected void OnApplicationFocus(bool value)
+        {
+            focusEvents++;
+            TraceFocus("applicationFocus=" + value);
+            if (!value) ResetInput();
+        }
         protected void OnDisable() { Close(); }
         protected void OnEnable() { if (image != null) Open(); }
         protected void OnDestroy()
@@ -128,11 +139,19 @@ namespace T34400.VRWebView
             bool xrRunning = displays.Exists(display => display.running);
             string native = failure ?? (id == 0 ? "Probe closed" : VulkanProbeNative.Status(id));
             string host = id == 0 || bridge == null ? "" : bridge.CallStatic<string>("status");
+            string details = "source=" + pointerSource + " R " + input.RightHandDetails + " L " + input.LeftHandDetails;
+            if (details != lastInputDetails) { TraceFocus(details); lastInputDetails = details; }
             status.text = native + "\n" + host + "\nXR running=" + xrRunning + "  Unity frames=" + Time.frameCount
-                + "\ninput=HI1 source=" + pointerSource + " tracked=" + pointerTracked + " pressed=" + pointerPressed
+                + "\ninput=HI2 source=" + pointerSource + " tracked=" + pointerTracked + " pressed=" + pointerPressed
                 + " flipY=" + flipImageVertically + "\nhandAim R=" + input.RightHandPresent + "/" + input.RightHandTracked
                 + " L=" + input.LeftHandPresent + "/" + input.LeftHandTracked + " controller=" + input.ControllerTracked
-                + "\nPinch/trigger: click and drag. IME / Focus buttons work with either source.";
+                + "\nappFocus=" + Application.isFocused + " paused=" + paused + " focus/pauseEvents=" + focusEvents + "/" + pauseEvents
+                + "\nR " + input.RightHandDetails
+                + "\nPinch: click/drag. Focus +5s: arm recovery before selecting a field.";
+        }
+        private void TraceFocus(string value)
+        {
+            Debug.Log("[VRWebViewFocus] unity frame=" + Time.frameCount + " " + value, this);
         }
         private void UpdateHead()
         {
@@ -219,9 +238,10 @@ namespace T34400.VRWebView
             browser.GetComponent<BoxCollider>().size = new Vector3(1024, 768, 1);
             image = browser.GetComponent<RawImage>(); image.color = Color.white;
             image.uvRect = new Rect(0, flipImageVertically ? 1 : 0, 1, flipImageVertically ? -1 : 1);
-            status = Label("Status", new Vector2(0, 580), new Vector2(1024, 380), "Waiting for GPU probe", 16);
+            status = Label("Status", new Vector2(0, 620), new Vector2(1024, 460), "Waiting for GPU probe", 16);
             Button("IME", -420, RequestIme); Button("Focus", -252, ReturnFocus); Button("Reload", -84, Reload);
             Button("Recreate", 84, Recreate); Button("Resize", 252, Resize); Button("Flip Y", 420, Flip);
+            Button("Focus +5s", 0, ArmFocusReturn, -510, 320);
             var rayObject = new GameObject("Browser input ray", typeof(LineRenderer)); ray = rayObject.GetComponent<LineRenderer>();
             ray.positionCount = 2; ray.startWidth = ray.endWidth = 0.003f; ray.useWorldSpace = true;
             var rayShader = Shader.Find("Sprites/Default") ?? Shader.Find("UI/Default");
@@ -236,15 +256,15 @@ namespace T34400.VRWebView
             text.fontSize = fontSize; text.color = Color.white; text.text = value; text.raycastTarget = false;
             return text;
         }
-        private void Button(string name, float x, Action action)
+        private void Button(string name, float x, Action action, float y = -434, float width = 156)
         {
             var owner = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(BoxCollider), typeof(VulkanProbeButton));
             owner.transform.SetParent(panel, false);
-            var rect = owner.GetComponent<RectTransform>(); rect.anchoredPosition = new Vector2(x, -434); rect.sizeDelta = new Vector2(156, 60);
+            var rect = owner.GetComponent<RectTransform>(); rect.anchoredPosition = new Vector2(x, y); rect.sizeDelta = new Vector2(width, 60);
             owner.GetComponent<Image>().color = new Color(0.1f, 0.25f, 0.4f, 1);
-            owner.GetComponent<BoxCollider>().size = new Vector3(156, 60, 2);
+            owner.GetComponent<BoxCollider>().size = new Vector3(width, 60, 2);
             owner.GetComponent<VulkanProbeButton>().Action = action;
-            var label = Label(name + " label", new Vector2(x, -434), new Vector2(156, 60), name, 24);
+            var label = Label(name + " label", new Vector2(x, y), new Vector2(width, 60), name, 24);
             label.alignment = TextAnchor.MiddleCenter;
         }
     }

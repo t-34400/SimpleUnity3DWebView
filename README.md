@@ -86,3 +86,5 @@ WindowsではユーザーのDownloads、今回指定されたWSL環境では`C:\
 ## ハンドでの実機検証
 
 コントローラーがない場合は、XR HandsのMeta Hand Tracking Aimを使ってピンチでクリック・ドラッグできます。基準プロジェクトの手の追跡設定も有効にしています。[HI1手順](Packages/com.t34400.vrwebview/Documentation~/HandInputProbe.md)を参照してください。既存シーンではFlip Image Verticallyをオンにし、画像とクリック位置の上下を合わせてください。Nativeの表示はGX2、入力の表示はHI1です。
+
+Unity XR focus diagnostics: `Packages/com.t34400.vrwebview/Documentation~/FocusProbe.md` describes HI2 metadata logs and the opt-in Focus +5s recovery test for the unresolved keyboard/ray loss.

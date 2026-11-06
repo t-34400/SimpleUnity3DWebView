@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "aarSha256": "b64495efd5b8ddccec0acbc27d24503b30922dda5321c603a3b7970ef52f4bd6",
+  "aarSha256": "a1caffd06717fb682a58037380747b6835507580d719036800ab994c1fc3fc7a",
   "sources": {
     "Android~/build.gradle.kts": "30319db7ac75762e50cc423c2245d8bc704df111839e5be6fd9393f906db67af",
     "Android~/gradle/wrapper/gradle-wrapper.jar": "498495120a03b9a6ab5d155f5de3c8f0d986a449153702fb80fc80e134484f17",
@@ -33,8 +33,8 @@
     "Android~/webview/src/main/java/com/t34400/vrwebview/ProbeAssets.java": "773f9929cfde4faf3a968fa919c0964388350614bd1c41863dd511c800d54328",
     "Android~/webview/src/main/java/com/t34400/vrwebview/ProbeGeometry.java": "78b8e28ea7a03ccfb761d13916ac95621e08b9e8e5777464f4a8182a6d51d1b9",
     "Android~/webview/src/main/java/com/t34400/vrwebview/ProbeRange.java": "d768dddd6d7ea7b05aca21b91064749c635c6c41fb538ef9b41cb179f4a4f617",
-    "Android~/webview/src/main/java/com/t34400/vrwebview/ProbeWebView.java": "d020ce6897dfc239d11c947088eac93e2f0ac629049e710de41af36fc3896dee",
-    "Android~/webview/src/main/java/com/t34400/vrwebview/VulkanProbe.java": "bbe97727802a1c102229ad78dcb08393eae5ab62f143222ee8701c49f31104e2"
+    "Android~/webview/src/main/java/com/t34400/vrwebview/ProbeWebView.java": "6fb4b53592d281b9bee035b2f2321227d4ad7a73cb09386451f1b083d92849a0",
+    "Android~/webview/src/main/java/com/t34400/vrwebview/VulkanProbe.java": "4a3b36a135e8674fcbba266de37dc3b79ec9083729f8f02eb27accfc4a81e6df"
   },
   "nativeLibrary": {
     "path": "Packages/com.t34400.vrwebview/Runtime/Plugins/Android/arm64-v8a/libGfxPluginVRWebView.so",

@@ -24,6 +24,17 @@ namespace T34400.VRWebView
         internal bool LeftHandPresent { get; private set; }
         internal bool RightHandTracked { get; private set; }
         internal bool LeftHandTracked { get; private set; }
+        internal string RightHandDetails => DescribeHand(MetaAimHand.right);
+        internal string LeftHandDetails => DescribeHand(MetaAimHand.left);
+
+        private static string DescribeHand(MetaAimHand hand)
+        {
+            if (hand == null || !hand.added) return "absent";
+            var flags = (MetaAimFlags)(uint)hand.aimFlags.ReadValue();
+            return "enabled=" + hand.enabled + " rawTracked=" + hand.isTracked.isPressed
+                + " flags=0x" + ((ulong)flags).ToString("X")
+                + " background=" + hand.canRunInBackground;
+        }
 
         internal bool TryRead(ProbePointerMode mode, int? capturedSource, out ProbeRaySample sample)
         {

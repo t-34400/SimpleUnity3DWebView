@@ -5,10 +5,12 @@ import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 import android.view.inputmethod.InputMethodManager;
 import android.webkit.PermissionRequest;
 import android.webkit.WebChromeClient;
@@ -23,6 +25,7 @@ public final class VulkanProbe {
     private static final Handler UI = new Handler(Looper.getMainLooper());
     private static final Map<Long, Host> HOSTS = new HashMap<>(); // UI thread only
     private static volatile String status = "Host not created";
+    private static final String TAG = "VRWebViewFocus";
     private VulkanProbe() {}
     private static native Surface nativeSurface(long id);
     private static native boolean nativeReserve(long id);
@@ -47,16 +50,26 @@ public final class VulkanProbe {
             Host host = HOSTS.get(id); if (host == null || host.web == null) return;
             host.web.requestFocus();
             InputMethodManager imm = (InputMethodManager) host.owner.getSystemService(Context.INPUT_METHOD_SERVICE);
+            host.imeRequests++;
             host.imeAccepted = imm != null && imm.showSoftInput(host.web, 0);
+            host.trace("explicitIme accepted=" + host.imeAccepted);
             host.updateStatus();
         });
     }
     public static void releaseFocus(long id) {
         UI.post(() -> {
             Host host = HOSTS.get(id); if (host == null || host.web == null) return;
-            host.cancelTouch(); host.hideIme(); host.web.clearFocus();
-            if (host.previousFocus != null && host.previousFocus.isAttachedToWindow()) host.previousFocus.requestFocus();
-            host.updateStatus();
+            host.returnFocus("button");
+        });
+    }
+    /** Opt-in recovery experiment: arm BEFORE selecting a field; does not require a live XR ray. */
+    public static void armFocusReturn(long id) {
+        UI.post(() -> {
+            Host host = HOSTS.get(id); if (host == null || host.web == null || host.closed) return;
+            UI.removeCallbacks(host.delayedFocusReturn);
+            host.focusReturnAt = SystemClock.uptimeMillis() + 5000;
+            host.trace("focusReturn armed=5s");
+            UI.postDelayed(host.delayedFocusReturn, 5000);
         });
     }
     public static void reload(long id) {
@@ -69,11 +82,16 @@ public final class VulkanProbe {
             Host host = HOSTS.get(id); if (host == null || host.web == null) return;
             if (action == MotionEvent.ACTION_DOWN) {
                 host.cancelTouch(); host.downTime = SystemClock.uptimeMillis(); host.touching = true;
-                host.web.requestFocus();
+                boolean accepted = host.web.requestFocus();
+                host.trace("touchDown focusRequest=" + accepted);
             } else if (!host.touching) return;
             MotionEvent event = MotionEvent.obtain(host.downTime, SystemClock.uptimeMillis(), action,
                     x * host.width, y * host.height, 0);
             try { host.web.dispatchTouchEvent(event); } finally { event.recycle(); }
+            if (action != MotionEvent.ACTION_MOVE) {
+                host.lastTouchAction = action;
+                host.trace("touchAction=" + action);
+            }
             if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) host.touching = false;
         });
     }
@@ -90,7 +108,19 @@ public final class VulkanProbe {
         ProbeWebView web; FrameLayout panel; Surface surface; View previousFocus;
         boolean closed, touching, imeAccepted;
         long downTime;
-        int fullscreenRequests;
+        long focusReturnAt;
+        int fullscreenRequests, imeRequests, focusReturns, focusChanges, lastTouchAction = -1;
+        String lastFocusMove = "none", lastState;
+        ViewTreeObserver focusObserver;
+        final ViewTreeObserver.OnGlobalFocusChangeListener focusListener = (before, after) -> {
+            focusChanges++;
+            lastFocusMove = viewName(before) + ">" + viewName(after);
+            trace("globalFocus " + lastFocusMove);
+        };
+        final Runnable delayedFocusReturn = () -> {
+            focusReturnAt = 0;
+            if (!closed && web != null) returnFocus("timer");
+        };
         Host(Activity owner, long id, int width, int height) {
             this.owner = owner; this.id = id; this.width = width; this.height = height;
         }
@@ -100,6 +130,7 @@ public final class VulkanProbe {
             previousFocus = owner.getCurrentFocus();
             panel = new FrameLayout(owner);
             web = new ProbeWebView(owner);
+            web.metadataListener = this::trace;
             web.suppressWindowDraw = true;
             web.setFocusable(true); web.setFocusableInTouchMode(true);
             web.getSettings().setJavaScriptEnabled(true);
@@ -114,6 +145,9 @@ public final class VulkanProbe {
             });
             panel.addView(web, new FrameLayout.LayoutParams(width, height));
             owner.addContentView(panel, new ViewGroup.LayoutParams(width, height));
+            focusObserver = owner.getWindow().getDecorView().getViewTreeObserver();
+            focusObserver.addOnGlobalFocusChangeListener(focusListener);
+            trace("hostOpened previous=" + viewName(previousFocus));
             web.loadUrl(ProbeAssets.PAGE);
             UI.post(draw);
         }
@@ -134,14 +168,35 @@ public final class VulkanProbe {
         void updateStatus() {
             if (web == null) return;
             InputMethodManager imm = (InputMethodManager) owner.getSystemService(Context.INPUT_METHOD_SERVICE);
+            boolean active = imm != null && imm.isActive(web);
+            String state = "viewFocus=" + web.hasFocus() + " windowFocus=" + web.hasWindowFocus()
+                    + " immActive=" + active + " owner=" + viewName(owner.getCurrentFocus())
+                    + " inputConnections=" + web.connectionRequests + "/" + web.nonNullConnections;
+            if (!state.equals(lastState)) { trace("state " + state); lastState = state; }
             status = "sameActivity=" + owner.getClass().getSimpleName() + "\nviewFocus=" + web.hasFocus()
-                    + " windowFocus=" + web.hasWindowFocus() + " immActive=" + (imm != null && imm.isActive(web))
+                    + " windowFocus=" + web.hasWindowFocus() + " immActive=" + active
                     + " imeAccepted=" + imeAccepted + "\nattached=" + web.isAttachedToWindow() + " shown=" + web.isShown()
                     + " view=" + web.getWidth() + "x" + web.getHeight() + " window=" + panel.getRootView().getWidth() + "x" + panel.getRootView().getHeight()
                     + "\ncanvas=" + web.draws + " hardware=" + web.targetHardware + " windowDraw=off"
                     + " scroll=" + web.getScrollX() + "," + web.getScrollY()
                     + "\ninputConnections=" + web.connectionRequests + "/" + web.nonNullConnections
-                    + " fullscreenRequests=" + fullscreenRequests;
+                    + " fullscreenRequests=" + fullscreenRequests
+                    + "\nfocusOwner=" + viewName(owner.getCurrentFocus()) + " changes=" + focusChanges
+                    + " returns=" + focusReturns + " imeRequests=" + imeRequests
+                    + "\nfocusMove=" + lastFocusMove + " touch=" + lastTouchAction
+                    + " returnIn=" + (focusReturnAt == 0 ? "off" : Math.max(0, focusReturnAt - SystemClock.uptimeMillis()) + "ms");
+        }
+        // Deliberately avoid getText(), hint/editor contents, URLs, and connection retention.
+        void trace(String event) {
+            Log.i(TAG, "[VRWebViewFocus] host=" + id + " " + event);
+        }
+        void returnFocus(String reason) {
+            focusReturnAt = 0; UI.removeCallbacks(delayedFocusReturn);
+            focusReturns++;
+            trace("returnFocus reason=" + reason + " target=" + viewName(previousFocus));
+            cancelTouch(); hideIme(); web.clearFocus();
+            if (previousFocus != null && previousFocus.isAttachedToWindow()) previousFocus.requestFocus();
+            updateStatus();
         }
         void cancelTouch() {
             if (!touching || web == null) return;
@@ -156,7 +211,11 @@ public final class VulkanProbe {
         }
         void close() {
             if (closed) return;
-            closed = true; UI.removeCallbacks(draw); cancelTouch(); hideIme();
+            trace("hostClosed");
+            closed = true; UI.removeCallbacks(draw); UI.removeCallbacks(delayedFocusReturn);
+            if (focusObserver != null && focusObserver.isAlive()) focusObserver.removeOnGlobalFocusChangeListener(focusListener);
+            if (web != null) web.metadataListener = null;
+            cancelTouch(); hideIme();
             if (web != null) { web.stopLoading(); web.onPause(); panel.removeView(web); web.destroy(); web = null; }
             if (panel != null && panel.getParent() instanceof ViewGroup) ((ViewGroup) panel.getParent()).removeView(panel);
             if (surface != null) { surface.release(); surface = null; }
@@ -164,5 +223,8 @@ public final class VulkanProbe {
             nativeStop(id); // consumer teardown is deferred until Unity's safe frame
             status = "Host closed";
         }
+    }
+    private static String viewName(View view) {
+        return view == null ? "none" : view.getClass().getSimpleName() + "#" + Integer.toHexString(System.identityHashCode(view));
     }
 }

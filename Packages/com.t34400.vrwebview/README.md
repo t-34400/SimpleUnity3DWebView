@@ -10,8 +10,10 @@ Import the IME Probe sample through Package Manager, then use **VRWebView > Crea
 
 For the video/GPU comparison use **VRWebView > Create GPU Probe Scene**; no sample import is required. The native screen switches between normal WebView, host-window hardware Canvas, and VirtualDisplay GPU output without rebuilding. See `Documentation~/GpuProbe.md`. The bundled synthetic H.264/AAC clip makes moving video pixels independently observable; successful capture and IME behavior still require device validation.
 
-Core is independent of Unity and Meta SDK. UnityUI uses uGUI; the sample Android probe uses a bundled AAR built from this repository's `Android~` project. Web permissions are denied by default; probe input is not logged.
+Core is independent of Unity and Meta SDK. UnityUI uses uGUI; the sample Android probe uses a bundled AAR built from this repository's `Android~` project. Web permissions are denied by default; input text is never logged. The XR probe records focus and input-connection metadata.
 
 Vulkan and GLES share the Java WebView/IME host and native image queue. Only GPU import, copy and completion tracking differ; see `Documentation~/GlesSupport.md` for extension requirements and OpenXR feature limits. Existing Vulkan probe scenes retain their component GUIDs.
 
 Hand input: `Pointer Mode=Auto` uses Meta Hand Tracking Aim when no controller is tracked. Pinch to click/drag, including probe buttons. See `Documentation~/HandInputProbe.md`. Existing scenes should enable Flip Image Vertically before rebuilding; click coordinates now follow the displayed UV rectangle.
+
+If selecting a field hides the ray, use the HI2 focus diagnostics and opt-in Focus +5s recovery experiment in `Documentation~/FocusProbe.md`. These observations do not yet establish Unity/Quest IME support.
