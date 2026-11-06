@@ -9,9 +9,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 0}
+  m_Script: {fileID: 13964, guid: 0000000000000000e000000000000000, type: 0}
   m_Name: 
-  m_EditorClassIdentifier: UnityEditor.CoreModule:UnityEditor.PackageManager.UI.Internal:PackageManagerProjectSettings
+  m_EditorClassIdentifier: UnityEditor.dll::UnityEditor.PackageManager.UI.Internal.PackageManagerProjectSettings
   m_EnablePreReleasePackages: 0
   m_AdvancedSettingsExpanded: 1
   m_ScopedRegistriesSettingsExpanded: 1
@@ -36,7 +36,7 @@ MonoBehaviour:
     m_Modified: 0
     m_ErrorMessage: 
     m_UserModificationsEntityId:
-      m_Data: -4796
+      m_Data: -924
     m_OriginalEntityId:
-      m_Data: -4798
+      m_Data: -926
   m_LoadAssets: 0

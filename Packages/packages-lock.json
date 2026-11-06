@@ -25,6 +25,14 @@
       },
       "url": "https://packages.unity.com"
     },
+    "com.t34400.vrwebview": {
+      "version": "file:com.t34400.vrwebview",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "com.unity.ugui": "2.0.0"
+      }
+    },
     "com.unity.collab-proxy": {
       "version": "2.12.4",
       "depth": 0,
