@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace T34400.VRWebView
 {
@@ -12,6 +13,7 @@ namespace T34400.VRWebView
         private readonly List<(ulong id, RenderTexture texture)> retired = new List<(ulong, RenderTexture)>();
         private IntPtr callback;
         private int eventId;
+        private CommandBuffer renderEvents;
         internal static VulkanProbePump Ensure()
         {
             if (instance != null) return instance;
@@ -20,13 +22,18 @@ namespace T34400.VRWebView
             instance = owner.AddComponent<VulkanProbePump>();
             instance.callback = VulkanProbeNative.VrGetRenderEvent();
             instance.eventId = VulkanProbeNative.VrGetEventId();
+            if (instance.callback != IntPtr.Zero)
+            {
+                instance.renderEvents = new CommandBuffer { name = "VRWebView Vulkan render event" };
+                instance.renderEvents.IssuePluginEventAndData(instance.callback, instance.eventId, IntPtr.Zero);
+            }
             return instance;
         }
         internal void Retire(ulong id, RenderTexture texture) { retired.Add((id, texture)); }
         private void Update()
         {
-            if (Application.platform != RuntimePlatform.Android || callback == IntPtr.Zero) return;
-            GL.IssuePluginEventAndData(callback, eventId, IntPtr.Zero);
+            if (Application.platform != RuntimePlatform.Android || renderEvents == null) return;
+            Graphics.ExecuteCommandBuffer(renderEvents);
             for (int i = retired.Count - 1; i >= 0; --i)
             {
                 if (VulkanProbeNative.VrAlive(retired[i].id) != 0) continue;
@@ -34,6 +41,11 @@ namespace T34400.VRWebView
                 retired.RemoveAt(i);
             }
         }
-        private void OnDestroy() { if (instance == this) instance = null; }
+        private void OnDestroy()
+        {
+            renderEvents?.Release();
+            renderEvents = null;
+            if (instance == this) instance = null;
+        }
     }
 }
