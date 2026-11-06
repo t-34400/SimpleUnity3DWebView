@@ -213,7 +213,8 @@ namespace T34400.VRWebView
             Button("Recreate", 84, Recreate); Button("Resize", 252, Resize); Button("Flip Y", 420, Flip);
             var rayObject = new GameObject("Right controller ray", typeof(LineRenderer)); ray = rayObject.GetComponent<LineRenderer>();
             ray.positionCount = 2; ray.startWidth = ray.endWidth = 0.003f; ray.useWorldSpace = true;
-            rayMaterial = new Material(Shader.Find("Sprites/Default")); ray.material = rayMaterial;
+            var rayShader = Shader.Find("Sprites/Default") ?? Shader.Find("UI/Default");
+            if (rayShader != null) { rayMaterial = new Material(rayShader); ray.material = rayMaterial; }
             ray.startColor = ray.endColor = Color.cyan; ray.enabled = false;
         }
         private Text Label(string name, Vector2 position, Vector2 size, string value, int fontSize)

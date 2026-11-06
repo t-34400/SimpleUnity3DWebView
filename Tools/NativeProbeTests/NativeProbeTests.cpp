@@ -10,7 +10,7 @@ struct AImageReader { std::deque<std::pair<AImage*, int>> queued; };
 namespace test {
 uint64_t current = 10, safe = 3;
 int deleted = 0, readersDeleted = 0, importedDestroyed = 0, memoriesFreed = 0, copies = 0;
-bool badFormat = false, failBind = false;
+bool badFormat = false, failBind = false, failReader = false;
 std::vector<VkImageMemoryBarrier> barriers;
 std::vector<VkImageLayout> targetLayouts;
 std::vector<std::unique_ptr<AImage>> images;
@@ -91,6 +91,7 @@ extern "C" {
 media_status_t AImageReader_newWithUsage(int32_t, int32_t, int32_t format, uint64_t usage, int32_t maxImages, AImageReader** out) {
     assert(format == AIMAGE_FORMAT_RGBA_8888 && maxImages >= 6);
     assert((usage & AHARDWAREBUFFER_USAGE_GPU_SAMPLED_IMAGE) && (usage & AHARDWAREBUFFER_USAGE_GPU_COLOR_OUTPUT));
+    if (test::failReader) return AMEDIA_ERROR_UNKNOWN;
     *out = new AImageReader; return AMEDIA_OK;
 }
 media_status_t AImageReader_acquireNextImageAsync(AImageReader* r, AImage** out, int* fence) {
@@ -169,4 +170,18 @@ int main() {
     assert(image->deleted && copies == 1 && importedDestroyed == 2 && memoriesFreed == 2);
     VrAbandon(id); render(0, nullptr); assert(!VrAlive(id));
     std::cout << "PASS unsupported format and failed import cleanup\n";
+    failBind = false; current = 20; safe = 10;
+    id = VrCreate(1024, 768, reinterpret_cast<void*>(1)); image = post(id); render(0, nullptr);
+    assert(!image->deleted); failReader = true;
+    assert(!VrCreate(1024, 768, reinterpret_cast<void*>(1)) && deviceError.empty());
+    char message[1024]; VrStatus(0, message, sizeof(message));
+    assert(strstr(message, "AImageReader creation failed"));
+    Java_com_t34400_vrwebview_VulkanProbe_nativeStop(nullptr, nullptr, id); safe = 20; render(0, nullptr);
+    assert(!VrAlive(id) && image->deleted); failReader = false;
+    std::cout << "PASS failed recreation leaves old GPU generation retireable\n";
+    id = VrCreate(1024, 768, reinterpret_cast<void*>(1)); image = post(id); current = 30; render(0, nullptr);
+    Java_com_t34400_vrwebview_VulkanProbe_nativeStop(nullptr, nullptr, id);
+    assert(VrAlive(id)); deviceEvent(kUnityGfxDeviceEventShutdown);
+    assert(!VrAlive(id) && image->deleted);
+    std::cout << "PASS graphics shutdown retires acknowledged generations\n";
 }

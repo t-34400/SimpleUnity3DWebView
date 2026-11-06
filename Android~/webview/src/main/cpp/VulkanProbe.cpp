@@ -62,6 +62,7 @@ struct Session {
 std::unordered_map<uint64_t, std::unique_ptr<Session>> sessions;
 uint64_t nextId = 1;
 std::string deviceError = "Unity Vulkan device not initialized";
+std::string creationError;
 
 bool hasExtension(const std::vector<VkExtensionProperties>& available, const char* name) {
     return std::any_of(available.begin(), available.end(), [name](const auto& p) { return !strcmp(name, p.extensionName); });
@@ -269,11 +270,13 @@ void UNITY_INTERFACE_API deviceEvent(UnityGfxDeviceEventType type) {
         deviceError.clear();
     } else if (type == kUnityGfxDeviceEventShutdown) {
         if (unity.device && vkDeviceWaitIdle) vkDeviceWaitIdle(unity.device); // shutdown only
-        for (auto& pair : sessions) {
-            auto& s = *pair.second;
+        for (auto it = sessions.begin(); it != sessions.end();) {
+            auto& s = *it->second;
             for (auto& frame : s.frames) destroyFrame(s, frame);
             s.frames.clear(); destroyPending(s);
             s.error = "Vulkan device shutdown; recreate the probe";
+            if (s.stopping) { if (s.reader) AImageReader_delete(s.reader); it = sessions.erase(it); }
+            else ++it; // UI producer must acknowledge stop before deleting its reader.
         }
         deviceError = "Vulkan device shut down"; unity = {}; configuredDevice = VK_NULL_HANDLE;
     }
@@ -298,11 +301,15 @@ UNITY_INTERFACE_EXPORT UnityRenderingEventAndData VrGetRenderEvent() { return re
 UNITY_INTERFACE_EXPORT int VrGetEventId() { return eventId; }
 UNITY_INTERFACE_EXPORT uint64_t VrCreate(int width, int height, void* target) {
     std::lock_guard<std::mutex> guard(mutex);
-    if (width < 128 || width > 2048 || height < 128 || height > 2048 || !target || !deviceError.empty()) return 0;
+    creationError.clear();
+    if (!deviceError.empty()) return 0;
+    if (width < 128 || width > 2048 || height < 128 || height > 2048 || !target) {
+        creationError = "Invalid probe extent or target"; return 0;
+    }
     auto s = std::make_unique<Session>(); s->id = nextId++; s->width = width; s->height = height; s->target = target;
     auto result = AImageReader_newWithUsage(width, height, AIMAGE_FORMAT_RGBA_8888,
             AHARDWAREBUFFER_USAGE_GPU_SAMPLED_IMAGE | AHARDWAREBUFFER_USAGE_GPU_COLOR_OUTPUT, 8, &s->reader);
-    if (result != AMEDIA_OK) { deviceError = "AImageReader creation failed " + std::to_string(result); return 0; }
+    if (result != AMEDIA_OK) { creationError = "AImageReader creation failed " + std::to_string(result); return 0; }
     auto id = s->id; sessions.emplace(id, std::move(s)); return id;
 }
 UNITY_INTERFACE_EXPORT int VrAlive(uint64_t id) { std::lock_guard<std::mutex> guard(mutex); return find(id) != nullptr; }
@@ -315,6 +322,7 @@ UNITY_INTERFACE_EXPORT int VrStatus(uint64_t id, char* output, int capacity) {
     std::lock_guard<std::mutex> guard(mutex);
     std::ostringstream text; auto s = find(id);
     text << "Vulkan AHB probe VU1\n" << (deviceError.empty() ? "device extensions enabled" : deviceError);
+    if (!s && !creationError.empty()) text << "\n" << creationError;
     if (s) text << "\nGPU copies=" << s->copies << " acquired=" << s->acquired << " inFlight=" << s->frames.size()
                 << " slots=" << s->outstanding << " fenceWait=" << s->fenceWaits << " producerSkipped=" << s->skipped
                 << "\ntimestamp=" << s->timestamp << " size=" << s->width << "x" << s->height
