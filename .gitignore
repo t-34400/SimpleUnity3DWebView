@@ -103,3 +103,7 @@ InitTestScene*.unity*
 /Android~/local.properties
 /Artifacts/
 *.unitypackage
+
+# Local Meta Agent Bridge settings
+/Assets/Resources/DevAgentSettings.asset
+/Assets/Resources/DevAgentSettings.asset.meta
