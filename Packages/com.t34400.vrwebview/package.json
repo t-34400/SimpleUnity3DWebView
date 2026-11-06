@@ -1,0 +1,11 @@
+{
+  "name": "com.t34400.vrwebview",
+  "version": "0.1.0-preview.1",
+  "displayName": "VRWebView",
+  "description": "Browser foundations and explicit Android IME probes for VR. GPU browser rendering is not implemented in this preview.",
+  "unity": "6000.4",
+  "author": { "name": "t34400" },
+  "license": "MIT",
+  "dependencies": { "com.unity.ugui": "2.0.0" },
+  "samples": [ { "displayName": "IME Probe", "description": "Compare host-window and virtual-display WebView input on Android.", "path": "Samples~/ImeProbe" } ]
+}

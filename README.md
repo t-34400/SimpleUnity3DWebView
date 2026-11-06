@@ -1,225 +1,75 @@
-# Simple Unity 3D WebView for Android (or Meta Quest, etc.)
+# VRWebView
 
-Simple Unity 3D WebView is a straightforward 3D WebView library designed for the Android platform, enabling seamless integration of web content within Unity projects.
+Unity 6000.4 / Meta Quest向けWebViewの新規実装です。配布物は埋め込みUPMパッケージ `Packages/com.t34400.vrwebview` に集約しています。
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![CodeFactor](https://www.codefactor.io/repository/github/t-34400/simpleunity3dwebview/badge)](https://www.codefactor.io/repository/github/t-34400/simpleunity3dwebview)
+このプレビューには、セッション・要求応答・ポインタ入力の基盤とAndroid IME検証プローブがあります。**VR空間へWebページを表示する製品用GPUバックエンドは未実装**です。キーボード・日本語IME・XRフォーカスの成立も実機で検証してください。
 
-<img src="./Image/google_3d.png" width=200>   <img src="./Image/google_3d_2.png" width=200>
+## 構成
 
-## 🚀 What's New (v2.0.0)
-
-This release includes key improvements for compatibility and developer experience:
-* **Support for Unity 2023.1 and Later**
-  Adapted to breaking changes in `UnityPlayer` introduced in Unity 2023.1 and newer versions.
-* **No More Subclassing of UnityPlayerActivity**
-  The implementation no longer relies on subclassing `UnityPlayerActivity` or `UnityPlayerGameActivity`, improving cross-version compatibility.
-* **Android Code Now Packaged as AAR**
-  All Android-side JVM code is consolidated into a single `.aar` file, streamlining integration and enhancing build efficiency.
-
-## Installation
-
-### Unity 2022 or Earlier
-
-1. Install [the package](https://github.com/t-34400/SimpleUnity3DWebView/releases) ([Official Manual](https://docs.unity3d.com/Manual/upm-ui-local.html)).
-2. Go to `File` > `Build Settings`, select **Android** as the platform, and click **Switch Platform**.
-3. Click **Player Settings**, then under `Publishing Settings` > `Build`, enable both `Custom Main Manifest` and `Custom Main Gradle Template`. Note the paths shown.
-4. Open the generated `AndroidManifest.xml` at the specified path and make the following changes:
-    - Add the following tag inside the `<manifest>` element:
-      ```xml
-      <uses-permission android:name="android.permission.INTERNET" />
-      ```
-    - Inside the `<application>` element, add:
-      ```xml
-      android:networkSecurityConfig="@xml/network_security_config"
-      android:hardwareAccelerated="true"
-      ```
-5. Open the generated `mainTemplate.gradle` at the same path and modify it as follows:
-    - In the `dependencies` block, add:
-      ```gradle
-      implementation "org.jetbrains.kotlin:kotlin-stdlib:2.0.21"
-      ```
-
-- [AndroidManifest.xml Sample](Assets/SimpleUnity3DWebView/Plugins/Android/AndroidManifest_2022_sample.xml)
-- [mainTemplate.gradle Sample](Assets/SimpleUnity3DWebView/Plugins/Android/mainTemplate_sample.gradle)
-
----
-
-### Unity 2023 or Later
-
-1. Install [the package](https://github.com/t-34400/SimpleUnity3DWebView/releases) ([Official Manual](https://docs.unity3d.com/Manual/upm-ui-local.html)).
-2. Go to `File` > `Build Settings`, select **Android** as the platform, and click **Switch Platform**.
-3. In **Player Settings**, under `Other Settings` > `Configuration`, check `GameActivity` and uncheck `Activity`.
-4. Under `Publishing Settings` > `Build`, enable both `Custom Main Manifest` and `Custom Main Gradle Template`. Note the paths shown.
-5. Open the generated `AndroidManifest.xml` and make the following changes:
-    - Remove the `<activity>` tag for `UnityPlayerActivity`.
-    - Add the following tag inside the `<manifest>` element:
-      ```xml
-      <uses-permission android:name="android.permission.INTERNET" />
-      ```
-    - Inside the `<application>` element, add:
-      ```xml
-      android:networkSecurityConfig="@xml/network_security_config"
-      android:hardwareAccelerated="true"
-      ```
-6. Open the generated `mainTemplate.gradle` and add the following line in the `dependencies` block:
-    ```gradle
-    implementation "org.jetbrains.kotlin:kotlin-stdlib:2.0.21"
-    ```
-
-- [AndroidManifest.xml Sample](Assets/SimpleUnity3DWebView/Plugins/Android/AndroidManifest_2023_sample.xml)
-- [mainTemplate.gradle Sample](Assets/SimpleUnity3DWebView/Plugins/Android/mainTemplate_sample.gradle)
-
-
-## Usage
-
-1. Create a `RawImage` object on a suitable `Canvas`, and add the `PointerEventSource` component.
-2. Add the `WebViewManager` component to a GameObject, and update the Inspector as follows:
-   - Assign the previously created `RawImage` to both **Web View Image** and **Pointer Event Source**.
-   - Set **Texture Width** to the width (in pixels) of the texture used to render the web content.
-   - Set **Interval MSec** to the update interval of the texture in milliseconds.
-   - Set **Default Url** to the initial URL to load (leave blank to skip automatic loading).
-   - Set **Normalized Touch Slop** to adjust the drag sensitivity, normalized by texture size. (Note: this setting is currently not fully functional.)
-
-3. Depending on the target device, add any required input or interaction components (e.g., XR Interaction Toolkit, Oculus Interaction SDK) to enable UI interaction.
-
-Sample prefabs are available in `Assets/SamplePrefabs` for reference.
-
-
-## Web Browser Interaction
-
-- Click and drag on the `RawImage` to perform touch interactions.
-  - Additionally, attach UI input components (e.g., XR Interaction Toolkit, Oculus Interaction SDK) appropriate to your target device to enable interaction with the web view.
-    - Specifically, the system responds to Unity UI events such as `IPointerExitHandler`, `IPointerDownHandler`, `IPointerUpHandler`, and `IDragHandler` in the `UnityEngine.EventSystems` namespace.
-
-- You can control browser behavior through the public methods of the `WebViewManager` component:
-  - `void LoadUrl(string url)`: Loads the specified URL.
-  - `void Reload()`: Reloads the current page.
-  - `void GoBack()`: Navigates back in the browser history.
-  - `void GoForward()`: Navigates forward in the browser history.
-  - `void SetKeyboardInputEnabled(bool isEnabled)`: Enables or disables keyboard input.
-  - `void EvaluateJavascript(string script)`: Executes JavaScript in the current page.
-
-- To start or stop screen updates, enable or disable the `WebViewManager` component itself:
-  - `webViewManager.enabled = true;` enables texture updates.
-  - `webViewManager.enabled = false;` stops texture updates.
-
-
-## Retrieving Values from Web Pages
-
-The `WebViewManager` component provides UnityEvents for communicating from JavaScript running inside the WebView:
-
-- `urlChanged`: Invoked when the current page URL changes.
-  - Signature: `UnityEvent<string>` — receives the new URL as a string.
-
-- `dataReceived`: Invoked when JavaScript calls `Android.sendJsonData(...)`.
-  - Signature: `UnityEvent<ReceivedData>` — receives a structured data object from JavaScript.
-
-### Sending Data from JavaScript
-
-To send data from the web page, call the following in JavaScript:
-
-```javascript
-Android.sendJsonData('YOUR_TYPE', JSON.stringify({ id: 100, name: 't34400' }));
+```text
+Packages/com.t34400.vrwebview/
+  Runtime/Core/          Unityに依存しないセッション・ポインタ・応答管理
+  Runtime/UnityUI/       uGUIからの座標変換・ポインタ入力
+  Runtime/Android/       IMEプローブへのJNI入口
+  Runtime/Plugins/Android/  ビルド済み検証用AAR
+  Editor/                検証シーン作成メニュー
+  Tests/EditMode/        Unityで実行するテスト
+  Samples~/ImeProbe/     Package Managerからimportする検証用スクリプト
+  Documentation~/       使用方法・検証項目
+Android~/                独立したAndroid LibraryのソースとGradle wrapper
+Tools/                   ビルド・テスト・unitypackage出力
 ```
 
-This will trigger the `dataReceived` event on the `WebViewManager`. The event receives a `ReceivedData` object with the following structure:
+Meta SDKはルートの検証プロジェクトの依存で、本体Runtimeの必須依存ではありません。既存の旧WebView/AAR・古いシーン/Meta64サンプルを取り除き、Unity/OpenXR/Metaの更新済み設定を基準として残しています。旧カスタムAndroid Manifest/Gradleは無効化し、検証AARの最小Manifestをマージします。
 
-```c#
-namespace WebView
-{
-    [System.Serializable]
-    public struct ReceivedData
-    {
-        public string type;
-        public string data;
-    }
-}
+## 最初の実機検証
+
+1. Unity 6000.4.5f1でルートを開き、パッケージの解決を待ちます。
+2. Package ManagerのVRWebViewから **IME Probe** サンプルをimportします。
+3. **VRWebView > Create IME Probe Scene** を実行します。保存されるシーンは生成のたびに新規作成されます。
+4. IME Probeオブジェクトの`Startup Mode`を選びます。初回は`Host Window`。
+5. Androidへビルドして起動します。自動で独立したAndroid Activityを開きます。
+6. フィールドをタップし、日本語変換・途中挿入・選択置換・改行・password・フィールド切替を確認します。合成データだけを使用してください。
+7. 次に`Virtual Display`で同じ操作を比較します。表示されるCPUプレビューは検証専用です。
+
+独立ActivityはAndroid標準の接続を確認する基準です。**この成功はUnity/XRとIMEの共存成功を意味しません。** Unity Activity上で比較する入口は`AndroidImeProbe.OpenOnUnityActivity`です。詳細はパッケージの[検証手順](Packages/com.t34400.vrwebview/Documentation~/ImeProbe.md)にあります。
+
+## コード検証
+
+Python 3と.NET SDK 8を使用します。Unityの依存は不要です。
+
+```sh
+python3 Tools/run_checks.py
 ```
 
-### Example Unity Component
+Unity側のテストはTest RunnerのEditModeから実行します。純C#テストとUnity実行・実機試験は別の結果として扱います。
 
-<details>
-<summary>Click to expand</summary>
+## Androidソースの再ビルド
 
-```c#
-using UnityEngine;
-using WebView;
+JDK 17以上、Android SDK Platform 35、Build Tools 34.0.0を準備し、`ANDROID_HOME`と`JAVA_HOME`を設定します。Gradle 8.9 / AGP 8.7.3を固定しています。
 
-public class TestComponent : MonoBehaviour
-{
-    private const string MY_SCRIPT = 
-        "const data = { id: 100, name: 't34400' };" +
-        "try {" +
-        "   const dataJson = JSON.stringify(data);" +
-        "   Android.sendJsonData('YOUR_TYPE', dataJson);" +
-        "} catch(e) {" +
-        "   console.error(e.message);" +
-        "}";
-
-    [SerializeField] private WebViewManager webViewManager;
-
-    // Register this method to WebViewManager.dataReceived in the Inspector
-    public void OnDataReceived(ReceivedData received)
-    {
-        if (received.type == "YOUR_TYPE")
-        {
-            var idNameData = JsonUtility.FromJson<IdNameData>(received.data);
-            Debug.Log($"ID: {idNameData.id}, Name: {idNameData.name}");
-        }
-    }
-
-    private void Update()
-    {
-        // Call Android.sendJsonData() in JavaScript
-        webViewManager.EvaluateJavascript(MY_SCRIPT);
-    }
-
-    [System.Serializable]
-    public struct IdNameData
-    {
-        public int id;
-        public string name;
-    }
-}
+```sh
+python3 Tools/build_android.py
 ```
-</details>
 
-To handle the `urlChanged` event, define a method like `public void OnUrlChanged(string url)` and register it in the Inspector.
+標準Java APIのみを使う小さな検証ライブラリなので、現時点ではKotlin stdlib・Unityのclasses.jar・NDKは不要です。製品用GPU経路の検証時にC++/NDKを追加します。
 
+## 配布
 
-## Enabling Specific APIs for Non-SSL Connections
+主形式はUPMです。現在のプロジェクトではPackages内の埋め込みパッケージとして読み込まれます。別プロジェクトではPackage Managerの「Add package from disk」でpackage.jsonを指定できます。
 
-1. Open `Assets/Plugins/Android/res.androidlib/res/xml/network_security_config.xml` (cannot be displayed in the UnityEditor; open through other means).
-2. Add `<domain includeSubdomains="true">[hostname]</domain>` to the <domain-config> tag.
-   - By default, only localhost has this feature enabled.
+unitypackageが必要なら:
 
-## Notes
+```sh
+python3 Tools/export_unitypackage.py
+```
 
-- The output from WebView's JavaScript console is logged to Logcat with the tag `WebViewConsole`.
-- WebView texture transfer from Android native to Unity is simple and CPU-based, so heavy processing may occur with large texture sizes or excessively frequent updates.
-- Text input with the keyboard is supported for input and textarea tags but may be somewhat unstable.
-- If you are developing a project using OpenXR, uncheck `Force Remove Internet` under `Project Settings` > `OpenXR` > `Meta Quest Support`.
-    - In Unity OpenXR package versions prior to 1.9.1, there is a bug where, even if this checkbox is unchecked, the Internet permission is removed. To address this issue, either update the OpenXR version in `Packages/manifest.json` to 1.9.1, or use Post Gradle during the build process to remove the OpenXR permission and then re-add it to the manifest.
-<img src="./Image/openxr_force_remove_internet.png" width=400>
+WindowsではユーザーのDownloads、今回指定されたWSL環境では`C:\Users\tmiyoshi\Downloads`へ出力します。`--output`で変更できます。Runtime/Editor/サンプル/文書を`Assets/VRWebView`に集約するアーカイブを生成し、GUIDとファイル本文を照合します。元プロジェクト内にコピーを作らないため、export中に重複GUIDをimportしません。利用先ではUPM版とunitypackage版の片方だけを導入してください。Unityでの実importは別途確認が必要です。
 
-- When using on Meta Quest, add the following permission to `AndroidManifest.xml`:
-  
-   ```xml
-   <uses-feature android:name="oculus.software.overlay_keyboard" 
-                 android:required="true" />
-   ```
+## 実装範囲
 
-## Android AAR Source Code
+- 実装済み: HTTP(S) URL方針、セッション初期化/破棄、遅延通知排除、要求ID/世代照合、単一ポインタ捕捉/キャンセル、pivot/Overlay Canvas対応の座標変換。
+- 検証用実装済み: 通常ホスト/VirtualDisplayのWebView、IME要求、状態表示、複数行・日本語変換・contenteditableを含むテストページ。
+- 未実装: 製品ブラウザバックエンド、GPU共有/NDK、IME接続の中継、完全なXR検証シーン、履歴/JS通信等の製品API。
 
-The Android-side implementation bundled as an `.aar` is open source and available here:
-
-- [View AAR Source Code](https://github.com/t-34400/UnityWebViewLib)
-
-## License
-
-[MIT License](./LICENSE)
-
-## Acknowledgments
-
-The button icons used in the sample prefabs are borrowed from [Evericons](http://evericons.com) under the CC0 1.0 Universal license. We sincerely appreciate their generosity and the availability of these icons for use in our project.
+旧版のAPI/Prefabとの互換性は維持していません。MIT License。

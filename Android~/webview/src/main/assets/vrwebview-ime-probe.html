@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VRWebView IME probe</title>
+<style>body{font:20px sans-serif;padding:16px;background:#fff;color:#111}label{display:block;margin:12px 0}input,textarea,[contenteditable]{font:inherit;display:block;width:90%;border:1px solid #777;padding:8px}#status{white-space:pre-wrap}</style>
+<h1>IME / selection test</h1>
+<p>Use synthetic data only. Test Japanese composition, middle insertion, selection, switching fields and closing the keyboard.</p>
+<label>Text<input id="text" value="ABC 日本語 XYZ" enterkeyhint="next"></label>
+<label>Second field<input id="second" value="quotes: ' and backslash: \" enterkeyhint="search"></label>
+<label>Multiline<textarea id="multiline" rows="3">first line
+second line</textarea></label>
+<label>Password<input id="password" type="password" autocomplete="off"></label>
+<label>Decimal<input type="text" inputmode="decimal"></label>
+<label>Contenteditable<div contenteditable="true">Editable 日本語 text</div></label>
+<button id="change">Change first field from page</button>
+<button id="remove">Remove focused element after 2 seconds</button>
+<pre id="status" aria-live="polite"></pre>
+<script>
+const output = document.getElementById('status');
+let events = [];
+for (const type of ['focusin', 'focusout', 'compositionstart', 'compositionupdate', 'compositionend', 'input', 'selectionchange']) {
+  document.addEventListener(type, event => {
+    const element = document.activeElement;
+    const start = element?.selectionStart;
+    const end = element?.selectionEnd;
+    events.push(`${type}: element=${element?.id || element?.tagName} selection=${start ?? '?'}:${end ?? '?'} composing=${event.isComposing ?? '?'}`);
+    events = events.slice(-8); output.textContent = events.join('\n');
+  });
+}
+document.getElementById('change').onclick = () => { document.getElementById('text').value = 'Page update 日本語'; };
+document.getElementById('remove').onclick = () => setTimeout(() => {
+  const element = document.activeElement;
+  if (element && ['INPUT', 'TEXTAREA'].includes(element.tagName)) element.remove();
+}, 2000);
+</script></html>

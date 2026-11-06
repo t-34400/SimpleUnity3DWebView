@@ -1,0 +1,5 @@
+{
+  "name": "T34400.VRWebView.Editor",
+  "references": ["T34400.VRWebView.Android"],
+  "includePlatforms": ["Editor"]
+}
