@@ -9,6 +9,19 @@ namespace T34400.VRWebView.Editor
 {
     public static class ProbeSceneMenu
     {
+        [MenuItem("VRWebView/Create GPU Probe Scene")]
+        public static void CreateGpuProbe()
+        {
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
+            new GameObject("GPU Probe", typeof(GpuProbeLauncher));
+            if (!AssetDatabase.IsValidFolder("Assets/VRWebViewPlayground")) AssetDatabase.CreateFolder("Assets", "VRWebViewPlayground");
+            string path = AssetDatabase.GenerateUniqueAssetPath("Assets/VRWebViewPlayground/GpuProbe.unity");
+            EditorSceneManager.SaveScene(scene, path);
+            EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(path, true) };
+            Debug.Log("Created standalone GPU probe scene. Android mode buttons switch H0/H1/V1 without rebuilding; see package documentation.");
+        }
+
         [MenuItem("VRWebView/Create IME Probe Scene")]
         public static void Create()
         {

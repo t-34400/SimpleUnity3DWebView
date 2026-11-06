@@ -8,6 +8,8 @@
 
 ## モード
 
+表示ラベルは`viewFocus`、`windowFocus`、`immActive`、`viewDisplayId`。以前の`served`／`display`表記を統一した。動画とGPU取り込みを比較するときは、サンプルImport不要の`VRWebView > Create GPU Probe Scene`を使用する。手順は[GPUプローブ](GpuProbe.md)を参照。
+
 - **Standalone / Host Window**: 独立したAndroid Activity内のWebView。標準の入力接続を確認する基準。
 - **Standalone / Virtual Display**: 独立ActivityにCPU画像プレビューを表示し、タッチをVirtualDisplayのWebViewへ渡す。IME自体はプレビューへ取り込む設計ではない。
 - **Unity Activity overlay**: 実際のUnity Activity上へ同じ仕組みを接続する実験用入口。XRでは通常のAndroid Viewが見えない可能性がある。その場合も独立Activityでの結果と区別する。表示/操作が成立するVR入力UIはまだ実装していない。

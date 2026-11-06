@@ -1,8 +1,8 @@
 {
   "name": "com.t34400.vrwebview",
-  "version": "0.1.0-preview.1",
+  "version": "0.1.0-preview.2",
   "displayName": "VRWebView",
-  "description": "Browser foundations and explicit Android IME probes for VR. GPU browser rendering is not implemented in this preview.",
+  "description": "Browser foundations and standalone Android GPU, video and IME comparison probes. A production Unity GPU browser backend is not implemented in this preview.",
   "unity": "6000.4",
   "author": { "name": "t34400" },
   "license": "MIT",

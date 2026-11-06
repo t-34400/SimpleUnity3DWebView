@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "description": "Synthetic FFmpeg testsrc2, burned-in frame number, and 880 Hz tone",
+  "durationSeconds": 8,
+  "width": 1280,
+  "height": 720,
+  "frameRate": 30,
+  "videoCodec": "H.264 Main",
+  "audioCodec": "AAC",
+  "generatedContentLicense": "CC0-1.0",
+  "sha256": "40b6751cafaeacf866ecd0b15fdea9d7b301dfaa1f017c43f77bcf06fcf368d0",
+  "bytes": 1314957
+}

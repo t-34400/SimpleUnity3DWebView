@@ -2,7 +2,7 @@
 
 Unity 6000.4 / Meta Quest向けWebViewの新規実装です。配布物は埋め込みUPMパッケージ `Packages/com.t34400.vrwebview` に集約しています。
 
-このプレビューには、セッション・要求応答・ポインタ入力の基盤とAndroid IME検証プローブがあります。**VR空間へWebページを表示する製品用GPUバックエンドは未実装**です。キーボード・日本語IME・XRフォーカスの成立も実機で検証してください。
+このプレビューには、セッション・要求応答・ポインタ入力の基盤と、Androidの動画・GPU・IME比較プローブがあります。**VR空間へWebページを表示する製品用GPUバックエンドは未実装**です。キーボード・日本語IME・XRフォーカスの成立も実機で検証してください。
 
 ## 構成
 
@@ -10,7 +10,7 @@ Unity 6000.4 / Meta Quest向けWebViewの新規実装です。配布物は埋め
 Packages/com.t34400.vrwebview/
   Runtime/Core/          Unityに依存しないセッション・ポインタ・応答管理
   Runtime/UnityUI/       uGUIからの座標変換・ポインタ入力
-  Runtime/Android/       IMEプローブへのJNI入口
+  Runtime/Android/       IME/GPUプローブへのJNI入口・自動起動
   Runtime/Plugins/Android/  ビルド済み検証用AAR
   Editor/                検証シーン作成メニュー
   Tests/EditMode/        Unityで実行するテスト
@@ -36,6 +36,8 @@ Meta SDKはルートの検証プロジェクトの依存で、本体Runtimeの�
 
 ## コード検証
 
+動画とGPU取り込みの比較には **VRWebView > Create GPU Probe Scene** を使用します。サンプルImportは不要です。Quest上のH0/H1/V1ボタンで、通常WebView、同一Windowからのhardware Canvas描画、VirtualDisplayからのGPU取り込みを切り替えます。手順と診断ラベルは[GPU検証手順](Packages/com.t34400.vrwebview/Documentation~/GpuProbe.md)、根拠は[AOSP調査](Packages/com.t34400.vrwebview/Documentation~/AospRendering.md)を参照してください。
+
 Python 3と.NET SDK 8を使用します。Unityの依存は不要です。
 
 ```sh
@@ -43,6 +45,8 @@ python3 Tools/run_checks.py
 ```
 
 Unity側のテストはTest RunnerのEditModeから実行します。純C#テストとUnity実行・実機試験は別の結果として扱います。
+
+GPUプローブの補助処理、同梱動画のdecode、AARへの同梱内容は、JDKとFFmpegを用意して`python3 Tools/run_probe_checks.py`で確認できます。これはGPU描画やIMEの実機成功を示す検証ではありません。動画素材の再生成は`python3 Tools/generate_probe_video.py`です。再生成後はAARも再ビルドしてください。
 
 ## Androidソースの再ビルド
 
@@ -69,7 +73,7 @@ WindowsではユーザーのDownloads、今回指定されたWSL環境では`C:\
 ## 実装範囲
 
 - 実装済み: HTTP(S) URL方針、セッション初期化/破棄、遅延通知排除、要求ID/世代照合、単一ポインタ捕捉/キャンセル、pivot/Overlay Canvas対応の座標変換。
-- 検証用実装済み: 通常ホスト/VirtualDisplayのWebView、IME要求、状態表示、複数行・日本語変換・contenteditableを含むテストページ。
-- 未実装: 製品ブラウザバックエンド、GPU共有/NDK、IME接続の中継、完全なXR検証シーン、履歴/JS通信等の製品API。
+- 検証用実装済み: 通常ホスト/VirtualDisplayのWebView、IME要求、状態表示、複数行・日本語変換・contenteditableを含むテストページ。同一Windowのhardware Canvas／VirtualDisplayからSurfaceTextureへのGPU取り込み比較と、合成H.264/AAC動画。
+- 未実装: 製品ブラウザバックエンド、UnityへのGPU共有/NDK、IME接続の中継、完全なXR検証シーン、fullscreen/MSE/DRMの比較経路、履歴/JS通信等の製品API。
 
 旧版のAPI/Prefabとの互換性は維持していません。MIT License。

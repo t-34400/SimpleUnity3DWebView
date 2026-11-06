@@ -225,9 +225,9 @@ public final class ImeProbe {
             InputMethodManager imm = (InputMethodManager) web.getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
             status.setText((virtual ? "VirtualDisplay (CPU diagnostic preview)" : "Host window")
                     + "\nviewFocus=" + web.hasFocus() + " windowFocus=" + web.hasWindowFocus()
-                    + " served=" + (imm != null && imm.isActive(web))
-                    + " display=" + (web.getDisplay() == null ? -1 : web.getDisplay().getDisplayId())
-                    + " showRequestAccepted=" + showAccepted + " frames=" + frames
+                    + "\nimmActive=" + (imm != null && imm.isActive(web))
+                    + " viewDisplayId=" + (web.getDisplay() == null ? -1 : web.getDisplay().getDisplayId())
+                    + "\nshowRequestAccepted=" + showAccepted + " frames=" + frames
                     + "\nTap a field before Request IME. Request acceptance is not proof of visibility.");
         }
 

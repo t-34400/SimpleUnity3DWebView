@@ -5,5 +5,8 @@
         <activity android:name="com.t34400.vrwebview.ImeProbeActivity"
             android:exported="false" android:hardwareAccelerated="true"
             android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+        <activity android:name="com.t34400.vrwebview.GpuProbeActivity"
+            android:exported="false" android:hardwareAccelerated="true"
+            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
     </application>
 </manifest>

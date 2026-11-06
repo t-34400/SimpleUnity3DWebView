@@ -6,6 +6,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -19,7 +20,9 @@ def main():
     command = [args.gradle or str(wrapper), "--no-daemon", ":webview:assembleRelease", ":webview:lintRelease", "--console=plain"]
     if args.offline:
         command.append("--offline")
-    subprocess.run(command, cwd=ROOT / "Android~", check=True)
+    # Keep machine-local Gradle state outside the transferable source workspace.
+    with tempfile.TemporaryDirectory(prefix="vrwebview-gradle-") as project_cache:
+        subprocess.run([*command, "--project-cache-dir", project_cache], cwd=ROOT / "Android~", check=True)
     source = ROOT / "Android~/webview/build/outputs/aar/webview-release.aar"
     target = ROOT / "Packages/com.t34400.vrwebview/Runtime/Plugins/Android/vrwebview-probe.aar"
     target.parent.mkdir(parents=True, exist_ok=True)
