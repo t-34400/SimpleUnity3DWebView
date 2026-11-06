@@ -20,8 +20,11 @@ def main():
             body += "folderAsset: yes\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"
         elif path.suffix == ".cs":
             body += "MonoImporter:\n  externalObjects: {}\n  serializedVersion: 2\n  defaultReferences: []\n  executionOrder: 0\n  icon: {instanceID: 0}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"
-        elif path.suffix == ".aar":
+        elif path.suffix in {".aar", ".so"}:
             body += "PluginImporter:\n  externalObjects: {}\n  serializedVersion: 2\n  iconMap: {}\n  executionOrder: {}\n  isPreloaded: 0\n  isOverridable: 0\n  isExplicitlyReferenced: 0\n  validateReferences: 1\n  platformData:\n  - first:\n      Any: \n    second:\n      enabled: 0\n      settings: {}\n  - first:\n      Android: Android\n    second:\n      enabled: 1\n      settings: {}\n  - first:\n      Editor: Editor\n    second:\n      enabled: 0\n      settings:\n        DefaultValueInitialized: true\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"
+            if path.suffix == ".so":
+                body = body.replace("isPreloaded: 0", "isPreloaded: 1")
+                body = body.replace("Android: Android\n    second:\n      enabled: 1\n      settings: {}", "Android: Android\n    second:\n      enabled: 1\n      settings:\n        CPU: ARM64")
         elif path.suffix == ".asmdef":
             body += "AssemblyDefinitionImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"
         else:

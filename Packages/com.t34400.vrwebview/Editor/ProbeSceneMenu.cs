@@ -9,6 +9,21 @@ namespace T34400.VRWebView.Editor
 {
     public static class ProbeSceneMenu
     {
+        [MenuItem("VRWebView/Create Vulkan XR Probe Scene")]
+        public static void CreateVulkanProbe()
+        {
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
+            var probe = new GameObject("Vulkan XR Probe", typeof(VulkanWebViewProbe)).GetComponent<VulkanWebViewProbe>();
+            probe.headCamera = Camera.main;
+            if (Camera.main != null) Camera.main.transform.position = Vector3.zero;
+            if (!AssetDatabase.IsValidFolder("Assets/VRWebViewPlayground")) AssetDatabase.CreateFolder("Assets", "VRWebViewPlayground");
+            string path = AssetDatabase.GenerateUniqueAssetPath("Assets/VRWebViewPlayground/VulkanXrProbe.unity");
+            EditorSceneManager.SaveScene(scene, path);
+            EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(path, true) };
+            Debug.Log("Created same-Activity Vulkan XR probe. Keep Android Vulkan and ARM64; see VulkanProbe.md for controls and required device checks.");
+        }
+
         [MenuItem("VRWebView/Create GPU Probe Scene")]
         public static void CreateGpuProbe()
         {

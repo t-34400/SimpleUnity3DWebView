@@ -1,5 +1,7 @@
 # 動画・GPU・IMEの比較プローブ
 
+次段階の同一Unity Activity / Vulkan / XR検証は[VulkanProbe.md](VulkanProbe.md)を参照。以下は比較基準として残す独立Activity版。
+
 このプローブは独立したAndroid Activityで動く。UnityのテクスチャやOpenXRレイヤーへ描く本番backendではない。独立Activityへ切り替わる間、Unity側は休止し得る。
 
 ## 起動
@@ -25,7 +27,7 @@ H1の`Window draw: off`は、元WebViewの通常Windowへの`draw()`を止める
 
 ## 最初の試験
 
-`probeRevision=H1-scroll-1`では、H1のSurface描画へ通常のView描画と同じスクロール補正を追加した。元の症状は、SOURCEとTARGETで動画が動く一方、スクロールするとTARGETの上側から表示が消えるというもの。修正後の実機動作は別途確認する。
+`probeRevision=H1-scroll-1`では、H1のSurface描画へ通常のView描画と同じスクロール補正を追加した。元の症状は、SOURCEとTARGETで動画が動く一方、スクロールするとTARGETの上側から表示が消えるというもの。修正後は利用者がQuest 3でWindow draw offのスクロール・入力・動画音声の動作を確認した。詳細な選択・候補位置・性能と、次段階のUnity統合は別途検証する。
 
 既存の`GpuProbe.unity`をそのままビルドできる。起動後、診断欄に上記revisionが出ていることを確認する。次の順で比較する。
 

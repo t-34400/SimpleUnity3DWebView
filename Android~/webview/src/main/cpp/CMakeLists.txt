@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.22)
+project(vrwebview_vulkan LANGUAGES CXX)
+add_library(vrwebview_vulkan SHARED VulkanProbe.cpp)
+target_compile_features(vrwebview_vulkan PRIVATE cxx_std_17)
+target_compile_options(vrwebview_vulkan PRIVATE -Wall -Wextra -Werror -fvisibility=hidden)
+target_link_options(vrwebview_vulkan PRIVATE -Wl,-z,max-page-size=16384)
+target_link_libraries(vrwebview_vulkan PRIVATE android mediandk log)

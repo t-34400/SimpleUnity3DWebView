@@ -10,8 +10,9 @@ Unity 6000.4 / Meta Quest向けWebViewの新規実装です。配布物は埋め
 Packages/com.t34400.vrwebview/
   Runtime/Core/          Unityに依存しないセッション・ポインタ・応答管理
   Runtime/UnityUI/       uGUIからの座標変換・ポインタ入力
-  Runtime/Android/       IME/GPUプローブへのJNI入口・自動起動
-  Runtime/Plugins/Android/  ビルド済み検証用AAR
+  Runtime/Android/       独立ActivityのIME/GPUプローブへのJNI入口・自動起動
+  Runtime/VulkanProbe/   同一Unity ActivityのVulkan/XR検証・レイ操作
+  Runtime/Plugins/Android/  ビルド済み検証用AAR・arm64 Vulkanプラグイン
   Editor/                検証シーン作成メニュー
   Tests/EditMode/        Unityで実行するテスト
   Samples~/ImeProbe/     Package Managerからimportする検証用スクリプト
@@ -21,6 +22,10 @@ Tools/                   ビルド・テスト・unitypackage出力
 ```
 
 Meta SDKはルートの検証プロジェクトの依存で、本体Runtimeの必須依存ではありません。既存の旧WebView/AAR・古いシーン/Meta64サンプルを取り除き、Unity/OpenXR/Metaの更新済み設定を基準として残しています。旧カスタムAndroid Manifest/Gradleは無効化し、検証AARの最小Manifestをマージします。
+
+## 次の実機検証
+
+H1のWindow draw offでスクロール・入力・動画音声が動くことはQuest 3で利用者が確認済みです。次は **VRWebView > Create Vulkan XR Probe Scene** で、UnityのVulkanテクスチャ、同一ActivityでのIME、XR継続動作を検証します。Android Vulkan / ARM64を維持してください。[手順と未確認事項](Packages/com.t34400.vrwebview/Documentation~/VulkanProbe.md)を参照してください。
 
 ## 最初の実機検証
 
@@ -50,13 +55,13 @@ GPUプローブの補助処理、同梱動画のdecode、AARへの同梱内容�
 
 ## Androidソースの再ビルド
 
-JDK 17以上、Android SDK Platform 35、Build Tools 34.0.0を準備し、`ANDROID_HOME`と`JAVA_HOME`を設定します。Gradle 8.9 / AGP 8.7.3を固定しています。
+JDK 17以上、Android SDK Platform 35、Build Tools 34.0.0、NDK 27.2.12479018、CMake 3.22.1を準備し、`ANDROID_HOME`と`JAVA_HOME`を設定します。Gradle 8.9 / AGP 8.7.3を固定しています。
 
 ```sh
 python3 Tools/build_android.py
 ```
 
-標準Java APIのみを使う小さな検証ライブラリなので、現時点ではKotlin stdlib・Unityのclasses.jar・NDKは不要です。製品用GPU経路の検証時にC++/NDKを追加します。
+Java側にKotlin stdlib・Unityのclasses.jarは不要です。Vulkan経路はNDKでビルドし、arm64ライブラリをUPMへ同梱します。ネイティブの一時ビルド先はプロジェクト外です。
 
 ## 配布
 
@@ -73,7 +78,7 @@ WindowsではユーザーのDownloads、今回指定されたWSL環境では`C:\
 ## 実装範囲
 
 - 実装済み: HTTP(S) URL方針、セッション初期化/破棄、遅延通知排除、要求ID/世代照合、単一ポインタ捕捉/キャンセル、pivot/Overlay Canvas対応の座標変換。
-- 検証用実装済み: 通常ホスト/VirtualDisplayのWebView、IME要求、状態表示、複数行・日本語変換・contenteditableを含むテストページ。同一Windowのhardware Canvas／VirtualDisplayからSurfaceTextureへのGPU取り込み比較と、合成H.264/AAC動画。
-- 未実装: 製品ブラウザバックエンド、UnityへのGPU共有/NDK、IME接続の中継、完全なXR検証シーン、fullscreen/MSE/DRMの比較経路、履歴/JS通信等の製品API。
+- 検証用実装済み: 通常ホスト/VirtualDisplayのWebView、IME要求、状態表示、複数行・日本語変換・contenteditableを含むテストページ。同一Windowのhardware Canvas／VirtualDisplayからSurfaceTextureへのGPU取り込み比較と、合成H.264/AAC動画。同一Unity ActivityからAHardwareBuffer経由でUnity Vulkan RenderTextureへ描くVU1検証、XRコントローラーレイ・診断・pause/resize/recreate。
+- 未実装: 製品ブラウザバックエンド、IME接続の独自中継、製品用XR UI、fullscreen/MSE/DRMの比較経路、履歴/JS通信等の製品API。
 
-旧版のAPI/Prefabとの互換性は維持していません。MIT License。
+旧版のAPI/Prefabとの互換性は維持していません。自作部分はMIT License。Unity Native Plugin API headersの既存ライセンス表示はそのまま保持しています。

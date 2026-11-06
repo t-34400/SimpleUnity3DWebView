@@ -2,7 +2,9 @@
 
 Session/input foundations and Android WebView GPU, video and IME comparison probes for Unity 6000.4.
 
-This preview does **not** implement production GPU rendering into a Unity texture. Standalone Activity probes do not prove Unity/XR focus coexistence.
+This preview includes an experimental AHardwareBuffer-to-Unity Vulkan transfer and a same-Activity XR probe. It is not a production browser backend. Standalone Activity results do not establish the new probe's Unity/XR or IME behavior.
+
+Use **VRWebView > Create Vulkan XR Probe Scene** for the next Quest test. Keep Vulkan and ARM64 enabled. See `Documentation~/VulkanProbe.md` for controller controls, diagnostics and the device validation sequence.
 
 Import the IME Probe sample through Package Manager, then use **VRWebView > Create IME Probe Scene**. See `Documentation~/ImeProbe.md` for the test matrix and limitations.
 

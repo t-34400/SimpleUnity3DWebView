@@ -1,0 +1,5 @@
+{
+  "name": "T34400.VRWebView.VulkanProbe",
+  "rootNamespace": "T34400.VRWebView",
+  "references": ["UnityEngine.UI"]
+}

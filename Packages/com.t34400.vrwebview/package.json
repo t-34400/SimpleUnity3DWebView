@@ -1,11 +1,21 @@
 {
   "name": "com.t34400.vrwebview",
-  "version": "0.1.0-preview.3",
+  "version": "0.1.0-preview.4",
   "displayName": "VRWebView",
-  "description": "Browser foundations and standalone Android GPU, video and IME comparison probes. A production Unity GPU browser backend is not implemented in this preview.",
+  "description": "Browser foundations, standalone Android comparison probes, and an experimental same-Activity Vulkan/OpenXR WebView probe. Device validation is required.",
   "unity": "6000.4",
-  "author": { "name": "t34400" },
+  "author": {
+    "name": "t34400"
+  },
   "license": "MIT",
-  "dependencies": { "com.unity.ugui": "2.0.0" },
-  "samples": [ { "displayName": "IME Probe", "description": "Compare host-window and virtual-display WebView input on Android.", "path": "Samples~/ImeProbe" } ]
+  "dependencies": {
+    "com.unity.ugui": "2.0.0"
+  },
+  "samples": [
+    {
+      "displayName": "IME Probe",
+      "description": "Compare host-window and virtual-display WebView input on Android.",
+      "path": "Samples~/ImeProbe"
+    }
+  ]
 }

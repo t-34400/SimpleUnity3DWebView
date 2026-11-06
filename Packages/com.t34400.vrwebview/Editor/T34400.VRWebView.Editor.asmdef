@@ -1,5 +1,10 @@
 {
   "name": "T34400.VRWebView.Editor",
-  "references": ["T34400.VRWebView.Android"],
-  "includePlatforms": ["Editor"]
+  "references": [
+    "T34400.VRWebView.Android",
+    "T34400.VRWebView.VulkanProbe"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ]
 }
