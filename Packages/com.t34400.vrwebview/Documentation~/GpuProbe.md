@@ -25,6 +25,17 @@ H1の`Window draw: off`は、元WebViewの通常Windowへの`draw()`を止める
 
 ## 最初の試験
 
+`probeRevision=H1-scroll-1`では、H1のSurface描画へ通常のView描画と同じスクロール補正を追加した。元の症状は、SOURCEとTARGETで動画が動く一方、スクロールするとTARGETの上側から表示が消えるというもの。修正後の実機動作は別途確認する。
+
+既存の`GpuProbe.unity`をそのままビルドできる。起動後、診断欄に上記revisionが出ていることを確認する。次の順で比較する。
+
+1. H1で動画を再生する。SOURCEから上下へスクロールし、TARGETが同じ内容を表示し続けるか見る。動画を画面外へ移し、戻した後もフレーム番号が進むか確認する。
+2. 次にTARGETから同じ操作を行う。今回の補正は描画Canvasだけに適用し、タッチ座標へページのスクロール量を足さない。両側で同じ入力欄を選べるか確認する。
+3. TARGETから入力欄を選択して日本語の変換・確定を確認する。
+4. `Window draw: off`にして、TARGETだけでもスクロール・動画・日本語入力が成立するか確認する。
+
+この段階ではV1のIMEやUnity/OpenXRへの接続は変更していない。横方向にスクロールするページでも同じX方向補正を使うが、同梱ページでの横方向スクロール成功を確認したという意味ではない。
+
 1. H0で`Play / Pause`を押す。動画の焼き込み`VIDEO frame`番号と色が動き、音が出ることを確認する。pause、seekも確認する。
 2. 動画を再生しながら入力欄へ日本語を入力し、変換・確定する。
 3. H1へ切り替え、同じ操作を行う。**下段のGPU OUTPUT内の動画**でフレーム番号が進むことを確認する。上段だけで動いていても合格ではない。
@@ -46,6 +57,8 @@ H1の`Window draw: off`は、元WebViewの通常Windowへの`draw()`を止める
 - `webHardware` / `targetCanvasHardware`：Viewと描画先Canvasのhardware acceleration。後者はH1だけ。
 - `connectionRequests` / `nonNullConnections`：InputConnection生成の呼び出しと非nullの回数。接続を保存・ラップしない。
 - `canvasSubmissions` / `gpuFramesAcquired` / `textureTimestampNs`：描画指示とGPU consumer側の観測。前者はH1だけ。どれも動画描画の合否ではない。
+- `probeRevision`：起動したAARの検証版識別子。今回の修正版は`H1-scroll-1`。
+- `viewScroll` / `capturedScroll`：Viewの現在のスクロール量と、H1の直近描画で補正した量。動いている間は取得タイミングの差があり得る。
 - Window flags、API level、Android version、WebView provider/version、GLES、Unity graphics、起動元Activity、`failure`。
 
 入力本文・password・周辺テキストをUnityやLogcatへ送らない。ページ上の入力イベント表示も要素名・選択範囲・イベント種別だけ。JavascriptInterfaceを設けず、任意のサイトへ移動しない。

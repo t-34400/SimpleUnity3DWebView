@@ -12,6 +12,7 @@ import android.webkit.WebView;
 /** Records connection metadata only; never wraps, retains, or logs input text. */
 final class ProbeWebView extends WebView {
     int connectionRequests, nonNullConnections, windowFocusChanges, inputType, imeOptions;
+    int capturedScrollX, capturedScrollY;
     long draws;
     boolean targetHardware, suppressWindowDraw;
 
@@ -38,7 +39,16 @@ final class ProbeWebView extends WebView {
         try {
             targetHardware = canvas.isHardwareAccelerated();
             canvas.drawColor(Color.WHITE, PorterDuff.Mode.SRC);
-            super.draw(canvas);
+            // View.updateDisplayListIfDirty normally supplies this transform.
+            // Calling draw directly skips it, while WebView's GPU compositor
+            // still adds the view scroll offset to the incoming Canvas matrix.
+            computeScroll();
+            capturedScrollX = getScrollX(); capturedScrollY = getScrollY();
+            int checkpoint = canvas.save();
+            try {
+                canvas.translate(-capturedScrollX, -capturedScrollY);
+                super.draw(canvas);
+            } finally { canvas.restoreToCount(checkpoint); }
             draws++;
         } finally { surface.unlockCanvasAndPost(canvas); }
     }

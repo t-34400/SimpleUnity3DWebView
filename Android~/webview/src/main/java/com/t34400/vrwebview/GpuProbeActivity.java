@@ -232,7 +232,7 @@ public final class GpuProbeActivity extends Activity {
         private void updateStatus() {
             String name = mode == 0 ? "H0 normal Window" : mode == 1 ? "H1 host Window / hardware Canvas" : "V1 Virtual Display / GPU";
             PackageInfo provider = WebView.getCurrentWebViewPackage();
-            StringBuilder text = new StringBuilder(name).append("\nfailure=").append(failure);
+            StringBuilder text = new StringBuilder(name).append("\nprobeRevision=H1-scroll-1\nfailure=").append(failure);
             if (web != null) {
                 InputMethodManager imm = web.getContext().getSystemService(InputMethodManager.class);
                 text.append("\nviewFocus=").append(web.hasFocus()).append("  windowFocus=").append(web.hasWindowFocus())
@@ -247,7 +247,9 @@ public final class GpuProbeActivity extends Activity {
                         .append("\ninputType=").append(web.inputType).append("  imeOptions=").append(web.imeOptions)
                         .append("  windowFocusChanges=").append(web.windowFocusChanges)
                         .append("\ncanvasSubmissions=").append(mode == 1 ? Long.toString(web.draws) : "n/a")
-                        .append("  sourceWindowDraw=").append(!web.suppressWindowDraw);
+                        .append("  sourceWindowDraw=").append(!web.suppressWindowDraw)
+                        .append("\nviewScroll=").append(web.getScrollX()).append(',').append(web.getScrollY())
+                        .append("  capturedScroll=").append(mode == 1 ? web.capturedScrollX + "," + web.capturedScrollY : "n/a");
             }
             text.append("\ngpuFramesAcquired=").append(preview == null ? "n/a" : Long.toString(preview.acquiredFrames))
                     .append("  textureTimestampNs=").append(preview == null ? "n/a" : Long.toString(preview.textureTimestamp))
