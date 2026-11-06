@@ -11,13 +11,22 @@ namespace T34400.VRWebView
         private readonly Dictionary<long, TaskCompletionSource<string>> pending = new Dictionary<long, TaskCompletionSource<string>>();
         private long next;
         private bool disposed;
-        public int Generation { get; private set; }
+        private int generation;
+        private readonly int maximumPending;
+        public int Generation { get { lock (gate) return generation; } }
+
+        public RequestLedger(int maximumPending = 256)
+        {
+            if (maximumPending < 1) throw new ArgumentOutOfRangeException(nameof(maximumPending));
+            this.maximumPending = maximumPending;
+        }
 
         public Task<string> Begin(out long requestId, out int generation)
         {
             lock (gate)
             {
                 if (disposed) throw new ObjectDisposedException(nameof(RequestLedger));
+                if (pending.Count >= maximumPending) throw new InvalidOperationException("Too many pending requests.");
                 requestId = checked(++next); generation = Generation;
                 var completion = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
                 pending.Add(requestId, completion);
@@ -42,7 +51,7 @@ namespace T34400.VRWebView
             lock (gate)
             {
                 if (disposed) return;
-                disposed = final; Generation++;
+                disposed = final; generation++;
                 values = new TaskCompletionSource<string>[pending.Count];
                 pending.Values.CopyTo(values, 0); pending.Clear();
             }

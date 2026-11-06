@@ -79,6 +79,8 @@ public final class ImeProbe {
         private int frames;
         private boolean showAccepted;
         private long downTime;
+        private int touchOwner = -1;
+        private ByteBuffer packedFrame;
 
         Probe(Activity activity, boolean virtual) { this.activity = activity; this.virtual = virtual; }
 
@@ -155,13 +157,25 @@ public final class ImeProbe {
             float top = (preview.getHeight() - 768f * scale) / 2;
             float x = (original.getX() - left) / scale;
             float y = (original.getY() - top) / scale;
+            if (original.getPointerCount() > 1) {
+                if (touchOwner != -1) {
+                    MotionEvent cancel = MotionEvent.obtain(downTime, original.getEventTime(), MotionEvent.ACTION_CANCEL, x, y, 0);
+                    try { web.dispatchTouchEvent(cancel); } finally { cancel.recycle(); }
+                    touchOwner = -1;
+                }
+                return true;
+            }
             if (original.getActionMasked() == MotionEvent.ACTION_DOWN) {
                 if (x < 0 || y < 0 || x >= 1024 || y >= 768) return false;
                 downTime = original.getEventTime();
+                touchOwner = original.getPointerId(0);
             }
+            if (touchOwner != original.getPointerId(0)) return false;
             MotionEvent event = MotionEvent.obtain(downTime, original.getEventTime(), original.getActionMasked(), x, y, 0);
             try { web.dispatchTouchEvent(event); }
             finally { event.recycle(); }
+            if (original.getActionMasked() == MotionEvent.ACTION_UP || original.getActionMasked() == MotionEvent.ACTION_CANCEL)
+                touchOwner = -1;
             return true;
         }
 
@@ -173,7 +187,9 @@ public final class ImeProbe {
                         Image.Plane plane = image.getPlanes()[0];
                         ByteBuffer pixels = plane.getBuffer();
                         // Last-row padding is not guaranteed to be present in the buffer.
-                        ByteBuffer packed = ByteBuffer.allocate(image.getWidth() * image.getHeight() * 4);
+                        if (packedFrame == null) packedFrame = ByteBuffer.allocate(image.getWidth() * image.getHeight() * 4);
+                        ByteBuffer packed = packedFrame;
+                        packed.clear();
                         for (int y = 0; y < image.getHeight(); y++) {
                             ByteBuffer row = pixels.duplicate();
                             row.position(y * plane.getRowStride());
@@ -181,11 +197,11 @@ public final class ImeProbe {
                             packed.put(row);
                         }
                         packed.flip();
-                        Bitmap next = Bitmap.createBitmap(image.getWidth(), image.getHeight(), Bitmap.Config.ARGB_8888);
-                        next.copyPixelsFromBuffer(packed);
-                        preview.setImageBitmap(next);
-                        if (previewBitmap != null) previewBitmap.recycle();
-                        previewBitmap = next;
+                        if (previewBitmap == null)
+                            previewBitmap = Bitmap.createBitmap(image.getWidth(), image.getHeight(), Bitmap.Config.ARGB_8888);
+                        previewBitmap.copyPixelsFromBuffer(packed);
+                        preview.setImageBitmap(previewBitmap);
+                        preview.invalidate();
                         frames++;
                     }
                 } catch (RuntimeException error) {
@@ -234,7 +250,8 @@ public final class ImeProbe {
             if (display != null) { display.release(); display = null; }
             if (reader != null) { reader.close(); reader = null; }
             if (preview != null) preview.setImageDrawable(null);
-            if (previewBitmap != null) { previewBitmap.recycle(); previewBitmap = null; }
+            // Let Android retire render-thread references; do not recycle a potentially queued bitmap.
+            previewBitmap = null; packedFrame = null;
             if (panel != null && panel.getParent() instanceof ViewGroup) ((ViewGroup) panel.getParent()).removeView(panel);
             if (active.get() == this) active.clear();
             if (activity instanceof ImeProbeActivity && !activity.isFinishing()) activity.finish();

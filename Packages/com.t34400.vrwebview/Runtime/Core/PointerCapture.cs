@@ -21,6 +21,7 @@ namespace T34400.VRWebView
         public event Action<BrowserPointerEvent> Received;
         public bool Send(int id, PointerPhase phase, float x, float y)
         {
+            if (phase < PointerPhase.Down || phase > PointerPhase.Cancel) return false;
             if (float.IsNaN(x) || float.IsNaN(y) || float.IsInfinity(x) || float.IsInfinity(y)) return false;
             if (phase == PointerPhase.Down)
             {
@@ -37,5 +38,6 @@ namespace T34400.VRWebView
         {
             if (owner.HasValue) Send(owner.Value, PointerPhase.Cancel, lastX, lastY);
         }
+        public void Cancel(int id) { if (owner == id) Cancel(); }
     }
 }

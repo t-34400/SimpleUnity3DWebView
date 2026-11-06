@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "aarSha256": "ea45baf4dc7cb72c9916a29618363ef7cc814c6fdf15b79b6285503b0dabfbfe",
+  "sources": {
+    "Android~/build.gradle.kts": "30319db7ac75762e50cc423c2245d8bc704df111839e5be6fd9393f906db67af",
+    "Android~/gradle/wrapper/gradle-wrapper.jar": "498495120a03b9a6ab5d155f5de3c8f0d986a449153702fb80fc80e134484f17",
+    "Android~/gradle/wrapper/gradle-wrapper.properties": "6f5a64034789bb015a6e7bf094953c7593d464bbdcf0a741ad12d9c004bab2ea",
+    "Android~/gradlew": "a3648413b47ef77af21d5ebc36c687c7d103aaef3e17f33de7d4f080a6f300a3",
+    "Android~/gradlew.bat": "57931b17dd228e5c24dac90e815d0bf82477e831a4618dfab4136f5446b42a9f",
+    "Android~/settings.gradle.kts": "64260860199058d92994e3e80574741aa2ab5a5e76cf2516491d4ef40fc65a8f",
+    "Android~/webview/build.gradle.kts": "088c1b0e9fe78bc8bacc6d4740372c5cb0f83daa53127b0b62d81f8478845d9d",
+    "Android~/webview/consumer-rules.pro": "54bd964af637faf4800e14137b904c4c19b9af57400a137013f14a7238728dcb",
+    "Android~/webview/src/main/AndroidManifest.xml": "3682ebde0f0efb7fdc480374d88c25f87130b831e169a30beeb930d464d64f70",
+    "Android~/webview/src/main/assets/vrwebview-ime-probe.html": "a20bcaf42287cdb058adaf2f7cd20fc4ee9bd014b648f83cb8183f1d1bb52d5b",
+    "Android~/webview/src/main/java/com/t34400/vrwebview/ImeProbe.java": "d27a19799065874607bd0ead6ae71557cfe37b2fdcb394fcf0e02b24d8abb66d",
+    "Android~/webview/src/main/java/com/t34400/vrwebview/ImeProbeActivity.java": "4c8e3b5f9f65cdf7d81144e50ff10cc7f409a1c2c2ba0d8d55e6ce8ce4d6aead"
+  },
+  "runtimeValidation": "Not performed by the build"
+}

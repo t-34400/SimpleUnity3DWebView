@@ -1,5 +1,6 @@
 """Run executable core tests and package integrity checks; no Unity/Android runtime claim."""
 import argparse
+import hashlib
 import json
 from pathlib import Path
 import re
@@ -34,6 +35,10 @@ def main():
         if path.suffix in {".asmdef", ".json"}:
             json.loads(path.read_text())
     aar = PACKAGE / "Runtime/Plugins/Android/vrwebview-probe.aar"
+    provenance = json.loads(aar.with_suffix(".build.json").read_text())
+    assert provenance["aarSha256"] == hashlib.sha256(aar.read_bytes()).hexdigest()
+    for name, expected in provenance["sources"].items():
+        assert hashlib.sha256((ROOT / name).read_bytes()).hexdigest() == expected, "Stale AAR: " + name
     with zipfile.ZipFile(aar) as archive:
         assert archive.testzip() is None
         assert "assets/vrwebview-ime-probe.html" in archive.namelist()

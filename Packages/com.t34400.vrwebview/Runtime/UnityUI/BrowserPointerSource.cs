@@ -21,11 +21,16 @@ namespace T34400.VRWebView
         {
             if (target == null) target = (RectTransform)transform;
             if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(target, data.position,
-                data.pressEventCamera, out var local)) return;
+                data.pressEventCamera, out var local))
+            {
+                if (phase == PointerPhase.Up) Capture.Cancel(data.pointerId);
+                return;
+            }
             Rect rect = target.rect;
             if (BrowserCoordinates.TryNormalize(local.x, local.y, rect.xMin, rect.yMin,
                 rect.width, rect.height, out float x, out float y))
                 Capture.Send(data.pointerId, phase, x, y);
+            else if (phase == PointerPhase.Up) Capture.Cancel(data.pointerId);
         }
     }
 }

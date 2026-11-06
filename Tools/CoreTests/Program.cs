@@ -126,6 +126,21 @@ internal static class Program
             ledger.Dispose(); ledger.Dispose(); await Rejects<OperationCanceledException>(pending);
             Throws<ObjectDisposedException>(() => ledger.Begin(out id, out generation));
         });
+        await Test("request limit recovers after completion", async () => {
+            using var ledger = new RequestLedger(1);
+            var first = ledger.Begin(out long id, out int generation);
+            Throws<InvalidOperationException>(() => ledger.Begin(out _, out _));
+            ledger.Complete(generation, id, "first"); await first;
+            var second = ledger.Begin(out id, out generation);
+            ledger.Complete(generation, id, "second"); Check(await second == "second", "Limit did not recover");
+        });
+        await Test("foreign cancellation cannot release owner and invalid phases are rejected", () => Sync(() => {
+            var capture = new PointerCapture();
+            Check(!capture.Send(1, (PointerPhase)99, 0, 0), "Invalid phase accepted");
+            capture.Send(1, PointerPhase.Down, 0, 0); capture.Cancel(2);
+            Check(!capture.Send(2, PointerPhase.Down, 0, 0), "Foreign cancellation released owner");
+            capture.Cancel(1); Check(capture.Send(2, PointerPhase.Down, 0, 0), "Owner cancellation failed");
+        }));
         Console.WriteLine($"Passed {passed} core tests; no Unity or Android runtime was exercised.");
     }
 }

@@ -11,6 +11,8 @@ PACKAGE = ROOT / "Packages/com.t34400.vrwebview"
 
 
 def export(output):
+    if output.resolve().is_relative_to(PACKAGE.resolve()):
+        raise ValueError("Export outside the source package to avoid packaging the output itself")
     assets = []
     for path in [PACKAGE, *sorted(PACKAGE.rglob("*"))]:
         rel = path.relative_to(PACKAGE)
