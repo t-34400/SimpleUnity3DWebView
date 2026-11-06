@@ -48,6 +48,7 @@ public final class VulkanProbe {
     public static void requestIme(long id) {
         UI.post(() -> {
             Host host = HOSTS.get(id); if (host == null || host.web == null) return;
+            host.focusRecovery.claimBrowser();
             host.web.requestFocus();
             InputMethodManager imm = (InputMethodManager) host.owner.getSystemService(Context.INPUT_METHOD_SERVICE);
             host.imeRequests++;
@@ -60,6 +61,13 @@ public final class VulkanProbe {
         UI.post(() -> {
             Host host = HOSTS.get(id); if (host == null || host.web == null) return;
             host.returnFocus("button");
+        });
+    }
+    public static void setFocusRecovery(long id, boolean enabled) {
+        UI.post(() -> {
+            Host host = HOSTS.get(id); if (host == null || host.closed) return;
+            host.focusRecovery.setEnabled(enabled);
+            host.trace("focusRecovery enabled=" + enabled);
         });
     }
     /** Opt-in recovery experiment: arm BEFORE selecting a field; does not require a live XR ray. */
@@ -82,6 +90,7 @@ public final class VulkanProbe {
             Host host = HOSTS.get(id); if (host == null || host.web == null) return;
             if (action == MotionEvent.ACTION_DOWN) {
                 host.cancelTouch(); host.downTime = SystemClock.uptimeMillis(); host.touching = true;
+                host.focusRecovery.claimBrowser();
                 boolean accepted = host.web.requestFocus();
                 host.trace("touchDown focusRequest=" + accepted);
             } else if (!host.touching) return;
@@ -109,7 +118,8 @@ public final class VulkanProbe {
         boolean closed, touching, imeAccepted;
         long downTime;
         long focusReturnAt;
-        int fullscreenRequests, imeRequests, focusReturns, focusChanges, lastTouchAction = -1;
+        int fullscreenRequests, imeRequests, focusReturns, focusChanges, focusRecoveries, lastTouchAction = -1;
+        final ProbeFocusRecovery focusRecovery = new ProbeFocusRecovery();
         String lastFocusMove = "none", lastState;
         ViewTreeObserver focusObserver;
         final ViewTreeObserver.OnGlobalFocusChangeListener focusListener = (before, after) -> {
@@ -131,6 +141,7 @@ public final class VulkanProbe {
             panel = new FrameLayout(owner);
             web = new ProbeWebView(owner);
             web.metadataListener = this::trace;
+            web.windowFocusListener = this::windowFocusChanged;
             web.suppressWindowDraw = true;
             web.setFocusable(true); web.setFocusableInTouchMode(true);
             web.getSettings().setJavaScriptEnabled(true);
@@ -183,6 +194,7 @@ public final class VulkanProbe {
                     + " fullscreenRequests=" + fullscreenRequests
                     + "\nfocusOwner=" + viewName(owner.getCurrentFocus()) + " changes=" + focusChanges
                     + " returns=" + focusReturns + " imeRequests=" + imeRequests
+                    + " recovery=" + focusRecovery.isEnabled() + "/" + focusRecoveries
                     + "\nfocusMove=" + lastFocusMove + " touch=" + lastTouchAction
                     + " returnIn=" + (focusReturnAt == 0 ? "off" : Math.max(0, focusReturnAt - SystemClock.uptimeMillis()) + "ms");
         }
@@ -191,12 +203,29 @@ public final class VulkanProbe {
             Log.i(TAG, "[VRWebViewFocus] host=" + id + " " + event);
         }
         void returnFocus(String reason) {
+            focusRecovery.release();
             focusReturnAt = 0; UI.removeCallbacks(delayedFocusReturn);
             focusReturns++;
             trace("returnFocus reason=" + reason + " target=" + viewName(previousFocus));
             cancelTouch(); hideIme(); web.clearFocus();
             if (previousFocus != null && previousFocus.isAttachedToWindow()) previousFocus.requestFocus();
             updateStatus();
+        }
+        void windowFocusChanged(boolean focused) {
+            if (!focused) { focusRecovery.windowLost(web.hasFocus()); return; }
+            long ticket = focusRecovery.windowGained();
+            if (ticket < 0) return;
+            // Let the Activity finish its window-focus callback before restoring the
+            // view that owned browser input. Never poll/reclaim focus every frame.
+            UI.post(() -> {
+                if (closed || web == null || !web.isAttachedToWindow() || !web.hasWindowFocus()
+                        || !focusRecovery.consume(ticket)) return;
+                if (web.hasFocus()) { trace("focusRecovery unnecessary"); return; }
+                focusRecoveries++;
+                boolean accepted = web.requestFocus();
+                trace("focusRecovery request=" + accepted + " owner=" + viewName(owner.getCurrentFocus()));
+                updateStatus();
+            });
         }
         void cancelTouch() {
             if (!touching || web == null) return;
@@ -212,9 +241,10 @@ public final class VulkanProbe {
         void close() {
             if (closed) return;
             trace("hostClosed");
+            focusRecovery.release();
             closed = true; UI.removeCallbacks(draw); UI.removeCallbacks(delayedFocusReturn);
             if (focusObserver != null && focusObserver.isAlive()) focusObserver.removeOnGlobalFocusChangeListener(focusListener);
-            if (web != null) web.metadataListener = null;
+            if (web != null) { web.metadataListener = null; web.windowFocusListener = null; }
             cancelTouch(); hideIme();
             if (web != null) { web.stopLoading(); web.onPause(); panel.removeView(web); web.destroy(); web = null; }
             if (panel != null && panel.getParent() instanceof ViewGroup) ((ViewGroup) panel.getParent()).removeView(panel);

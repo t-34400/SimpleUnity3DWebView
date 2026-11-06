@@ -40,6 +40,40 @@ public final class ProbeTests {
         boolean refused = false;
         try { new ProbeGeometry(0, 500, 500, 1000); } catch (IllegalArgumentException expected) { refused = true; }
         check(refused);
-        System.out.println("PASS " + checks + " probe range/geometry checks");
+        ProbeFocusRecovery focus = new ProbeFocusRecovery();
+        check(focus.windowGained() == -1); // No browser ownership: never steal focus.
+        focus.claimBrowser();
+        focus.windowLost(false);
+        check(focus.windowGained() == -1); // The browser did not own focus before loss.
+        focus.windowLost(true);
+        long first = focus.windowGained();
+        check(first >= 0 && focus.consume(first));
+        check(!focus.consume(first));
+        focus.windowLost(true);
+        check(focus.windowGained() == -1); // A second window cycle cannot form an IME loop.
+        focus.claimBrowser(); focus.windowLost(true);
+        long released = focus.windowGained();
+        focus.release();
+        check(!focus.consume(released)); // Explicit Unity return/host close cancels posted work.
+        focus.claimBrowser(); focus.windowLost(true);
+        long stale = focus.windowGained();
+        focus.claimBrowser();
+        check(!focus.consume(stale)); // A new gesture invalidates an older queued callback.
+        focus.windowLost(true);
+        long disabled = focus.windowGained();
+        focus.setEnabled(false);
+        check(!focus.consume(disabled));
+        focus.claimBrowser(); focus.windowLost(true);
+        check(focus.windowGained() == -1);
+        focus.setEnabled(true);
+        check(focus.windowGained() == -1); // Toggling on does not immediately steal focus.
+        focus.claimBrowser(); focus.windowLost(true);
+        long oldWindow = focus.windowGained();
+        focus.windowLost(true);
+        check(!focus.consume(oldWindow));
+        check(focus.windowGained() == -1); // An interrupted attempt still consumes the bound.
+        focus.claimBrowser(); focus.windowLost(true);
+        check(focus.consume(focus.windowGained()));
+        System.out.println("PASS " + checks + " probe range/geometry/focus checks");
     }
 }

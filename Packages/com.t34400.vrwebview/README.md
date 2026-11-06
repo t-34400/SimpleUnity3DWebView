@@ -16,4 +16,4 @@ Vulkan and GLES share the Java WebView/IME host and native image queue. Only GPU
 
 Hand input: `Pointer Mode=Auto` uses Meta Hand Tracking Aim when no controller is tracked. Pinch to click/drag, including probe buttons. See `Documentation~/HandInputProbe.md`. Existing scenes should enable Flip Image Vertically before rebuilding; click coordinates now follow the displayed UV rectangle.
 
-If selecting a field hides the ray, use the HI2 focus diagnostics and opt-in Focus +5s recovery experiment in `Documentation~/FocusProbe.md`. These observations do not yet establish Unity/Quest IME support.
+If selecting a field hides the ray, use the HI3 bounded window-focus recovery, Restore ON/OFF comparison and opt-in Focus +5s experiment in `Documentation~/FocusProbe.md`. These observations do not yet establish Unity/Quest IME support.

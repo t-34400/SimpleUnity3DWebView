@@ -22,6 +22,7 @@ def main():
     with tempfile.TemporaryDirectory(prefix="vrwebview-probe-tests-") as temp:
         subprocess.run([args.javac, "--release", "11", "-d", temp,
                         str(JAVA / "ProbeGeometry.java"), str(JAVA / "ProbeRange.java"),
+                        str(JAVA / "ProbeFocusRecovery.java"),
                         str(ROOT / "Tools/ProbeTests/ProbeTests.java")], check=True)
         subprocess.run([args.java, "-cp", temp, "com.t34400.vrwebview.ProbeTests"], check=True)
     video = ASSETS / "vrwebview-probe-video.mp4"

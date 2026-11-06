@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 using UnityEngine.XR;
 using UnityEngine.XR.Hands;
 
@@ -26,6 +27,14 @@ namespace T34400.VRWebView
         internal bool LeftHandTracked { get; private set; }
         internal string RightHandDetails => DescribeHand(MetaAimHand.right);
         internal string LeftHandDetails => DescribeHand(MetaAimHand.left);
+        private readonly List<XRHandSubsystem> handSubsystems = new List<XRHandSubsystem>();
+        internal string RootDetails()
+        {
+            SubsystemManager.GetSubsystems(handSubsystems);
+            foreach (var subsystem in handSubsystems)
+                if (subsystem.running) return "roots R=" + subsystem.rightHand.isTracked + " L=" + subsystem.leftHand.isTracked;
+            return "roots subsystem=not-running";
+        }
 
         private static string DescribeHand(MetaAimHand hand)
         {

@@ -33,7 +33,7 @@ GX2の実機画像で、Vulkan初期化とページ画像の取り込みが成�
 1. Unityを閉じてパッチを適用し、開き直してPackage Managerの解決・コンパイルを待つ。
 2. 既存GPU XR ProbeのInspectorで`Pointer Mode=Auto`、`Flip Image Vertically=On`にする。
 3. 上記のAndroid OpenXR二項目とControllers And Handsを確認する。設定のローカル変更をstashから戻した際に競合した場合は、その変更を確認する。
-4. 再ビルド・インストールする。native表示は`GX2 backend=Vulkan`のまま、入力欄に`input=HI2`が出る。
+4. 再ビルド・インストールする。native表示は`GX2 backend=Vulkan`のまま、入力欄に`input=HI3`が出る。
 5. 手をレイが向く姿勢にすると、`source=RightHand`または`LeftHand`、`tracked=True`となることを確認する。頭の近くや掌を顔へ向けたsystem gestureではrayを抑制する。
 6. ピンチでPlayを押し、動画の焼き込みVIDEO frameが進むことと音を確認する。続いてピンチ保持のドラッグでスクロールし、同じ入力欄を正しく選べるか確認する。
 7. 入力欄を選び、必要なら下部のIMEをピンチで押す。日本語の変換・確定・Focusからの復帰を試す。
@@ -41,7 +41,7 @@ GX2の実機画像で、Vulkan初期化とページ画像の取り込みが成�
 
 ## 診断
 
-- `input=HI2`: 今回の入力と座標修正を含む。
+- `input=HI3`: 今回の入力と座標修正を含む。
 - `source`: 選択中の入力元。Noneなら有効なray poseがない。
 - `tracked` / `pressed`: 選択した入力元の有効性とピンチ/トリガー状態。
 - `handAim R=present/tracked L=present/tracked`: Aim deviceが作られたか／UIで使えるposeがあるか。deviceがあっても手が見えていなければtracked=Falseになり得る。
@@ -57,3 +57,5 @@ C#基盤テストで、画面上の点とsource UVの対応、反転/crop/範囲
 ## 入力欄の選択でrayが消える場合
 
 HI2ではfocus owner、Unity lifecycle、手のraw状態を追加した。詳細とログ採取・明示的な5秒後復帰実験は[FocusProbe.md](FocusProbe.md)を参照。HI1の実機でピンチの動画操作・スクロールは成功したが、Unity内のIMEは未解決。
+
+HI3はWindow復帰後の限定的なfocus復元と、手のroot状態/reset通知を追加。実機検証はFocusProbe.mdのRestore ON/OFF比較で行う。

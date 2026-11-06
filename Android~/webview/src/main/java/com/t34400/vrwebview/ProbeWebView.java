@@ -19,6 +19,8 @@ final class ProbeWebView extends WebView {
     // Diagnostic events contain metadata only. Do not pass EditorInfo or connection objects.
     interface MetadataListener { void onEvent(String event); }
     MetadataListener metadataListener;
+    interface WindowFocusListener { void onChanged(boolean focused); }
+    WindowFocusListener windowFocusListener;
 
     ProbeWebView(Context context) { super(context); }
 
@@ -40,6 +42,7 @@ final class ProbeWebView extends WebView {
     @Override public void onWindowFocusChanged(boolean focused) {
         windowFocusChanges++; super.onWindowFocusChanged(focused);
         metadata("windowFocus=" + focused);
+        if (windowFocusListener != null) windowFocusListener.onChanged(focused);
     }
 
     private void metadata(String event) {
