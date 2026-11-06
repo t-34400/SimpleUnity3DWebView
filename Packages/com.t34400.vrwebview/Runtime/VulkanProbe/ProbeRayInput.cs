@@ -1,0 +1,81 @@
+using UnityEngine;
+using UnityEngine.XR;
+using UnityEngine.XR.Hands;
+
+namespace T34400.VRWebView
+{
+    public enum ProbePointerMode { Auto, RightController, RightHand, LeftHand }
+    internal enum ProbePointerSource { None, RightController, RightHand, LeftHand }
+    internal struct ProbeRaySample
+    {
+        internal ProbePointerSource Source;
+        internal Vector3 Position;
+        internal Quaternion Rotation;
+        internal bool Pressed, RequestIme, ReturnFocus;
+        internal Vector2 Scroll;
+    }
+
+    // Only this probe input adapter knows about XR Hands. Rendering and Android
+    // receive the same single-pointer stream for controllers and hand aim.
+    internal sealed class ProbeRayInput
+    {
+        internal bool ControllerTracked { get; private set; }
+        internal bool RightHandPresent { get; private set; }
+        internal bool LeftHandPresent { get; private set; }
+        internal bool RightHandTracked { get; private set; }
+        internal bool LeftHandTracked { get; private set; }
+
+        internal bool TryRead(ProbePointerMode mode, int? capturedSource, out ProbeRaySample sample)
+        {
+            ControllerTracked = TryController(out var controller);
+            RightHandPresent = MetaAimHand.right != null && MetaAimHand.right.added;
+            LeftHandPresent = MetaAimHand.left != null && MetaAimHand.left.added;
+            RightHandTracked = TryHand(MetaAimHand.right, ProbePointerSource.RightHand, out var right);
+            LeftHandTracked = TryHand(MetaAimHand.left, ProbePointerSource.LeftHand, out var left);
+            sample = default;
+            if (mode == ProbePointerMode.Auto)
+            {
+                // A second source cannot steal a held gesture from its tracked owner.
+                if (capturedSource == (int)ProbePointerSource.RightController && ControllerTracked) { sample = controller; return true; }
+                if (capturedSource == (int)ProbePointerSource.RightHand && RightHandTracked) { sample = right; return true; }
+                if (capturedSource == (int)ProbePointerSource.LeftHand && LeftHandTracked) { sample = left; return true; }
+                if (ControllerTracked) { sample = controller; return true; }
+                if (RightHandTracked) { sample = right; return true; }
+                if (LeftHandTracked) { sample = left; return true; }
+                return false;
+            }
+            if (mode == ProbePointerMode.RightController && ControllerTracked) { sample = controller; return true; }
+            if (mode == ProbePointerMode.RightHand && RightHandTracked) { sample = right; return true; }
+            if (mode == ProbePointerMode.LeftHand && LeftHandTracked) { sample = left; return true; }
+            return false;
+        }
+        private static bool TryController(out ProbeRaySample sample)
+        {
+            sample = default;
+            var hand = InputDevices.GetDeviceAtXRNode(XRNode.RightHand);
+            if (!hand.isValid || (hand.characteristics & InputDeviceCharacteristics.Controller) == 0
+                    || !hand.TryGetFeatureValue(CommonUsages.isTracked, out bool tracked) || !tracked
+                    || !hand.TryGetFeatureValue(CommonUsages.devicePosition, out sample.Position)
+                    || !hand.TryGetFeatureValue(CommonUsages.deviceRotation, out sample.Rotation)) return false;
+            sample.Source = ProbePointerSource.RightController;
+            hand.TryGetFeatureValue(CommonUsages.triggerButton, out sample.Pressed);
+            hand.TryGetFeatureValue(CommonUsages.primaryButton, out sample.RequestIme);
+            hand.TryGetFeatureValue(CommonUsages.secondaryButton, out sample.ReturnFocus);
+            hand.TryGetFeatureValue(CommonUsages.primary2DAxis, out sample.Scroll);
+            return true;
+        }
+        private static bool TryHand(MetaAimHand hand, ProbePointerSource source, out ProbeRaySample sample)
+        {
+            sample = default;
+            if (hand == null || !hand.added || !hand.isTracked.isPressed) return false;
+            var flags = (MetaAimFlags)(uint)hand.aimFlags.ReadValue();
+            var required = MetaAimFlags.Computed | MetaAimFlags.Valid;
+            if ((flags & required) != required || (flags & MetaAimFlags.SystemGesture) != 0) return false;
+            sample.Source = source;
+            sample.Position = hand.devicePosition.ReadValue();
+            sample.Rotation = hand.deviceRotation.ReadValue();
+            sample.Pressed = hand.indexPressed.isPressed;
+            return true;
+        }
+    }
+}

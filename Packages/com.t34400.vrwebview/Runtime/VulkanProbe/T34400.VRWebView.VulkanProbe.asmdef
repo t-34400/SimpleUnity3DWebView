@@ -1,5 +1,10 @@
 {
   "name": "T34400.VRWebView.VulkanProbe",
   "rootNamespace": "T34400.VRWebView",
-  "references": ["UnityEngine.UI"]
+  "references": [
+    "UnityEngine.UI",
+    "T34400.VRWebView.Core",
+    "Unity.InputSystem",
+    "Unity.XR.Hands"
+  ]
 }

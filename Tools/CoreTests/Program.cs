@@ -101,6 +101,44 @@ internal static class Program
             Check(BrowserCoordinates.TryNormalize(200, 0, 0, 0, 100, 100, out x, out y) && x == 2, "Drag clamped");
             Check(!BrowserCoordinates.TryNormalize(0, 0, 0, 0, 0, 100, out x, out y), "Zero width accepted");
         }));
+        await Test("displayed Canvas UV maps upright and inverted page points to the same source content", () => Sync(() => {
+            // A point near the Android page top is at the UI top after Flip Y,
+            // and near the UI bottom with an unflipped top-first Canvas buffer.
+            Check(BrowserCoordinates.TryMapTextureUv(.2f, .25f, 0, 1, 1, -1, out float x, out float y)
+                && Math.Abs(x - .2f) < .00001f && Math.Abs(y - .25f) < .00001f, "Upright click was inverted twice");
+            Check(BrowserCoordinates.TryMapTextureUv(.2f, .75f, 0, 0, 1, 1, out x, out y)
+                && Math.Abs(y - .25f) < .00001f, "Displayed inverted point does not reach its source row");
+            Check(BrowserCoordinates.TryMapTextureUv(0, 0, 0, 1, 1, -1, out x, out y) && x == 0 && y == 0, "Top-left corner");
+            Check(BrowserCoordinates.TryMapTextureUv(1, 1, 0, 1, 1, -1, out x, out y) && x == 1 && y == 1, "Bottom-right corner");
+        }));
+        await Test("sampled UV coordinates preserve crop, mirroring and out-of-bounds capture", () => Sync(() => {
+            Check(BrowserCoordinates.TryMapTextureUv(.5f, .2f, .1f, .2f, .6f, .5f, out float x, out float y)
+                && Math.Abs(x - .4f) < .00001f && Math.Abs(y - .6f) < .00001f, "Cropped UV mapping");
+            Check(BrowserCoordinates.TryMapTextureUv(.2f, .25f, 1, 1, -1, -1, out x, out y)
+                && Math.Abs(x - .8f) < .00001f && Math.Abs(y - .25f) < .00001f, "Mirrored UV mapping");
+            Check(BrowserCoordinates.TryMapTextureUv(-.5f, 1.5f, 0, 1, 1, -1, out x, out y) && x == -.5f && y == 1.5f, "Capture was clamped");
+            Check(!BrowserCoordinates.TryMapTextureUv(float.NaN, 0, 0, 0, 1, 1, out x, out y), "Nonfinite UV accepted");
+        }));
+        await Test("pinch and trigger produce one press, movement and release", () => Sync(() => {
+            var press = new PointerPressState();
+            Check(press.Update(true, 1, false) == null, "Initial tracking generated a press");
+            Check(press.Update(true, 1, true) == PointerPhase.Down && press.ActiveSourceId == 1, "Pinch down lost");
+            Check(press.Update(true, 1, true) == PointerPhase.Move, "Held pinch did not move");
+            Check(press.Update(true, 1, false) == PointerPhase.Up && press.ActiveSourceId == null, "Pinch release lost");
+            Check(press.Update(true, 1, false) == null, "Duplicate release");
+        }));
+        await Test("tracking loss and source replacement cancel without ghost pinch clicks", () => Sync(() => {
+            var press = new PointerPressState();
+            Check(press.Update(true, 1, true) == null && press.Update(true, 1, true) == null, "Held pinch clicked on initial tracking");
+            press.Update(true, 1, false); Check(press.Update(true, 1, true) == PointerPhase.Down, "Fresh pinch rejected");
+            Check(press.Update(true, 2, true) == PointerPhase.Cancel, "Replacement source stole gesture");
+            Check(press.Update(true, 2, true) == null, "Replacement held pinch clicked");
+            press.Update(true, 2, false); Check(press.Update(true, 2, true) == PointerPhase.Down, "Replacement fresh pinch rejected");
+            Check(press.Update(false, 2, true) == PointerPhase.Cancel, "Tracking loss did not cancel");
+            Check(press.Update(false, 2, true) == null && press.Update(true, 2, true) == null, "Reacquisition clicked");
+            press.Update(true, 2, false); Check(press.Update(true, 2, true) == PointerPhase.Down, "Reacquired fresh pinch rejected");
+            press.Reset(); Check(press.Update(true, 2, true) == null, "Focus recovery clicked a held pinch");
+        }));
         await Test("nonfinite pointer data cannot poison capture", () => Sync(() => {
             var capture = new PointerCapture();
             Check(!capture.Send(1, PointerPhase.Down, float.NaN, 0), "NaN accepted");

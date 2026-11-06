@@ -73,7 +73,7 @@ unitypackageが必要なら:
 python3 Tools/export_unitypackage.py
 ```
 
-WindowsではユーザーのDownloads、今回指定されたWSL環境では`C:\Users\tmiyoshi\Downloads`へ出力します。`--output`で変更できます。Runtime/Editor/サンプル/文書を`Assets/VRWebView`に集約するアーカイブを生成し、GUIDとファイル本文を照合します。元プロジェクト内にコピーを作らないため、export中に重複GUIDをimportしません。利用先ではUPM版とunitypackage版の片方だけを導入してください。Unityでの実importは別途確認が必要です。
+WindowsではユーザーのDownloads、今回指定されたWSL環境では`C:\Users\tmiyoshi\Downloads`へ出力します。`--output`で変更できます。Runtime/Editor/サンプル/文書を`Assets/VRWebView`に集約するアーカイブを生成し、GUIDとファイル本文を照合します。元プロジェクト内にコピーを作らないため、export中に重複GUIDをimportしません。利用先ではUPM版とunitypackage版の片方だけを導入してください。unitypackage版ではUGUI・Input System 1.19.0・XR Hands 1.7.3をPackage Managerで先に導入してください。Unityでの実importは別途確認が必要です。
 
 ## 実装範囲
 
@@ -82,3 +82,7 @@ WindowsではユーザーのDownloads、今回指定されたWSL環境では`C:\
 - 未実装: 製品ブラウザバックエンド、IME接続の独自中継、製品用XR UI、fullscreen/MSE/DRMの比較経路、履歴/JS通信等の製品API。
 
 旧版のAPI/Prefabとの互換性は維持していません。自作部分はMIT License。Unity Native Plugin API headersの既存ライセンス表示はそのまま保持しています。
+
+## ハンドでの実機検証
+
+コントローラーがない場合は、XR HandsのMeta Hand Tracking Aimを使ってピンチでクリック・ドラッグできます。基準プロジェクトの手の追跡設定も有効にしています。[HI1手順](Packages/com.t34400.vrwebview/Documentation~/HandInputProbe.md)を参照してください。既存シーンではFlip Image Verticallyをオンにし、画像とクリック位置の上下を合わせてください。Nativeの表示はGX2、入力の表示はHI1です。

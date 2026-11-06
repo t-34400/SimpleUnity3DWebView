@@ -11,7 +11,7 @@ Unity Editorのimport/build、実機GPU共有、同一Unity WindowのIME、XRの
 - Unity native plugin: 実行rendererに応じてbackendを選択する。Vulkanでは起動時に初期化をinterceptし、対応しているデバイスで`VK_ANDROID_external_memory_android_hardware_buffer`と`VK_EXT_queue_family_foreign`を追加する。非対応・追加失敗時は通常のUnityデバイス作成を維持し、プローブを停止する。
 - Vulkan render thread: acquire fenceを非ブロッキングpollし、完了したAHBを専用メモリーへimport。foreign queueからownershipを取得し、Unity所有のRenderTextureへGPU copyしてownershipを返す。Unityの`safeFrameNumber`までAImageとimport資源を保持する。毎フレームのqueue/device wait idleは行わない。
 - GLES render thread: 同じAHBをEGLImage経由でGL textureへ取り込み、raw GPU copyでUnity textureへ渡す。EGL fenceが完了するまで画像を保持する。詳細と拡張条件は[GlesSupport.md](GlesSupport.md)。
-- World-space uGUI表示と右コントローラーのレイ。入力イベントはWebViewのviewport座標へ渡し、DOMのscroll量を加えない。IMEのInputConnectionはWebView自身に任せる。
+- World-space uGUI表示とコントローラーまたは手のレイ。入力イベントはWebViewのviewport座標へ渡し、DOMのscroll量を加えない。IMEのInputConnectionはWebView自身に任せる。
 
 最大6枚の未返却画像でproducerを抑制し、Unity休止中も無制限に描き込まない。pause・resize・recreateではJava UI側の描画を止めてからnative側へ停止を通知する。古いRenderTextureはGPUの解放を待って破棄する。
 これは最適化前の検証経路。フェンスのCPU側poll、画像ごとのimport、30 fps producerにより遅延が増える可能性がある。外部format/YUV、保護動画、fullscreen custom viewは扱わない。
@@ -20,16 +20,18 @@ Unity Editorのimport/build、実機GPU共有、同一Unity WindowのIME、XRの
 
 Vulkan初期化の旧エラーへの修正内容と再ビルド手順は[VulkanInitialization.md](VulkanInitialization.md)を参照。
 
+ハンドトラッキングでは[HandInputProbe.md](HandInputProbe.md)のHI1手順を使用する。コントローラーがなくても手のrayとpinchで操作できる検証実装を追加した。
+
 ## ビルドと操作
 
 1. Unityを閉じて追加パッチを適用し、6000.4.5f1で開く。
 2. **VRWebView > Create GPU XR Probe Scene** を実行する。生成された`GpuXrProbe.unity`だけをAndroid Build ProfileのScene Listへ登録する。古い`GpuProbeLauncher`を同じシーンに置かない。
 3. AndroidのGraphics APIは比較する**Vulkan**または**OpenGLES3**だけを選び、Target Architecturesは**ARM64**。既定のVulkan設定は変更していない。GLES比較はLinear色空間を維持し、Meta XR Subsampled LayoutとMeta Quest SupportのOptimize Buffer DiscardsなどVulkan専用設定を無効にする。最初の比較ではfoveation/SpaceWarpも無効にする。OpenXRとQuestのコントローラープロファイルを有効にする。Oculus XR Pluginへの変更は不要。
 4. Build And Runする。初回のプラグイン追加後はアプリを完全終了して起動する。ネイティブ`.so`のPlugin InspectorでAndroid ARM64 / Load on startupが有効なことを確認できる。
-5. 右コントローラーの水色レイをページへ向け、トリガーでクリック・ドラッグする。スティック上下でスクロール。AはIME要求、BはIMEを閉じてUnityへfocusを返す。
+5. 手のrayはピンチでクリック/ドラッグできる。既存シーンではInspectorのFlip Image Verticallyをオンにして比較する。右コントローラーの水色レイをページへ向け、トリガーでクリック・ドラッグする。スティック上下でスクロール。AはIME要求、BはIMEを閉じてUnityへfocusを返す。
 6. 下部のIME / Focus / Reload / Recreate / Resize / Flip Yも同じレイで操作できる。表示が逆ならFlip Yで比較する。入力座標も同時に反転する。
 
-頭とコントローラーのposeはUnity XR InputDevicesから取得する。検証専用の最小構成で、Meta Interaction SDKのUIや手追跡には依存しない。最初に有効なhead poseを取得したとき、パネルを頭の正面に置く。Recreateで再配置できる。頭を動かしたときにパネルが空間内に残るか確認する。
+頭とコントローラーのposeはUnity XR InputDevicesから取得する。検証専用の最小構成で、Meta Interaction SDKのUIや手入力はUnity XR HandsのMeta Hand Tracking Aimから取得する。最初に有効なhead poseを取得したとき、パネルを頭の正面に置く。Recreateで再配置できる。頭を動かしたときにパネルが空間内に残るか確認する。
 
 ## 合否を切り分ける順序
 

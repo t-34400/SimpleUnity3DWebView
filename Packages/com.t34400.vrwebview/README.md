@@ -13,3 +13,5 @@ For the video/GPU comparison use **VRWebView > Create GPU Probe Scene**; no samp
 Core is independent of Unity and Meta SDK. UnityUI uses uGUI; the sample Android probe uses a bundled AAR built from this repository's `Android~` project. Web permissions are denied by default; probe input is not logged.
 
 Vulkan and GLES share the Java WebView/IME host and native image queue. Only GPU import, copy and completion tracking differ; see `Documentation~/GlesSupport.md` for extension requirements and OpenXR feature limits. Existing Vulkan probe scenes retain their component GUIDs.
+
+Hand input: `Pointer Mode=Auto` uses Meta Hand Tracking Aim when no controller is tracked. Pinch to click/drag, including probe buttons. See `Documentation~/HandInputProbe.md`. Existing scenes should enable Flip Image Vertically before rebuilding; click coordinates now follow the displayed UV rectangle.

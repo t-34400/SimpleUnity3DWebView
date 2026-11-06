@@ -30,7 +30,9 @@
       "depth": 0,
       "source": "embedded",
       "dependencies": {
-        "com.unity.ugui": "2.0.0"
+        "com.unity.ugui": "2.0.0",
+        "com.unity.inputsystem": "1.19.0",
+        "com.unity.xr.hands": "1.7.3"
       }
     },
     "com.unity.collab-proxy": {

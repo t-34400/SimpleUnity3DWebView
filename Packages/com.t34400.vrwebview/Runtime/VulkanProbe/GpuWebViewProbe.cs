@@ -12,7 +12,8 @@ namespace T34400.VRWebView
     public class GpuWebViewProbe : MonoBehaviour
     {
         public int width = 1024, height = 768;
-        public bool flipImageVertically;
+        public bool flipImageVertically = true;
+        public ProbePointerMode pointerMode = ProbePointerMode.Auto;
         public Camera headCamera;
         private ulong id;
         private RenderTexture texture;
@@ -24,8 +25,11 @@ namespace T34400.VRWebView
         private Transform panel;
         private LineRenderer ray;
         private Material rayMaterial;
-        private bool paused, wasTrigger, wasPrimary, wasSecondary, touching;
-        private bool hasPointer, placed, controllerTracked;
+        private bool paused, wasPrimary, wasSecondary, touching;
+        private bool hasPointer, placed, pointerTracked, pointerPressed;
+        private ProbePointerSource pointerSource;
+        private readonly ProbeRayInput input = new ProbeRayInput();
+        private readonly PointerPressState press = new PointerPressState();
         private Vector2 lastPointer;
         private float nextStatus;
         private string failure;
@@ -72,7 +76,7 @@ namespace T34400.VRWebView
         }
         private void Close()
         {
-            CancelPointer();
+            ResetInput();
             if (id != 0)
             {
                 try { bridge?.CallStatic("close", (long)id); }
@@ -104,7 +108,7 @@ namespace T34400.VRWebView
         }
         // Keyboard focus changes do not imply application suspension. Keep the WebView
         // and InputConnection alive when the system keyboard takes input focus.
-        protected void OnApplicationFocus(bool value) { if (!value) CancelPointer(); }
+        protected void OnApplicationFocus(bool value) { if (!value) ResetInput(); }
         protected void OnDisable() { Close(); }
         protected void OnEnable() { if (image != null) Open(); }
         protected void OnDestroy()
@@ -125,7 +129,10 @@ namespace T34400.VRWebView
             string native = failure ?? (id == 0 ? "Probe closed" : VulkanProbeNative.Status(id));
             string host = id == 0 || bridge == null ? "" : bridge.CallStatic<string>("status");
             status.text = native + "\n" + host + "\nXR running=" + xrRunning + "  Unity frames=" + Time.frameCount
-                + "  rightTracked=" + controllerTracked + "  flipY=" + flipImageVertically + "\nRight trigger: point/drag   Stick: scroll   A: IME   B: Unity focus";
+                + "\ninput=HI1 source=" + pointerSource + " tracked=" + pointerTracked + " pressed=" + pointerPressed
+                + " flipY=" + flipImageVertically + "\nhandAim R=" + input.RightHandPresent + "/" + input.RightHandTracked
+                + " L=" + input.LeftHandPresent + "/" + input.LeftHandTracked + " controller=" + input.ControllerTracked
+                + "\nPinch/trigger: click and drag. IME / Focus buttons work with either source.";
         }
         private void UpdateHead()
         {
@@ -142,21 +149,17 @@ namespace T34400.VRWebView
         }
         private void UpdateRay()
         {
-            var hand = InputDevices.GetDeviceAtXRNode(XRNode.RightHand);
-            bool tracked = hand.isValid && hand.TryGetFeatureValue(CommonUsages.isTracked, out bool isTracked) && isTracked;
-            controllerTracked = tracked;
-            bool trigger = false, primary = false, secondary = false;
-            if (tracked)
+            pointerTracked = input.TryRead(pointerMode, press.ActiveSourceId, out var sample);
+            pointerSource = pointerTracked ? sample.Source : ProbePointerSource.None;
+            pointerPressed = pointerTracked && sample.Pressed;
+            var phase = press.Update(pointerTracked, (int)sample.Source, pointerPressed);
+            if (phase == PointerPhase.Cancel) CancelPointer();
+            if (!pointerTracked)
             {
-                hand.TryGetFeatureValue(CommonUsages.triggerButton, out trigger);
-                hand.TryGetFeatureValue(CommonUsages.primaryButton, out primary);
-                hand.TryGetFeatureValue(CommonUsages.secondaryButton, out secondary);
+                ray.enabled = false; wasPrimary = wasSecondary = false; return;
             }
-            if (!tracked || !hand.TryGetFeatureValue(CommonUsages.devicePosition, out Vector3 origin)
-                    || !hand.TryGetFeatureValue(CommonUsages.deviceRotation, out Quaternion rotation))
-            {
-                CancelPointer(); ray.enabled = false; wasTrigger = false; wasPrimary = false; wasSecondary = false; return;
-            }
+            Vector3 origin = sample.Position;
+            Quaternion rotation = sample.Rotation;
             if (headCamera.transform.parent != null)
             {
                 origin = headCamera.transform.parent.TransformPoint(origin);
@@ -170,10 +173,15 @@ namespace T34400.VRWebView
             if (hasPointer)
             {
                 Vector3 local = webRect.InverseTransformPoint(result.point);
-                lastPointer = new Vector2(local.x / webRect.rect.width + 0.5f, 0.5f - local.y / webRect.rect.height);
-                if (flipImageVertically) lastPointer.y = 1f - lastPointer.y;
+                Rect rect = webRect.rect, uv = image.uvRect;
+                hasPointer = BrowserCoordinates.TryNormalize(local.x, local.y, rect.xMin, rect.yMin,
+                        rect.width, rect.height, out float x, out float y)
+                    && BrowserCoordinates.TryMapTextureUv(x, y, uv.x, uv.y, uv.width, uv.height, out x, out y);
+                // Raw hardware-Canvas buffer rows are top-first. The sampled UV is
+                // the Android viewport coordinate; do not invert it a second time.
+                if (hasPointer) lastPointer = new Vector2(x, y);
             }
-            if (trigger && !wasTrigger && hit)
+            if (phase == PointerPhase.Down && hit)
             {
                 var button = result.collider.GetComponent<VulkanProbeButton>();
                 if (button != null) button.Press();
@@ -181,16 +189,19 @@ namespace T34400.VRWebView
             }
             else if (touching)
             {
-                // Cancel a captured drag on ray loss; never strand a native pressed pointer.
                 if (!hasPointer) CancelPointer();
-                else if (!trigger) { SendPointer(1); touching = false; }
-                else SendPointer(2);
+                else if (phase == PointerPhase.Up) { SendPointer(1); touching = false; }
+                else if (phase == PointerPhase.Move) SendPointer(2);
             }
-            if (hasPointer && id != 0 && !touching && hand.TryGetFeatureValue(CommonUsages.primary2DAxis, out Vector2 axis)
-                    && Mathf.Abs(axis.y) > 0.2f) bridge.CallStatic("scroll", (long)id, -axis.y);
-            if (primary && !wasPrimary) RequestIme();
-            if (secondary && !wasSecondary) ReturnFocus();
-            wasTrigger = trigger; wasPrimary = primary; wasSecondary = secondary;
+            if (hasPointer && id != 0 && !touching && Mathf.Abs(sample.Scroll.y) > 0.2f)
+                bridge.CallStatic("scroll", (long)id, -sample.Scroll.y);
+            if (sample.RequestIme && !wasPrimary) RequestIme();
+            if (sample.ReturnFocus && !wasSecondary) ReturnFocus();
+            wasPrimary = sample.RequestIme; wasSecondary = sample.ReturnFocus;
+        }
+        private void ResetInput()
+        {
+            CancelPointer(); press.Reset(); wasPrimary = wasSecondary = false;
         }
         private void SendPointer(int action) { if (id != 0) bridge.CallStatic("pointer", (long)id, action, lastPointer.x, lastPointer.y); }
         private void CancelPointer() { if (touching) SendPointer(3); touching = false; }
@@ -208,10 +219,10 @@ namespace T34400.VRWebView
             browser.GetComponent<BoxCollider>().size = new Vector3(1024, 768, 1);
             image = browser.GetComponent<RawImage>(); image.color = Color.white;
             image.uvRect = new Rect(0, flipImageVertically ? 1 : 0, 1, flipImageVertically ? -1 : 1);
-            status = Label("Status", new Vector2(0, 550), new Vector2(1024, 320), "Waiting for GPU probe", 16);
+            status = Label("Status", new Vector2(0, 580), new Vector2(1024, 380), "Waiting for GPU probe", 16);
             Button("IME", -420, RequestIme); Button("Focus", -252, ReturnFocus); Button("Reload", -84, Reload);
             Button("Recreate", 84, Recreate); Button("Resize", 252, Resize); Button("Flip Y", 420, Flip);
-            var rayObject = new GameObject("Right controller ray", typeof(LineRenderer)); ray = rayObject.GetComponent<LineRenderer>();
+            var rayObject = new GameObject("Browser input ray", typeof(LineRenderer)); ray = rayObject.GetComponent<LineRenderer>();
             ray.positionCount = 2; ray.startWidth = ray.endWidth = 0.003f; ray.useWorldSpace = true;
             var rayShader = Shader.Find("Sprites/Default") ?? Shader.Find("UI/Default");
             if (rayShader != null) { rayMaterial = new Material(rayShader); ray.material = rayMaterial; }

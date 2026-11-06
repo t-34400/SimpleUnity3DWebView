@@ -1,6 +1,6 @@
 {
   "name": "com.t34400.vrwebview",
-  "version": "0.1.0-preview.6",
+  "version": "0.1.0-preview.7",
   "displayName": "VRWebView",
   "description": "Browser foundations and experimental same-Activity Vulkan/OpenGL ES 3 WebView probes for Quest/OpenXR. Device validation is required.",
   "unity": "6000.4",
@@ -9,7 +9,9 @@
   },
   "license": "MIT",
   "dependencies": {
-    "com.unity.ugui": "2.0.0"
+    "com.unity.ugui": "2.0.0",
+    "com.unity.inputsystem": "1.19.0",
+    "com.unity.xr.hands": "1.7.3"
   },
   "samples": [
     {
