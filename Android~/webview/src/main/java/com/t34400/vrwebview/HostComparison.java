@@ -44,12 +44,20 @@ public final class HostComparison {
         }
     }
     private HostComparison() {}
-    static void log(String value) { Log.i("VRWebViewHost", "[VRWebViewHost] HC1 " + value); }
+    static void log(String value) { Log.i("VRWebViewHost", "[VRWebViewHost] HC2 " + value); }
     static String viewName(View view) { return view == null ? "none" : view.getClass().getSimpleName(); }
     public static String startupCase(Activity owner) {
         Intent intent = owner.getIntent();
         String value = HostTrialState.startupCase(intent == null ? null : intent.getStringExtra("vrwebview_host_case"));
+        String expected = intent == null ? null : intent.getStringExtra("vrwebview_boot_expect");
+        if (expected != null) {
+            String actual = HostProbeEnvironment.bootKeyboard(owner);
+            boolean valid = ("0".equals(expected) || "1".equals(expected)) && expected.equals(actual);
+            log("bootCheck expected=" + (("0".equals(expected) || "1".equals(expected)) ? expected : "invalid") + " observed=" + actual + " valid=" + valid);
+            if (!valid) { log("SKIP startup trial: installed APK boot value does not match"); value = "menu"; }
+        }
         if (intent != null) intent.removeExtra("vrwebview_host_case");
+        if (intent != null) intent.removeExtra("vrwebview_boot_expect");
         return value;
     }
     public static void pulse(long frame, long renders, boolean xrRunning, boolean focused) { tick = new Tick(frame, renders, xrRunning, focused); }
@@ -110,7 +118,7 @@ public final class HostComparison {
             previousFocus.clear();
         }
         if (browser != null) {
-            hideIme(browser); browser.metadataListener = null; browser.stopLoading();
+            hideIme(browser); browser.metadataListener = null; browser.connectionMetadataListener = null; browser.stopLoading();
             if (browser.getParent() instanceof ViewGroup) ((ViewGroup) browser.getParent()).removeView(browser);
             browser.destroy(); browser = null;
             View old = previousFocus.get(); if (old != null && old.isAttachedToWindow()) old.requestFocus();
@@ -120,17 +128,31 @@ public final class HostComparison {
         if (old != null && !old.isFinishing()) old.finish();
     }
     public static void openNativeEditor(Activity owner) {
+        openNativeEditor(owner, false);
+    }
+    public static void openMatchedEditor(Activity owner) {
+        openNativeEditor(owner, true);
+    }
+    private static void openNativeEditor(Activity owner, boolean matched) {
         UI.post(() -> {
-            stopTrial(); final long ticket = TRIAL.begin("native"); trialActive = true;
+            stopTrial();
+            HostEditorProfile profile = matched ? HostEditorProfileStore.load(owner) : null;
+            if (matched && profile == null) {
+                log("SKIP native-webinfo: no #text profile for the current provider; run webview first, or transparent once for calibration");
+                return;
+            }
+            final String label = matched ? "native-webinfo" : "native";
+            final long ticket = TRIAL.begin(label); trialActive = true;
             previousFocus = new WeakReference<>(owner.getCurrentFocus());
             try {
-            editor = new EditText(owner); editor.setSingleLine(true);
-            editor.setInputType(InputType.TYPE_CLASS_TEXT); editor.setHint("HC1 native EditText");
+            editor = new HostProbeEditText(owner, profile, label);
             editor.setOnFocusChangeListener((v, focused) -> log("sameActivityEditText viewFocus=" + focused));
             owner.addContentView(editor, new ViewGroup.LayoutParams(600, 120));
             editor.requestFocus();
-            log("sameActivityEditText start owner=" + owner.getClass().getSimpleName() + " ticket=" + ticket);
-            UI.postDelayed(() -> { if (TRIAL.isCurrent(ticket) && editor != null) showIme(editor, ticket, "sameActivityEditText"); }, 200);
+            log("sameActivityEditText start case=" + label + " owner=" + owner.getClass().getSimpleName() + " ticket=" + ticket);
+            if (profile != null) log("editorProfile using provider=" + profile.provider + " type=0x" + Integer.toHexString(profile.inputType)
+                    + " imeOptions=0x" + Integer.toHexString(profile.imeOptions));
+            UI.postDelayed(() -> { if (TRIAL.isCurrent(ticket) && editor != null) showIme(editor, ticket, label); }, 200);
             UI.postDelayed(() -> {
                 if (!TRIAL.isCurrent(ticket)) return;
                 log("sameActivityEditText autoClose ticket=" + ticket); stopTrial();
@@ -146,6 +168,8 @@ public final class HostComparison {
                 final ProbeAssets assets = new ProbeAssets(owner.getAssets());
                 browser = new ProbeWebView(owner); browser.setFocusable(true); browser.setFocusableInTouchMode(true);
                 browser.metadataListener = event -> log("sameActivityWebView " + event);
+                final ProbeWebView current = browser;
+                browser.connectionMetadataListener = (connected, type, options) -> observeEditorProfile(current, ticket, "sameActivityWebView", connected, type, options);
                 browser.getSettings().setJavaScriptEnabled(true);
                 browser.getSettings().setAllowFileAccess(false); browser.getSettings().setAllowContentAccess(false);
                 browser.getSettings().setMediaPlaybackRequiresUserGesture(true);
@@ -164,6 +188,18 @@ public final class HostComparison {
                 log("sameActivityWebView start owner=" + owner.getClass().getSimpleName() + " windowDraw=on ticket=" + ticket);
                 UI.postDelayed(() -> { if (TRIAL.isCurrent(ticket)) { log("sameActivityWebView autoClose"); stopTrial(); } }, HostTrialState.DURATION_MS);
             } catch (Exception error) { log("sameActivityWebView failed=" + error.getClass().getSimpleName()); stopTrial(); }
+        });
+    }
+    static void observeEditorProfile(ProbeWebView view, long ticket, String source, boolean connected, int type, int options) {
+        if (!connected || (type & 0xf) != InputType.TYPE_CLASS_TEXT || !TRIAL.isCurrent(ticket)) return;
+        final int request = view.connectionRequests;
+        // Leave onCreateInputConnection before querying DOM; never create an extra connection.
+        UI.post(() -> {
+            if (!TRIAL.isCurrent(ticket) || !view.isAttachedToWindow() || view.connectionRequests != request) return;
+            view.evaluateJavascript("(location.href==='" + ProbeAssets.PAGE + "'&&document.activeElement&&document.activeElement.id==='text')", result -> {
+                if ("true".equals(result) && TRIAL.isCurrent(ticket) && view.isAttachedToWindow() && view.connectionRequests == request)
+                    HostEditorProfileStore.save(view.getContext(), type, options, source);
+            });
         });
     }
     static void focusTestField(ProbeWebView view, long ticket, String label) {

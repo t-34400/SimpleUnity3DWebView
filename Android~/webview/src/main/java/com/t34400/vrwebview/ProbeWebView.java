@@ -20,6 +20,8 @@ final class ProbeWebView extends WebView {
     // Diagnostic events contain metadata only. Do not pass EditorInfo or connection objects.
     interface MetadataListener { void onEvent(String event); }
     MetadataListener metadataListener;
+    interface ConnectionMetadataListener { void onCreated(boolean connected, int inputType, int imeOptions); }
+    ConnectionMetadataListener connectionMetadataListener;
     interface WindowFocusListener { void onChanged(boolean focused); }
     WindowFocusListener windowFocusListener;
 
@@ -32,7 +34,11 @@ final class ProbeWebView extends WebView {
         if (connection != null) nonNullConnections++;
         inputType = info.inputType; imeOptions = info.imeOptions;
         metadata("connection nonNull=" + (connection != null) + " count=" + connectionRequests
-                + "/" + nonNullConnections + " type=0x" + Integer.toHexString(inputType));
+                + "/" + nonNullConnections + " type=0x" + Integer.toHexString(inputType)
+                + " imeOptions=0x" + Integer.toHexString(imeOptions)
+                + " connectionClass=" + (connection == null ? "none" : connection.getClass().getSimpleName()));
+        if (connectionMetadataListener != null)
+            connectionMetadataListener.onCreated(connection != null, inputType, imeOptions);
         return connection;
     }
 

@@ -1,5 +1,7 @@
 # HC1: keyboard and Activity host comparison
 
+> preview.17以降の現在の試行手順は[HC2: KeyboardComparison.md](KeyboardComparison.md)。以下はHC1の調査経緯・補助比較の記録。HC2シーンはGameActivityとboot OFF/ONの選択を要求するため、以下の旧手順だけでは実行しない。別Activity常時前面の製品案とAG3の追加試験は保留している。
+
 目的は「Questのキーボード経路が成立しない」のか「GPU用WebViewホスト固有の問題」なのかを切り分け、別ActivityでUnityのVR表示を継続できるかを測ることです。これは製品方式の決定ではありません。
 
 HC1は既存GX2/HI4とは別のシーンです。GPUコピー用WebViewとフォーカス強制復元を開始しません。preview.13では、復帰後の手のレイ未追跡を調べるため、HI4と同じXR Hands 1.7.3向けリセット同期を切替可能な状態で追加しました。既存のGPUプローブは残しています。起動方式・Custom Main Manifest・Meta設定の変更もパッチ自体には含みません。

@@ -9,7 +9,7 @@ using InputSystem = UnityEngine.InputSystem.InputSystem;
 
 namespace T34400.VRWebView
 {
-    /// <summary>HC1: isolated keyboard/Activity lifetime experiment, without GPU-copy sessions.</summary>
+    /// <summary>HC2: keyboard boot flag and same-Activity editor comparison, without GPU-copy sessions.</summary>
     public sealed class HostComparisonProbe : MonoBehaviour
     {
         public Camera headCamera;
@@ -58,7 +58,7 @@ namespace T34400.VRWebView
         {
             if (owner != null) action(owner);
         }
-        private void Trace(string value) { Debug.Log("[VRWebViewHost] HC1 frame=" + Time.frameCount + " " + value, this); }
+        private void Trace(string value) { Debug.Log("[VRWebViewHost] HC2 frame=" + Time.frameCount + " " + value, this); }
         public void RunKeyboard()
         {
             if (Application.platform != RuntimePlatform.Android) return;
@@ -76,6 +76,7 @@ namespace T34400.VRWebView
             Trace("keyboard close requested");
         }
         public void RunNativeEditor() { if (bridge != null) WithActivity(a => bridge.CallStatic("openNativeEditor", a)); }
+        public void RunMatchedEditor() { if (bridge != null) WithActivity(a => bridge.CallStatic("openMatchedEditor", a)); }
         public void RunNativeWebView() { if (bridge != null) WithActivity(a => bridge.CallStatic("openNativeWebView", a)); }
         public void RunOpaque() { if (bridge != null) WithActivity(a => bridge.CallStatic("launch", a, false)); }
         public void RunTransparent() { if (bridge != null) WithActivity(a => bridge.CallStatic("launch", a, true)); }
@@ -91,6 +92,7 @@ namespace T34400.VRWebView
             switch (mode) {
                 case "keyboard": RunKeyboard(); break;
                 case "native": RunNativeEditor(); break;
+                case "native-webinfo": RunMatchedEditor(); break;
                 case "webview": RunNativeWebView(); break;
                 case "activity": RunOpaque(); break;
                 case "transparent": RunTransparent(); break;
@@ -119,10 +121,10 @@ namespace T34400.VRWebView
             if (hands != lastHands) { Trace(hands); lastHands = hands; }
             Trace("tick renders=" + renders + " appFocus=" + Application.isFocused + " paused=" + paused + " xrRunning=" + running + " nativeTrial=" + nativeActive
                 + " pointerTracked=" + pointerTracked + " pointerBlocked=" + pointerBlocked + " gazeAllowed=" + gazeAllowed + " handResetSync=" + synchronizeHandReset);
-            if (status != null) status.text = "HC1  Unity frames=" + Time.frameCount + "  XR running=" + running
+            if (status != null) status.text = "HC2  Unity frames=" + Time.frameCount + "  XR running=" + running
                 + "\nappFocus=" + Application.isFocused + " paused=" + paused + " nativeTrial=" + nativeActive
                 + " handResetSync=" + synchronizeHandReset
-                + "\n" + keyboardState + "\nGPU-copy backend inactive in HC1; native controls are separate trials."
+                + "\n" + keyboardState + "\nGPU-copy inactive. Compare boot OFF/ON in separate builds."
                 + "\nPinch/trigger to select. ADB trials do not require hand input."
                 + "\nNative trials return after 20s on the Android UI thread."
                 + "\nOptional gaze input is disabled after a trial or focus loss."
@@ -242,7 +244,7 @@ namespace T34400.VRWebView
             panel = owner.transform; panel.localScale = Vector3.one * 0.0013f; panel.position = new Vector3(0, 1.4f, 1.6f);
             var canvas = owner.GetComponent<Canvas>(); canvas.renderMode = RenderMode.WorldSpace; canvas.worldCamera = headCamera;
             owner.GetComponent<RectTransform>().sizeDelta = new Vector2(1000, 850);
-            status = Label("Status", new Vector2(0, 160), new Vector2(1000, 320), "HC1 preparing", 22);
+            status = Label("Status", new Vector2(0, 160), new Vector2(1000, 320), "HC2 preparing", 22);
             Button("Unity keyboard", -330, -120, () => RunCase("keyboard"));
             Button("Unity EditText", 0, -120, () => RunCase("native"));
             Button("Close keyboard", 330, -120, CloseKeyboard);
@@ -251,6 +253,7 @@ namespace T34400.VRWebView
             Button("Transparent Activity", 330, -240, () => RunCase("transparent"));
             Button("Toggle reset sync", -330, -350, ToggleHandResetSync);
             Button("Recenter", 0, -350, () => placed = false);
+            Button("Matched EditText", 330, -350, () => RunCase("native-webinfo"));
             var cube = GameObject.CreatePrimitive(PrimitiveType.Cube); cube.name = "Frame continuity marker";
             cube.transform.SetParent(panel, false); cube.transform.localPosition = new Vector3(0, 400, 0); cube.transform.localScale = Vector3.one * 65;
             Destroy(cube.GetComponent<Collider>()); spinner = cube.transform;

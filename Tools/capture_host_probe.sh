@@ -2,7 +2,7 @@
 # Start in a separate WSL terminal before running run_host_probe.sh.
 set -euo pipefail
 probe_label=${1:-game}
-case "$probe_label" in game|activity) ;; *) echo 'Usage: bash Tools/capture_host_probe.sh [game|activity]' >&2; exit 2;; esac
+case "$probe_label" in game|activity|off|on) ;; *) echo 'Usage: bash Tools/capture_host_probe.sh [off|on|game|activity]' >&2; exit 2;; esac
 probe_adb=${VRWEBVIEW_ADB_EXE:-'/mnt/c/Program Files/Unity/Hub/Editor/6000.4.5f1/Editor/Data/PlaybackEngines/AndroidPlayer/SDK/platform-tools/adb.exe'}
 probe_output=${VRWEBVIEW_LOG_DIR:-/mnt/c/Users/tmiyoshi/Downloads}
 mkdir -p "$probe_output"

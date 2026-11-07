@@ -30,7 +30,7 @@ public abstract class HostComparisonActivity extends Activity {
         trace("created transparent=" + transparent() + " ticket=" + ticket + " autoReturnSeconds=20");
         LinearLayout panel = new LinearLayout(this); panel.setOrientation(LinearLayout.VERTICAL);
         panel.setBackgroundColor(transparent() ? 0x44202020 : Color.WHITE);
-        TextView title = new TextView(this); title.setText("HC1: native host; auto return in 20 seconds"); panel.addView(title);
+        TextView title = new TextView(this); title.setText("HC2: native host; auto return in 20 seconds"); panel.addView(title);
         LinearLayout buttons = new LinearLayout(this); panel.addView(buttons);
         button(buttons, "Web field / IME", this::focusWeb);
         button(buttons, "EditText / IME", () -> {
@@ -41,6 +41,7 @@ public abstract class HostComparisonActivity extends Activity {
         editor.setHint("HC1 native EditText"); panel.addView(editor);
         web = new ProbeWebView(this); web.setFocusable(true); web.setFocusableInTouchMode(true);
         web.metadataListener = event -> trace("web " + event);
+        web.connectionMetadataListener = (connected, type, options) -> HostComparison.observeEditorProfile(web, ticket, "separateWebView", connected, type, options);
         web.setBackgroundColor(transparent() ? Color.TRANSPARENT : Color.WHITE);
         if (transparent()) web.setAlpha(0.35f);
         web.getSettings().setJavaScriptEnabled(true);
@@ -94,7 +95,7 @@ public abstract class HostComparisonActivity extends Activity {
     @Override protected void onDestroy() {
         closed = true; HostComparison.UI.removeCallbacks(autoReturn); HostComparison.UI.removeCallbacks(poll);
         if (web != null) {
-            HostComparison.hideIme(web); web.metadataListener = null; web.stopLoading();
+            HostComparison.hideIme(web); web.metadataListener = null; web.connectionMetadataListener = null; web.stopLoading();
             if (web.getParent() instanceof ViewGroup) ((ViewGroup) web.getParent()).removeView(web);
             web.destroy(); web = null;
         }

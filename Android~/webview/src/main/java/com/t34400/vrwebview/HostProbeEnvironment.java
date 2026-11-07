@@ -32,14 +32,17 @@ final class HostProbeEnvironment {
         try { HostComparison.log("defaultIme=" + Settings.Secure.getString(owner.getContentResolver(), Settings.Secure.DEFAULT_INPUT_METHOD)); }
         catch (Exception error) { HostComparison.log("defaultIme unavailable=" + error.getClass().getSimpleName()); }
     }
-    private static String bootKeyboard(Activity owner) {
+    static String bootKeyboard(Activity owner) {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(owner.getAssets().open("bin/Data/boot.config"), StandardCharsets.UTF_8))) {
-            String line;
+            String line, value = "missing";
+            int count = 0;
             while ((line = reader.readLine()) != null) {
-                if (line.equals("xr-keyboard-overlay-enabled=1")) return "1";
-                if (line.equals("xr-keyboard-overlay-enabled=0")) return "0";
+                if (!line.startsWith("xr-keyboard-overlay-enabled=")) continue;
+                if (++count > 1) return "duplicate";
+                value = line.equals("xr-keyboard-overlay-enabled=1") ? "1"
+                        : line.equals("xr-keyboard-overlay-enabled=0") ? "0" : "invalid";
             }
-            return "missing";
+            return value;
         } catch (Exception error) { return "unavailable"; }
     }
 }

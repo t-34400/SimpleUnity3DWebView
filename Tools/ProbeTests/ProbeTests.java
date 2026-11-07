@@ -98,6 +98,22 @@ public final class ProbeTests {
         boolean invalidTrial = false;
         try { trial.begin("keyboard"); } catch (IllegalArgumentException expected) { invalidTrial = true; }
         check(invalidTrial && trial.kind().equals("none"));
+        check(HostTrialState.startupCase("native-webinfo").equals("native-webinfo"));
+        long matchedTrial = trial.begin("native-webinfo"); trial.clear();
+        check(!trial.isCurrent(matchedTrial));
+        HostEditorProfile profile = new HostEditorProfile("provider/154/123", 0xc0a1, 0x12000005);
+        check(profile.matches("provider/154/123") && !profile.matches("provider/155/124") && !profile.matches(null));
+        check(profile.matches(0xc0a1, 0x12000005));
+        check(!profile.matches(1, 0x12000005) && !profile.matches(0xc0a1, 0x12000006));
+        boolean invalidProfile = false;
+        try { new HostEditorProfile(null, 1, 0); } catch (IllegalArgumentException expected) { invalidProfile = true; }
+        check(invalidProfile);
+        invalidProfile = false;
+        try { new HostEditorProfile("provider", 0, 0); } catch (IllegalArgumentException expected) { invalidProfile = true; }
+        check(invalidProfile); // A null WebView connection must never become a calibration fallback.
+        invalidProfile = false;
+        try { new HostEditorProfile("provider", 2, 0); } catch (IllegalArgumentException expected) { invalidProfile = true; }
+        check(invalidProfile); // The comparison is only for the bundled text field.
         ActivityGpuLifetime lifetime = new ActivityGpuLifetime();
         check(ActivityGpuLifetime.mode(null).equals("texture") && ActivityGpuLifetime.mode("untrusted").equals("texture"));
         check(ActivityGpuLifetime.mode("video").equals("video") && ActivityGpuLifetime.mode("ime").equals("ime"));

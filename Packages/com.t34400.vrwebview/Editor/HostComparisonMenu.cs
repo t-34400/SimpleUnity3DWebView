@@ -26,7 +26,7 @@ namespace T34400.VRWebView.Editor
             string path = AssetDatabase.GenerateUniqueAssetPath("Assets/VRWebViewPlayground/HostComparison.unity");
             EditorSceneManager.SaveScene(scene, path);
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(path, true) };
-            Debug.Log("Created HC1 host comparison scene. Keyboard/Activity trials log lifecycle and heartbeat metadata; see HostComparison.md.");
+            Debug.Log("Created HC2 host comparison scene. Select Host Comparison > Keyboard Boot > OFF (0) or ON (1) before building; see KeyboardComparison.md.");
         }
         [MenuItem("VRWebView/Host Comparison/Use GameActivity")]
         public static void UseGameActivity() { SetEntry(true); }

@@ -6,7 +6,7 @@ final class HostTrialState {
     private long generation;
     private String kind = "none";
     long begin(String value) {
-        if (!"native".equals(value) && !"webview".equals(value) && !"activity".equals(value) && !"transparent".equals(value))
+        if (!"native".equals(value) && !"native-webinfo".equals(value) && !"webview".equals(value) && !"activity".equals(value) && !"transparent".equals(value))
             throw new IllegalArgumentException("Unknown native trial");
         kind = value; return ++generation;
     }
@@ -18,7 +18,7 @@ final class HostTrialState {
     void clear() { kind = "none"; generation++; }
     String kind() { return kind; }
     static String startupCase(String value) {
-        if ("keyboard".equals(value) || "native".equals(value) || "webview".equals(value) || "activity".equals(value)
+        if ("keyboard".equals(value) || "native".equals(value) || "native-webinfo".equals(value) || "webview".equals(value) || "activity".equals(value)
                 || "transparent".equals(value)) return value;
         return "menu";
     }
