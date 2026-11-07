@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using T34400.VRWebView;
+using T34400.VRWebView.Editor;
+using System.Linq;
+using System.Xml.Linq;
 
 internal static class Program
 {
@@ -31,6 +34,29 @@ internal static class Program
 
     public static async Task Main()
     {
+        const string manifest = "<manifest xmlns:android='http://schemas.android.com/apk/res/android'><uses-feature android:name='oculus.software.overlay_keyboard' android:required='false'/><application><activity android:name='com.unity3d.player.UnityPlayerGameActivity' android:exported='true'><intent-filter><action android:name='android.intent.action.MAIN'/><category android:name='android.intent.category.LAUNCHER'/><category android:name='com.oculus.intent.category.VR'/></intent-filter><meta-data android:name='com.oculus.vr.focusaware' android:value='true'/><meta-data android:name='android.app.lib_name' android:value='game'/></activity><activity android:name='test.Other'/><meta-data android:name='com.oculus.supportedDevices' android:value='quest3'/></application></manifest>";
+        await Test("entry comparison preserves keyboard, VR, focus and other activity settings", () => Sync(() => {
+            string rewritten = HostEntryManifest.Rewrite(manifest, false);
+            Check(HostEntryManifest.LauncherName(rewritten) == HostEntryManifest.Activity, "Activity launcher");
+            var doc = XDocument.Parse(rewritten); XNamespace a = "http://schemas.android.com/apk/res/android";
+            Check(doc.Root.Elements("uses-feature").Any(x => (string)x.Attribute(a + "name") == "oculus.software.overlay_keyboard"), "Keyboard declaration lost");
+            Check(doc.Descendants("activity").Count() == 2 && rewritten.Contains("com.oculus.vr.focusaware") && rewritten.Contains("com.oculus.intent.category.VR") && rewritten.Contains("quest3"), "Other settings lost");
+            Check(!rewritten.Contains("android.app.lib_name"), "Game bootstrap retained on Activity");
+        }));
+        await Test("entry comparison roundtrip adds exactly one GameActivity bootstrap", () => Sync(() => {
+            string rewritten = HostEntryManifest.Rewrite(HostEntryManifest.Rewrite(manifest, false), true);
+            Check(HostEntryManifest.LauncherName(rewritten) == HostEntryManifest.GameActivity, "Game launcher");
+            XNamespace a = "http://schemas.android.com/apk/res/android"; var doc = XDocument.Parse(rewritten);
+            Check(doc.Descendants("meta-data").Count(x => (string)x.Attribute(a + "name") == "android.app.lib_name") == 1, "Duplicate game bootstrap");
+            Check(doc.Descendants("meta-data").Count(x => (string)x.Attribute(a + "name") == "unityplayer.UnityActivity") == 1, "Duplicate Unity marker");
+        }));
+        await Test("entry comparison refuses custom and ambiguous launchers", () => Sync(() => {
+            Throws<InvalidOperationException>(() => HostEntryManifest.Rewrite(manifest.Replace(HostEntryManifest.GameActivity, "custom.Player"), false));
+            var doc = XDocument.Parse(manifest); var launcher = doc.Root.Element("application").Element("activity");
+            doc.Root.Element("application").Add(new XElement(launcher));
+            Throws<InvalidOperationException>(() => HostEntryManifest.Rewrite(doc.ToString(), false));
+            Throws<System.Xml.XmlException>(() => HostEntryManifest.Rewrite("<!DOCTYPE manifest SYSTEM 'file:///missing'><manifest/>", false));
+        }));
         await Test("initialization is shared and navigation waits for readiness", async () => {
             var backend = new Backend(); using var session = new BrowserSession(backend, a => a());
             await Rejects<InvalidOperationException>(session.NavigateAsync("https://example.invalid"));

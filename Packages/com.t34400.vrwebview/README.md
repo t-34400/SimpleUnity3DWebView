@@ -4,6 +4,8 @@ Session/input foundations and Android WebView GPU, video and IME comparison prob
 
 This preview includes an experimental AHardwareBuffer-to-Unity Vulkan/OpenGL ES 3 transfer and a same-Activity XR probe. It is not a production browser backend. Standalone Activity results do not establish the new probe's Unity/XR or IME behavior.
 
+For the unresolved Quest keyboard issue, use **VRWebView > Create Host Comparison Scene** first. HC1 isolates Unity's official keyboard API, same-Activity EditText/WebView, and separate opaque/translucent Activities. See `Documentation~/HostComparison.md` for automated WSL trials and Downloads log capture. The experimental UnityPlayerActivity switch preserves manifest capabilities and detects SDK resets; Meta SDK 207 requires GameActivity for the supported configuration.
+
 Use **VRWebView > Create GPU XR Probe Scene** for the next Quest test. Keep ARM64 enabled and choose Vulkan or OpenGLES3 for comparison. See `Documentation~/GpuXrProbe.md` for controller controls, diagnostics and the device validation sequence.
 
 Import the IME Probe sample through Package Manager, then use **VRWebView > Create IME Probe Scene**. See `Documentation~/ImeProbe.md` for the test matrix and limitations.

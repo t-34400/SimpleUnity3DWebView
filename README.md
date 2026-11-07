@@ -25,6 +25,8 @@ Meta SDKはルートの検証プロジェクトの依存で、本体Runtimeの�
 
 ## 次の実機検証
 
+キーボード未表示の切り分けには **VRWebView > Create Host Comparison Scene** を使用してください。公式 `TouchScreenKeyboard`、同一ActivityのEditText/WebView、別Activityの不透明・半透明Windowを比較し、Unity更新・描画・フォーカスをログへ記録します。[HC1手順](Packages/com.t34400.vrwebview/Documentation~/HostComparison.md)に、コントローラー不要の自動起動とDownloadsへのログ保存をまとめています。起動方式の変更は別の補助実験で、Meta SDK 207が必須とするGameActivityを最初の基準にします。
+
 H1のWindow draw offでスクロール・入力・動画音声が動くことはQuest 3で利用者が確認済みです。次は **VRWebView > Create GPU XR Probe Scene** で、UnityのVulkan/GLESテクスチャ、同一ActivityでのIME、XR継続動作を検証します。既定のAndroid Vulkan / ARM64は維持しています。OpenGLES3も選択でき、[GLES条件と設計](Packages/com.t34400.vrwebview/Documentation~/GlesSupport.md)に比較時のSDK設定をまとめています。[手順と未確認事項](Packages/com.t34400.vrwebview/Documentation~/GpuXrProbe.md)を参照してください。
 
 ## 最初の実機検証

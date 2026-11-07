@@ -1,6 +1,6 @@
 {
   "name": "com.t34400.vrwebview",
-  "version": "0.1.0-preview.10",
+  "version": "0.1.0-preview.11",
   "displayName": "VRWebView",
   "description": "Browser foundations and experimental same-Activity Vulkan/OpenGL ES 3 WebView probes for Quest/OpenXR. Device validation is required.",
   "unity": "6000.4",

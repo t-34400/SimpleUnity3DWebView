@@ -6,6 +6,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../Packages/com.t34400.vrwebview/Runtime/Core/*.cs" />
+    <Compile Include="../../Packages/com.t34400.vrwebview/Editor/HostEntryManifest.cs" />
     <Compile Include="Program.cs" />
   </ItemGroup>
 </Project>

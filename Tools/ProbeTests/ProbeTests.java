@@ -82,6 +82,22 @@ public final class ProbeTests {
         long newIme = focus.currentToken();
         focus.windowLost(true);
         check(!focus.isCurrent(newIme)); // A new window loss also cancels the delayed request.
-        System.out.println("PASS " + checks + " probe range/geometry/focus checks");
+        HostTrialState trial = new HostTrialState();
+        check(HostTrialState.startupCase("keyboard").equals("keyboard"));
+        check(HostTrialState.startupCase("webview").equals("webview"));
+        check(HostTrialState.startupCase(null).equals("menu"));
+        check(HostTrialState.startupCase("unknown payload").equals("menu"));
+        long oldTrial = trial.begin("activity");
+        long newTrial = trial.begin("transparent");
+        check(!trial.finish(oldTrial)); // A late timer/destroy cannot finish a newer activity.
+        check(trial.isCurrent(newTrial) && trial.kind().equals("transparent"));
+        check(trial.finish(newTrial));
+        check(!trial.finish(newTrial));
+        long editTrial = trial.begin("native"); trial.clear();
+        check(!trial.isCurrent(editTrial)); // Teardown cancels pending IME requests.
+        boolean invalidTrial = false;
+        try { trial.begin("keyboard"); } catch (IllegalArgumentException expected) { invalidTrial = true; }
+        check(invalidTrial && trial.kind().equals("none"));
+        System.out.println("PASS " + checks + " probe range/geometry/focus/host checks");
     }
 }
