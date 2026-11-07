@@ -2,10 +2,19 @@ package com.t34400.vrwebview;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.pm.ActivityInfo;
+import android.content.pm.FeatureInfo;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
+import android.os.Build;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.ResultReceiver;
 import android.os.SystemClock;
 import android.util.Log;
+import android.provider.Settings;
+import android.text.InputType;
 import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.View;
@@ -16,6 +25,9 @@ import android.webkit.PermissionRequest;
 import android.webkit.WebChromeClient;
 import android.webkit.WebView;
 import android.widget.FrameLayout;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -50,10 +62,7 @@ public final class VulkanProbe {
             Host host = HOSTS.get(id); if (host == null || host.web == null) return;
             host.focusRecovery.claimBrowser();
             host.web.requestFocus();
-            InputMethodManager imm = (InputMethodManager) host.owner.getSystemService(Context.INPUT_METHOD_SERVICE);
-            host.imeRequests++;
-            host.imeAccepted = imm != null && imm.showSoftInput(host.web, 0);
-            host.trace("explicitIme accepted=" + host.imeAccepted);
+            host.showIme("manual", 0);
             host.updateStatus();
         });
     }
@@ -159,6 +168,7 @@ public final class VulkanProbe {
             focusObserver = owner.getWindow().getDecorView().getViewTreeObserver();
             focusObserver.addOnGlobalFocusChangeListener(focusListener);
             trace("hostOpened previous=" + viewName(previousFocus));
+            traceCapabilities();
             web.loadUrl(ProbeAssets.PAGE);
             UI.post(draw);
         }
@@ -220,12 +230,69 @@ public final class VulkanProbe {
             UI.post(() -> {
                 if (closed || web == null || !web.isAttachedToWindow() || !web.hasWindowFocus()
                         || !focusRecovery.consume(ticket)) return;
-                if (web.hasFocus()) { trace("focusRecovery unnecessary"); return; }
-                focusRecoveries++;
-                boolean accepted = web.requestFocus();
+                boolean alreadyFocused = web.hasFocus();
+                if (!alreadyFocused) focusRecoveries++;
+                boolean accepted = alreadyFocused || web.requestFocus();
                 trace("focusRecovery request=" + accepted + " owner=" + viewName(owner.getCurrentFocus()));
+                // Focus restoration creates an InputConnection but need not resend
+                // the original (now lost) show request. Wait once for that connection.
+                if (accepted) {
+                    long token = focusRecovery.currentToken();
+                    UI.postDelayed(() -> retryImeAfterFocus(token), 100);
+                }
                 updateStatus();
             });
+        }
+        void retryImeAfterFocus(long token) {
+            if (closed || web == null || !focusRecovery.isCurrent(token)) return;
+            if (!web.isAttachedToWindow() || !web.hasFocus() || !web.hasWindowFocus()
+                    || !web.lastConnectionNonNull || web.inputType == InputType.TYPE_NULL) {
+                trace("recoveryIme skipped: focus/window/editor not ready"); return;
+            }
+            showIme("focusRecovery", InputMethodManager.SHOW_IMPLICIT);
+            updateStatus();
+        }
+        void showIme(String reason, int flags) {
+            InputMethodManager imm = (InputMethodManager) owner.getSystemService(Context.INPUT_METHOD_SERVICE);
+            int request = ++imeRequests;
+            ResultReceiver receiver = new ResultReceiver(UI) {
+                @Override protected void onReceiveResult(int resultCode, Bundle ignored) {
+                    if (!closed && request == imeRequests) trace("imeResult request=" + request + " reason=" + reason + " code=" + resultCode);
+                }
+            };
+            imeAccepted = imm != null && imm.showSoftInput(web, flags, receiver);
+            trace("imeRequest request=" + request + " reason=" + reason + " accepted=" + imeAccepted
+                    + " viewFocus=" + web.hasFocus() + " windowFocus=" + web.hasWindowFocus()
+                    + " immActive=" + (imm != null && imm.isActive(web)) + " editor=" + web.lastConnectionNonNull);
+        }
+        void traceCapabilities() {
+            try {
+                PackageManager pm = owner.getPackageManager();
+                PackageInfo app = pm.getPackageInfo(owner.getPackageName(), PackageManager.GET_CONFIGURATIONS);
+                boolean overlay = false;
+                if (app.reqFeatures != null) for (FeatureInfo feature : app.reqFeatures)
+                    if ("oculus.software.overlay_keyboard".equals(feature.name)) overlay = true;
+                ActivityInfo activity = pm.getActivityInfo(owner.getComponentName(), PackageManager.GET_META_DATA);
+                boolean aware = activity.metaData != null && activity.metaData.getBoolean("com.oculus.vr.focusaware", false);
+                PackageInfo provider = WebView.getCurrentWebViewPackage();
+                trace("imeCapabilities sdk=" + Build.VERSION.SDK_INT + " overlayDeclared=" + overlay + " focusAware=" + aware
+                        + " bootKeyboard=" + bootKeyboardSetting() + " webView=" + (provider == null ? "unknown" : provider.packageName + "/" + provider.versionName)
+                        + " windowFlags=0x" + Integer.toHexString(owner.getWindow().getAttributes().flags)
+                        + " softInputMode=0x" + Integer.toHexString(owner.getWindow().getAttributes().softInputMode));
+            } catch (Exception error) { trace("imeCapabilities unavailable=" + error.getClass().getSimpleName()); }
+            try { trace("defaultIme=" + Settings.Secure.getString(owner.getContentResolver(), Settings.Secure.DEFAULT_INPUT_METHOD)); }
+            catch (Exception error) { trace("defaultIme unavailable=" + error.getClass().getSimpleName()); }
+        }
+        String bootKeyboardSetting() {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(
+                    owner.getAssets().open("bin/Data/boot.config"), StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (line.equals("xr-keyboard-overlay-enabled=1")) return "1";
+                    if (line.equals("xr-keyboard-overlay-enabled=0")) return "0";
+                }
+                return "missing";
+            } catch (Exception error) { return "unavailable"; }
         }
         void cancelTouch() {
             if (!touching || web == null) return;

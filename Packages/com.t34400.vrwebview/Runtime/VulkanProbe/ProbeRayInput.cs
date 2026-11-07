@@ -27,6 +27,16 @@ namespace T34400.VRWebView
         internal bool LeftHandTracked { get; private set; }
         internal string RightHandDetails => DescribeHand(MetaAimHand.right);
         internal string LeftHandDetails => DescribeHand(MetaAimHand.left);
+        internal static void SynchronizeHandReset(MetaAimHand hand)
+        {
+            if (hand == null || !hand.added) return;
+            // Probe-only XR Hands 1.7.3 compatibility hook. Input System resets
+            // controls, but the SDK's m_WasTracked/m_PreviousFlags/pinch caches
+            // otherwise survive. Submit an untracked reset sample through its
+            // public updater; the real provider supplies the next tracked pose.
+            // Never force isTracked/Valid true, use reflection, or alter focus policy.
+            hand.UpdateHand(false, MetaAimFlags.None, Pose.identity, 0f, 0f, 0f, 0f);
+        }
         private readonly List<XRHandSubsystem> handSubsystems = new List<XRHandSubsystem>();
         internal string RootDetails()
         {

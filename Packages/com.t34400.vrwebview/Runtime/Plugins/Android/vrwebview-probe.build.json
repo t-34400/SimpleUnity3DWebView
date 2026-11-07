@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "aarSha256": "211e2129aa3e2d8c103496fe6167259081176a87f634f14656dfd788dd32b13f",
+  "aarSha256": "4c931a5f52e8f09f34f50d29293db6c318b02a4dfa5e4af6ed151abc2637913a",
   "sources": {
     "Android~/build.gradle.kts": "30319db7ac75762e50cc423c2245d8bc704df111839e5be6fd9393f906db67af",
     "Android~/gradle/wrapper/gradle-wrapper.jar": "498495120a03b9a6ab5d155f5de3c8f0d986a449153702fb80fc80e134484f17",
@@ -31,11 +31,11 @@
     "Android~/webview/src/main/java/com/t34400/vrwebview/ImeProbe.java": "e17207cc446cf9f19bedc6d08d5deaf8fc9b438d23b99a65d5d80ed0df5f81e7",
     "Android~/webview/src/main/java/com/t34400/vrwebview/ImeProbeActivity.java": "4c8e3b5f9f65cdf7d81144e50ff10cc7f409a1c2c2ba0d8d55e6ce8ce4d6aead",
     "Android~/webview/src/main/java/com/t34400/vrwebview/ProbeAssets.java": "773f9929cfde4faf3a968fa919c0964388350614bd1c41863dd511c800d54328",
-    "Android~/webview/src/main/java/com/t34400/vrwebview/ProbeFocusRecovery.java": "1a2c8e92c82ad7aea31f17c6e7be4c8b76c97d289b407636a50876e05b6b5f84",
+    "Android~/webview/src/main/java/com/t34400/vrwebview/ProbeFocusRecovery.java": "c33b7fec3e78aed114036f83a3915f134da03bbc59b3df8ac08ee1134b67ca41",
     "Android~/webview/src/main/java/com/t34400/vrwebview/ProbeGeometry.java": "78b8e28ea7a03ccfb761d13916ac95621e08b9e8e5777464f4a8182a6d51d1b9",
     "Android~/webview/src/main/java/com/t34400/vrwebview/ProbeRange.java": "d768dddd6d7ea7b05aca21b91064749c635c6c41fb538ef9b41cb179f4a4f617",
-    "Android~/webview/src/main/java/com/t34400/vrwebview/ProbeWebView.java": "2499578f96dc54f8122b6f8fb8faf341496c173034543cbd3e9095d2721339f6",
-    "Android~/webview/src/main/java/com/t34400/vrwebview/VulkanProbe.java": "2f89261cc55bfea911477163edd5b7e66d4ecd8a2b71c81a709dea31b950110e"
+    "Android~/webview/src/main/java/com/t34400/vrwebview/ProbeWebView.java": "0c8210378cb712d7e15d60e0db3cc2f575691755d2c7cf22aa5d16d20b40622d",
+    "Android~/webview/src/main/java/com/t34400/vrwebview/VulkanProbe.java": "124b25a96b8cbf1addd49d7bcac06795c494093f16a982f4fa1841412d8ade5b"
   },
   "nativeLibrary": {
     "path": "Packages/com.t34400.vrwebview/Runtime/Plugins/Android/arm64-v8a/libGfxPluginVRWebView.so",

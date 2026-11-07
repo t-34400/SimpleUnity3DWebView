@@ -17,6 +17,7 @@ namespace T34400.VRWebView
         public bool flipImageVertically = true;
         public ProbePointerMode pointerMode = ProbePointerMode.Auto;
         public bool restoreBrowserFocus = true;
+        public bool synchronizeHandReset = true;
         public Camera headCamera;
         private ulong id;
         private RenderTexture texture;
@@ -25,6 +26,7 @@ namespace T34400.VRWebView
         private Text status;
         private RawImage image;
         private Text recoveryLabel;
+        private Text handSyncLabel;
         private RectTransform webRect;
         private Transform panel;
         private LineRenderer ray;
@@ -110,6 +112,12 @@ namespace T34400.VRWebView
             if (id != 0) bridge.CallStatic("setFocusRecovery", (long)id, restoreBrowserFocus);
             TraceFocus("focusRecovery enabled=" + restoreBrowserFocus);
         }
+        public void ToggleHandResetSync()
+        {
+            synchronizeHandReset = !synchronizeHandReset;
+            if (handSyncLabel != null) handSyncLabel.text = "Hand sync " + (synchronizeHandReset ? "ON" : "OFF");
+            TraceFocus("handResetSync enabled=" + synchronizeHandReset);
+        }
         public void ReturnFocus() { CancelPointer(); if (id != 0) bridge.CallStatic("releaseFocus", (long)id); }
         public void Reload() { if (id != 0) bridge.CallStatic("reload", (long)id); }
         public void Flip()
@@ -136,10 +144,22 @@ namespace T34400.VRWebView
         protected void OnEnable() { InputSystem.onDeviceChange += OnHandDeviceChange; if (image != null) Open(); }
         private void OnHandDeviceChange(UnityEngine.InputSystem.InputDevice device, UnityEngine.InputSystem.InputDeviceChange change)
         {
-            if (device is MetaAimHand)
-                TraceFocus("handDevice side=" + (device == MetaAimHand.right ? "R" : device == MetaAimHand.left ? "L" : "other")
+            if (device is MetaAimHand hand)
+            {
+                string side = device == MetaAimHand.right ? "R" : device == MetaAimHand.left ? "L" : "other";
+                TraceFocus("handDevice side=" + side
                     + " id=" + device.deviceId + " change=" + change
                     + " enabled=" + device.enabled);
+                if (synchronizeHandReset && Application.platform == RuntimePlatform.Android
+                        && (change == UnityEngine.InputSystem.InputDeviceChange.SoftReset
+                            || change == UnityEngine.InputSystem.InputDeviceChange.HardReset))
+                {
+                    if ((pointerSource == ProbePointerSource.RightHand && side == "R")
+                            || (pointerSource == ProbePointerSource.LeftHand && side == "L")) ResetInput();
+                    ProbeRayInput.SynchronizeHandReset(hand);
+                    TraceFocus("handResetSync side=" + side + " sample=reset");
+                }
+            }
         }
         protected void OnDestroy()
         {
@@ -159,10 +179,10 @@ namespace T34400.VRWebView
             string native = failure ?? (id == 0 ? "Probe closed" : VulkanProbeNative.Status(id));
             string host = id == 0 || bridge == null ? "" : bridge.CallStatic<string>("status");
             string roots = input.RootDetails();
-            string details = "source=" + pointerSource + " R " + input.RightHandDetails + " L " + input.LeftHandDetails + " " + roots;
+            string details = "input=HI4 handSync=" + synchronizeHandReset + " source=" + pointerSource + " R " + input.RightHandDetails + " L " + input.LeftHandDetails + " " + roots;
             if (details != lastInputDetails) { TraceFocus(details); lastInputDetails = details; }
             status.text = native + "\n" + host + "\nXR running=" + xrRunning + "  Unity frames=" + Time.frameCount
-                + "\ninput=HI3 source=" + pointerSource + " tracked=" + pointerTracked + " pressed=" + pointerPressed
+                + "\ninput=HI4 source=" + pointerSource + " tracked=" + pointerTracked + " pressed=" + pointerPressed
                 + " flipY=" + flipImageVertically + "\nhandAim R=" + input.RightHandPresent + "/" + input.RightHandTracked
                 + " L=" + input.LeftHandPresent + "/" + input.LeftHandTracked + " controller=" + input.ControllerTracked
                 + "\nappFocus=" + Application.isFocused + " paused=" + paused + " focus/pauseEvents=" + focusEvents + "/" + pauseEvents
@@ -263,6 +283,7 @@ namespace T34400.VRWebView
             Button("Recreate", 84, Recreate); Button("Resize", 252, Resize); Button("Flip Y", 420, Flip);
             Button("Focus +5s", 0, ArmFocusReturn, -510, 320);
             recoveryLabel = Button("Restore " + (restoreBrowserFocus ? "ON" : "OFF"), -350, ToggleFocusRecovery, -510, 300);
+            handSyncLabel = Button("Hand sync " + (synchronizeHandReset ? "ON" : "OFF"), 350, ToggleHandResetSync, -510, 300);
             var rayObject = new GameObject("Browser input ray", typeof(LineRenderer)); ray = rayObject.GetComponent<LineRenderer>();
             ray.positionCount = 2; ray.startWidth = ray.endWidth = 0.003f; ray.useWorldSpace = true;
             var rayShader = Shader.Find("Sprites/Default") ?? Shader.Find("UI/Default");

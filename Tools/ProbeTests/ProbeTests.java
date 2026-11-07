@@ -74,6 +74,14 @@ public final class ProbeTests {
         check(focus.windowGained() == -1); // An interrupted attempt still consumes the bound.
         focus.claimBrowser(); focus.windowLost(true);
         check(focus.consume(focus.windowGained()));
+        long ime = focus.currentToken();
+        check(focus.isCurrent(ime));
+        focus.release();
+        check(!focus.isCurrent(ime)); // Delayed IME must not reopen after a Unity return.
+        focus.claimBrowser();
+        long newIme = focus.currentToken();
+        focus.windowLost(true);
+        check(!focus.isCurrent(newIme)); // A new window loss also cancels the delayed request.
         System.out.println("PASS " + checks + " probe range/geometry/focus checks");
     }
 }

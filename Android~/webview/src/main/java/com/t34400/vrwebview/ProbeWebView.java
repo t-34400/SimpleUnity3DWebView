@@ -16,6 +16,7 @@ final class ProbeWebView extends WebView {
     int capturedScrollX, capturedScrollY;
     long draws;
     boolean targetHardware, suppressWindowDraw;
+    boolean lastConnectionNonNull;
     // Diagnostic events contain metadata only. Do not pass EditorInfo or connection objects.
     interface MetadataListener { void onEvent(String event); }
     MetadataListener metadataListener;
@@ -27,6 +28,7 @@ final class ProbeWebView extends WebView {
     @Override public InputConnection onCreateInputConnection(EditorInfo info) {
         InputConnection connection = super.onCreateInputConnection(info);
         connectionRequests++;
+        lastConnectionNonNull = connection != null;
         if (connection != null) nonNullConnections++;
         inputType = info.inputType; imeOptions = info.imeOptions;
         metadata("connection nonNull=" + (connection != null) + " count=" + connectionRequests

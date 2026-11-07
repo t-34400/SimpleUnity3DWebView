@@ -7,6 +7,8 @@ final class ProbeFocusRecovery {
     private long generation;
 
     boolean isEnabled() { return enabled; }
+    long currentToken() { return generation; }
+    boolean isCurrent(long token) { return enabled && wanted && token == generation; }
 
     void setEnabled(boolean value) {
         if (enabled == value) return;
