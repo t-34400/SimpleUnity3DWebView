@@ -1,6 +1,24 @@
 # AG1: 別ActivityからUnityテクスチャへ
 
-HC1で確認した「別ActivityのWebView・システムキーボード・Unity VR画面の同時表示」と「リセット同期による復帰後のレイ表示」を、GPU転送へつなぐ検証です。HC1と元のGPU XRプローブは残しています。AG1のUnityコンパイル・Quest上の描画/入力/IMEの成立は確認待ちです。
+HC1で確認した「別ActivityのWebView・システムキーボード・Unity VR画面の同時表示」と「リセット同期による復帰後のレイ表示」を、GPU転送へつなぐ検証です。HC1と元のGPU XRプローブは残しています。AG1では利用者がVulkan描画とIME起動を確認しました。Unityのレイ操作はまだ成立しておらず、preview.15（AG2）でフォーカス取得とタッチWindowの比較を追加しています。
+
+## AG2への更新と今回の比較
+
+初回ログでは `app=False,XR=unknown` と `pointer=none tracked=False blocked=True` が続き、Unityの `XRDisplaySubsystem.displayFocusChanged` は通知されませんでした。一方、Meta XR FeatureにはOpenXRの4→5が出ています。下部の操作はネイティブのSource/Edit/Browseによるもので、UnityRayの転送記録はありません。透明な見た目でも、Android Windowの入力領域は前面に残っていました。
+
+更新後、**既存AG1シーンを再ビルドする前に VRWebView > Activity GPU > Enable OpenXR Focus Probe** を実行してください。新しくCreate Activity GPU Probe Sceneを使う場合は自動で有効にします。AndroidのOpenXR設定へ観測専用Featureを追加し、ネイティブのOnSessionStateChangeからFOCUSED=5を取得します。Meta SDKやloaderの置換、拡張の追加要求、IgnoreFocus設定の変更は行いません。Featureが無効なままAG1シーンをビルドすると、原因を示して停止します。
+
+まず `texture` を起動し、**マゼンタ色のUnityレイ**が出るかを確認します。ログでは `focusSource=OpenXRSession,xrState=5`、`pointer=RightHandJoints/LeftHandJoints`、操作時は `pointer source=UnityRay` が確認対象です。Quest側のネイティブポインターとは区別してください。
+
+次に透明なWindowへの当たり方を比較します。
+
+```bash
+bash Tools/run_activity_gpu_probe.sh passthrough
+```
+
+このモードは元ページのWindow drawをOFFにし、ブラウズ中だけ同じアプリ内のホストWindowへFLAG_NOT_TOUCHABLEを設定します。WindowのfocusabilityとIME所有者は変更しません。UnityからWebViewへ直接送るポインター操作は残します。ネイティブの下部ボタンはブラウズ中は無効表示になります。Unity側のマゼンタレイで操作してください。
+
+入力欄を選ぶとネイティブタッチを戻し、編集後はネイティブのBrowseでブラウズへ戻します。元ページをONにした場合もネイティブタッチを戻します。復旧には120秒の自動終了、または `native` モードでの再起動を使えます。Questの3Dパネルのポインター表示まで消えるか、Unityのレイ操作とIMEが両立するかは実機確認が必要です。
 
 ## 所有関係
 
@@ -44,6 +62,7 @@ bash Tools/run_activity_gpu_probe.sh texture
 | mode | 確認するもの | 起動時の動作 |
 | --- | --- | --- |
 | texture | Unity内のテクスチャとUnityレイ操作 | 元WebViewのWindow drawはOFF。自動IME/再生はなし |
+| passthrough | 透明な前面Windowのタッチを除いた比較 | 元ページOFF、ブラウズ中はネイティブタッチOFF。編集中は戻す |
 | native | 元WebViewとUnityテクスチャの比較 | Window draw ON。まずネイティブ側の操作で確認できる |
 | video | レイ入力と切り離した動画GPU転送・音声 | Window draw OFF。Windowフォーカス成立後に固定PlayボタンへAndroidのポインタ操作を自動送信 |
 | ime | レイ入力と切り離した日本語IME・描画継続 | Window draw OFF。HTML入力欄へ自動focusし、編集接続とWindowが揃ったときに一度IME要求 |
@@ -71,7 +90,7 @@ Unity側の画面には **AG1 UNITY TEXTURE**、GPUコピー数、回転キュ�
 
 Unityにフォーカスがある場合は通常のcontroller/Meta Aimを優先します。別Activityの表示中は、次の条件が揃えばXR Handsの関節から作る別のレイを試します。この段階では、Unityがunfocusedの間のコントローラー入力は中継していません。
 
-- XR displayがrunningで、**displayFocusChangedでfocus=trueを観測済み**。未通知・falseなら利用しません。
+- XR displayがrunningで、**OpenXRのFOCUSED=5を観測済み**。観測用Featureを優先し、未観測・非FOCUSEDなら利用しません。displayFocusChangedはFeatureのinstanceが一度も作成されていない場合だけ補助として使い、破棄済みsessionを古いdisplay通知で復活させません。
 - 今回のホストWindowが生存・resume・Window focus・レイアウト完了し、元ページのWindow drawがOFF。
 - 編集要素が非選択で、IME Insetsも非表示。編集中・状態照会中はレイ操作を止めます。
 - 手本体と必要な関節poseを取得でき、そのDynamic更新が250ms以内。
@@ -80,7 +99,7 @@ Input SystemのIgnoreFocus設定やSDKのdevice enable状態は変更しませ�
 
 この関節レイはMeta Aimと異なる幾何学的な検証用入力です。頭に対する肩の近似位置から親指・人差し指の中点へ向け、指先間距離25mm以下でpinch、40mm超でreleaseにします。手のひら/甲をHMDへ向けた姿勢は除外します。手を少し上げ、表示されるレイで狙ってください。Meta Aim相当の精度・ジェスチャー認識を保証するものではありません。`Use Owned Activity Joint Ray` をOFFにするとこの経路を止められます。
 
-ログの `pointer=RightHandJoints/LeftHandJoints` は関節レイ、`RightHand/LeftHand` はMeta Aimです。`XR=unknown` のままでレイが出なければ、focus通知の未取得を含む結果として記録してください。頭の向きだけによる自動選択はありません。フォーカス喪失時は押下をcancelし、再追跡時はピンチを離してから操作します。
+ログの `pointer=RightHandJoints/LeftHandJoints` は関節レイ、`RightHand/LeftHand` はMeta Aimです。Unityのレイはマゼンタで、Quest側のポインターとは別です。`XR=unknown` のままでレイが出なければ、focus通知の未取得を含む結果として記録してください。頭の向きだけによる自動選択はありません。フォーカス喪失時は押下をcancelし、再追跡時はピンチを離してから操作します。
 
 編集中はUnityのレイを止め、Questのキーボードで操作します。編集終了後はネイティブツールバーのBrowseを選び、レイが戻るかを確認します。ホストを閉じてUnityへ戻る際は、HC1で効果を確認したXR Hands 1.7.3のリセット同期を適用します。
 

@@ -33,6 +33,7 @@ namespace T34400.VRWebView
         private readonly List<XRDisplaySubsystem> displays = new List<XRDisplaySubsystem>();
         private XRDisplaySubsystem observedDisplay;
         private bool? displayFocus;
+        private bool? EffectiveFocus => ActivityProbeInputPolicy.ResolveFocus(ActivityProbeFocusFeature.SeenInstance, ActivityProbeFocusFeature.SessionFocus, displayFocus);
         private bool paused, placed, touching, sourceVisible, pointerTracked, pointerBlocked;
         private int stateBits, lastRenderFrame = -1;
         private long renders;
@@ -48,7 +49,7 @@ namespace T34400.VRWebView
             bridge = new AndroidJavaClass("com.t34400.vrwebview.ActivityGpuProbe");
             using (var player = new AndroidJavaClass("com.unity3d.player.UnityPlayer")) unityOwner = player.GetStatic<AndroidJavaObject>("currentActivity");
             mode = bridge.CallStatic<string>("startupMode", unityOwner); sourceVisible = mode == "native";
-            Trace("start mode=" + mode + " graphics=" + SystemInfo.graphicsDeviceType);
+            Trace("start revision=AG2 mode=" + mode + " graphics=" + SystemInfo.graphicsDeviceType);
         }
         private void Open()
         {
@@ -97,7 +98,9 @@ namespace T34400.VRWebView
             if (spinner != null) spinner.localRotation = Quaternion.Euler(0, Time.unscaledTime * 70f, Time.unscaledTime * 45f);
             if (Time.unscaledTime < nextLog) return;
             nextLog = Time.unscaledTime + 1; joints?.Refresh();
-            string focus = "app=" + Application.isFocused + ",XR=" + (displayFocus.HasValue ? displayFocus.ToString() : "unknown");
+            bool? effective = EffectiveFocus;
+            string focus = "app=" + Application.isFocused + ",XR=" + (effective.HasValue ? effective.ToString() : "unknown")
+                + ",focusSource=" + (ActivityProbeFocusFeature.SeenInstance ? "OpenXRSession" : "DisplayEvent") + ",xrState=" + ActivityProbeFocusFeature.SessionState;
             if (id != 0) bridge.CallStatic("pulse", (long)id, (long)Time.frameCount, renders, focus);
             string native = id == 0 ? "GPU host closed; use Reopen" : VulkanProbeNative.Status(id);
             string host = id == 0 ? "" : bridge.CallStatic<string>("status", (long)id);
@@ -105,7 +108,7 @@ namespace T34400.VRWebView
                 + " bits=" + stateBits + " pointer=" + pointerSource + " tracked=" + pointerTracked + " blocked=" + pointerBlocked + " " + joints.Diagnostics;
             Trace(details + " " + native.Replace('\n', ' '));
             if (status != null) status.text = "AG1 UNITY TEXTURE (not the native source page)\n" + (failure ?? native) + "\n" + host + "\n" + details
-                + "\nNative toolbar: Browse ends editing; Close host returns to Unity. Auto return: 120s.";
+                + "\nUNITY RAY = MAGENTA. Native toolbar: Browse ends editing; auto return: 120s.";
         }
         private void RefreshDisplay()
         {
@@ -132,8 +135,9 @@ namespace T34400.VRWebView
         {
             if (ray == null) return;
             bool editing = (stateBits & ((int)ActivityProbeState.Editing | (int)ActivityProbeState.Ime)) != 0;
-            bool owned = useOwnedActivityJointRay && ActivityProbeInputPolicy.CanUseOwnedHand(paused, running, displayFocus, stateBits);
-            pointerBlocked = paused || editing || displayFocus == false || (!Application.isFocused && !owned);
+            bool? effective = EffectiveFocus;
+            bool owned = useOwnedActivityJointRay && ActivityProbeInputPolicy.CanUseOwnedHand(paused, running, effective, stateBits);
+            pointerBlocked = paused || editing || effective == false || (!Application.isFocused && !owned);
             ProbeRaySample sample = default;
             pointerTracked = !pointerBlocked && Application.isFocused && input.TryRead(ProbePointerMode.Auto, press.ActiveSourceId, out sample);
             if (!pointerTracked && !pointerBlocked && owned) pointerTracked = joints.TryRead(headCamera.transform, press.ActiveSourceId, out sample);
@@ -198,23 +202,24 @@ namespace T34400.VRWebView
             status = Label("Diagnostics", 600, new Vector2(1100, 400), "AG1 preparing", 18);
             Button("Reopen", -400, Reopen); Button("Resize", -200, Resize); Button("Source ON/OFF", 0, ToggleSource);
             Button("Edit field", 200, () => { if (id != 0) bridge.CallStatic("requestIme", (long)id); }); Button("Close host", 400, Close);
+            Button("Browse", 0, () => { if (id != 0) bridge.CallStatic("browse", (long)id); }, -535);
             var marker = GameObject.CreatePrimitive(PrimitiveType.Cube); marker.transform.SetParent(panel, false); marker.transform.localPosition = new Vector3(0, 850, 0); marker.transform.localScale = Vector3.one * 70;
             Destroy(marker.GetComponent<Collider>()); spinner = marker.transform;
             var line = new GameObject("AG1 Unity ray", typeof(LineRenderer)); ray = line.GetComponent<LineRenderer>(); ray.positionCount = 2; ray.useWorldSpace = true; ray.startWidth = ray.endWidth = 0.003f;
             var shader = Shader.Find("Sprites/Default") ?? Shader.Find("UI/Default"); if (shader != null) { rayMaterial = new Material(shader); ray.material = rayMaterial; }
-            ray.startColor = ray.endColor = Color.cyan; ray.enabled = false;
+            ray.startColor = ray.endColor = Color.magenta; ray.enabled = false;
         }
         private Text Label(string name, float y, Vector2 size, string value, int font)
         {
             var go = new GameObject(name, typeof(RectTransform), typeof(Text)); go.transform.SetParent(panel, false); go.GetComponent<RectTransform>().anchoredPosition = new Vector2(0, y); go.GetComponent<RectTransform>().sizeDelta = size;
             var t = go.GetComponent<Text>(); t.text = value; t.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"); t.fontSize = font; t.color = Color.white; t.raycastTarget = false; return t;
         }
-        private void Button(string name, float x, Action action)
+        private void Button(string name, float x, Action action, float y = -450)
         {
             var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(BoxCollider), typeof(VulkanProbeButton)); go.transform.SetParent(panel, false);
-            go.GetComponent<RectTransform>().anchoredPosition = new Vector2(x, -450); go.GetComponent<RectTransform>().sizeDelta = new Vector2(190, 70);
+            go.GetComponent<RectTransform>().anchoredPosition = new Vector2(x, y); go.GetComponent<RectTransform>().sizeDelta = new Vector2(190, 70);
             go.GetComponent<BoxCollider>().size = new Vector3(190, 70, 1); go.GetComponent<Image>().color = new Color(0.1f, 0.25f, 0.4f); go.GetComponent<VulkanProbeButton>().Action = action;
-            var t = Label(name + " label", -450, new Vector2(190, 70), name, 20); t.rectTransform.anchoredPosition = new Vector2(x, -450); t.alignment = TextAnchor.MiddleCenter;
+            var t = Label(name + " label", y, new Vector2(190, 70), name, 20); t.rectTransform.anchoredPosition = new Vector2(x, y); t.alignment = TextAnchor.MiddleCenter;
         }
     }
 }

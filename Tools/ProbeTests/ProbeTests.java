@@ -109,6 +109,13 @@ public final class ProbeTests {
         boolean invalidSession = false;
         try { lifetime.open(0); } catch (IllegalArgumentException expected) { invalidSession = true; }
         check(invalidSession && lifetime.current(32));
+        check(ActivityGpuLifetime.mode("passthrough").equals("passthrough"));
+        check(ActivityGpuTouchPolicy.passThrough("passthrough", false, false, false));
+        check(!ActivityGpuTouchPolicy.passThrough("texture", false, false, false));
+        check(!ActivityGpuTouchPolicy.passThrough("passthrough", true, false, false));
+        check(!ActivityGpuTouchPolicy.passThrough("passthrough", false, true, false));
+        check(!ActivityGpuTouchPolicy.passThrough("passthrough", false, false, true));
+        check(ActivityGpuTouchPolicy.passThrough("passthrough", false, false, false)); // Restores after editing/query ends.
         System.out.println("PASS " + checks + " probe range/geometry/focus/host checks");
     }
 }

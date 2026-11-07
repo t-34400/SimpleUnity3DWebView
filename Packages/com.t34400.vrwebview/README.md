@@ -2,7 +2,9 @@
 
 Session/input foundations and Android WebView GPU, video and IME comparison probes for Unity 6000.4.
 
-For the next separate-Activity GPU transfer test, use **VRWebView > Create Activity GPU Probe Scene**. AG1 connects a native WebView source to the existing AHardwareBuffer/Vulkan/GLES consumer and adds fixed texture/video/IME comparisons. See `Documentation~/ActivityGpuProbe.md`; actual Unity/Quest operation remains unverified.
+For the next separate-Activity GPU transfer test, use **VRWebView > Create Activity GPU Probe Scene**. AG1 connects a native WebView source to the existing AHardwareBuffer/Vulkan/GLES consumer and adds fixed texture/video/IME comparisons. See `Documentation~/ActivityGpuProbe.md`; the latest focus/touch changes remain unverified on device.
+
+AG1 has user-confirmed Vulkan rendering and IME opening. Preview.15 (AG2) replaces missing display-focus notifications with an observation-only OpenXR session feature, colors Unity rays magenta, and adds the `passthrough` comparison for the transparent source Window. Enable **VRWebView > Activity GPU > Enable OpenXR Focus Probe** before rebuilding an existing AG1 scene. Unity-ray operation and the new touch mode await device confirmation.
 
 This preview includes an experimental AHardwareBuffer-to-Unity Vulkan/OpenGL ES 3 transfer and a same-Activity XR probe. It is not a production browser backend. Standalone Activity results do not establish the new probe's Unity/XR or IME behavior.
 

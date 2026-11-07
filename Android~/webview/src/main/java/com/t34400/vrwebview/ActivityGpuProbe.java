@@ -15,6 +15,7 @@ import android.view.Surface;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowInsets;
+import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.PermissionRequest;
@@ -88,7 +89,7 @@ public final class ActivityGpuProbe {
         WeakReference<ActivityGpuHostActivity> activity = new WeakReference<>(null);
         ProbeWebView web; FrameLayout panel; Surface surface;
         boolean closed, resumed, editing, awaitingEditCheck, injecting, touching, pendingIme, pendingAutoVideo;
-        boolean sourceVisible;
+        boolean sourceVisible, touchPassthrough;
         long downTime, lastTrace, editQuery, returnAt;
         volatile int bits;
         volatile long snapshotAt, tickAt;
@@ -219,6 +220,15 @@ public final class ActivityGpuProbe {
         void cancelTouch() { if (touching) touch(MotionEvent.ACTION_CANCEL, 0, 0, "cancel"); }
         void updateState() {
             if (closed || web == null) return;
+            boolean pass = ActivityGpuTouchPolicy.passThrough(mode, sourceVisible, editing, awaitingEditCheck);
+            ActivityGpuHostActivity owner = activity.get();
+            if (owner != null && pass != touchPassthrough) {
+                touchPassthrough = pass;
+                if (pass) owner.getWindow().addFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
+                else owner.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
+                owner.touchPolicyChanged(pass);
+                log("id=" + id + " nativeTouchPassthrough=" + pass);
+            }
             boolean ime = false;
             if (Build.VERSION.SDK_INT >= 30) {
                 WindowInsets insets = web.getRootWindowInsets(); ime = insets != null && insets.isVisible(WindowInsets.Type.ime());
@@ -226,10 +236,10 @@ public final class ActivityGpuProbe {
             // Shared bit contract with ActivityProbeInputPolicy.cs. Conservative editing gate.
             bits = 1 | (web.hasWindowFocus() ? 2 : 0) | (!sourceVisible ? 4 : 0)
                 | (editing || awaitingEditCheck ? 8 : 0) | (ime ? 16 : 0)
-                | (web.isAttachedToWindow() && web.getWidth() == width && web.getHeight() == height ? 32 : 0) | (resumed ? 64 : 0);
+                | (web.isAttachedToWindow() && web.getWidth() == width && web.getHeight() == height ? 32 : 0) | (resumed ? 64 : 0) | (touchPassthrough ? 128 : 0);
             snapshotAt = SystemClock.elapsedRealtime();
             status = "AG1 id=" + id + " sourceVisible=" + sourceVisible + " stateBits=" + bits
-                + "\nwindowFocus=" + web.hasWindowFocus() + " editing=" + editing + " editCheck=" + awaitingEditCheck + " imeInsets=" + ime + " resumed=" + resumed
+                + "\nwindowFocus=" + web.hasWindowFocus() + " editing=" + editing + " editCheck=" + awaitingEditCheck + " imeInsets=" + ime + " resumed=" + resumed + " nativeTouchPassthrough=" + touchPassthrough
                 + "\ncanvas=" + web.draws + " hardware=" + web.targetHardware + " connection=" + web.connectionRequests + "/" + web.nonNullConnections
                 + " autoReturnIn=" + Math.max(0, (returnAt - snapshotAt) / 1000) + "s";
         }

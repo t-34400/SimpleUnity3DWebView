@@ -77,7 +77,7 @@ unitypackageが必要なら:
 python3 Tools/export_unitypackage.py
 ```
 
-WindowsではユーザーのDownloads、今回指定されたWSL環境では`C:\Users\tmiyoshi\Downloads`へ出力します。`--output`で変更できます。Runtime/Editor/サンプル/文書を`Assets/VRWebView`に集約するアーカイブを生成し、GUIDとファイル本文を照合します。元プロジェクト内にコピーを作らないため、export中に重複GUIDをimportしません。利用先ではUPM版とunitypackage版の片方だけを導入してください。unitypackage版ではUGUI・Input System 1.19.0・XR Hands 1.7.3をPackage Managerで先に導入してください。Unityでの実importは別途確認が必要です。
+WindowsではユーザーのDownloads、今回指定されたWSL環境では`C:\Users\tmiyoshi\Downloads`へ出力します。`--output`で変更できます。Runtime/Editor/サンプル/文書を`Assets/VRWebView`に集約するアーカイブを生成し、GUIDとファイル本文を照合します。元プロジェクト内にコピーを作らないため、export中に重複GUIDをimportしません。利用先ではUPM版とunitypackage版の片方だけを導入してください。unitypackage版ではUGUI・Input System 1.19.0・XR Hands 1.7.3・OpenXR 1.16.1をPackage Managerで先に導入してください。Unityでの実importは別途確認が必要です。
 
 ## 実装範囲
 

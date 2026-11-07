@@ -2,7 +2,9 @@
   "name": "T34400.VRWebView.Editor",
   "references": [
     "T34400.VRWebView.Android",
-    "T34400.VRWebView.VulkanProbe"
+    "T34400.VRWebView.VulkanProbe",
+    "Unity.XR.OpenXR",
+    "Unity.XR.OpenXR.Editor"
   ],
   "includePlatforms": [
     "Editor"

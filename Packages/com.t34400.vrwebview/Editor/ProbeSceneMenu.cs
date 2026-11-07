@@ -13,6 +13,7 @@ namespace T34400.VRWebView.Editor
         public static void CreateActivityGpuProbe()
         {
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+            ActivityProbeFocusSetup.Enable();
             var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
             var probe = new GameObject("Activity GPU Probe", typeof(ActivityGpuWebViewProbe)).GetComponent<ActivityGpuWebViewProbe>();
             probe.headCamera = Camera.main;

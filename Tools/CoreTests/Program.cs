@@ -35,6 +35,23 @@ internal static class Program
     public static async Task Main()
     {
         const string manifest = "<manifest xmlns:android='http://schemas.android.com/apk/res/android'><uses-feature android:name='oculus.software.overlay_keyboard' android:required='false'/><application><activity android:name='com.unity3d.player.UnityPlayerGameActivity' android:exported='true'><intent-filter><action android:name='android.intent.action.MAIN'/><category android:name='android.intent.category.LAUNCHER'/><category android:name='com.oculus.intent.category.VR'/></intent-filter><meta-data android:name='com.oculus.vr.focusaware' android:value='true'/><meta-data android:name='android.app.lib_name' android:value='game'/></activity><activity android:name='test.Other'/><meta-data android:name='com.oculus.supportedDevices' android:value='quest3'/></application></manifest>";
+        await Test("OpenXR session focus tracks focused state and clears on lifecycle reset", () => Sync(() => {
+            var focus = new ProbeXrFocusState();
+            Check(focus.Focus == null, "Cold session claimed focus");
+            for (int state = 1; state <= 8; state++) {
+                focus.Observe(state);
+                Check(focus.Focus == (state == 5), "Nonfocused state accepted or FOCUSED rejected");
+            }
+            focus.Observe(5); focus.Reset(); Check(focus.Focus == null, "Destroyed session retained focus");
+            focus.Observe(int.MaxValue); Check(focus.Focus == null, "Unknown state claimed focus");
+            focus.Observe(0); Check(focus.Focus == null, "UNKNOWN state claimed focus");
+        }));
+        await Test("OpenXR session observations take precedence without reviving stale display focus", () => Sync(() => {
+            Check(ActivityProbeInputPolicy.ResolveFocus(false, null, true) == true, "Legacy display observation ignored");
+            Check(ActivityProbeInputPolicy.ResolveFocus(true, true, false) == true, "Current session focus ignored");
+            Check(ActivityProbeInputPolicy.ResolveFocus(true, false, true) == false, "Lost session focus overridden");
+            Check(ActivityProbeInputPolicy.ResolveFocus(true, null, true) == null, "Destroyed session revived by stale display event");
+        }));
         await Test("owned Activity input requires every ownership, focus and readiness condition", () => Sync(() => {
             int ready = (int)(ActivityProbeState.Alive | ActivityProbeState.WindowFocus | ActivityProbeState.TextureOnly | ActivityProbeState.Ready | ActivityProbeState.Resumed);
             Check(ActivityProbeInputPolicy.CanUseOwnedHand(false, true, true, ready), "Valid owned host denied");

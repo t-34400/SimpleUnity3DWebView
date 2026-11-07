@@ -1,6 +1,6 @@
 {
   "name": "com.t34400.vrwebview",
-  "version": "0.1.0-preview.14",
+  "version": "0.1.0-preview.15",
   "displayName": "VRWebView",
   "description": "Browser foundations and experimental same-Activity Vulkan/OpenGL ES 3 WebView probes for Quest/OpenXR. Device validation is required.",
   "unity": "6000.4",
@@ -11,7 +11,8 @@
   "dependencies": {
     "com.unity.ugui": "2.0.0",
     "com.unity.inputsystem": "1.19.0",
-    "com.unity.xr.hands": "1.7.3"
+    "com.unity.xr.hands": "1.7.3",
+    "com.unity.xr.openxr": "1.16.1"
   },
   "samples": [
     {

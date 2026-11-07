@@ -15,6 +15,15 @@ namespace T34400.VRWebView
             return !paused && displayRunning && displayFocus == true && (bits & required) == required
                 && (bits & (ActivityProbeState.Editing | ActivityProbeState.Ime)) == 0;
         }
+        internal static bool? ResolveFocus(bool observedSession, bool? session, bool? display) => observedSession ? session : display;
+    }
+    internal sealed class ProbeXrFocusState
+    {
+        private volatile int state = -1;
+        internal int State => state;
+        internal bool? Focus { get { int value = state; return value >= 1 && value <= 8 ? value == 5 : (bool?)null; } }
+        internal void Observe(int value) { state = value >= 1 && value <= 8 ? value : -1; }
+        internal void Reset() { state = -1; }
     }
     internal sealed class ProbePinch
     {
