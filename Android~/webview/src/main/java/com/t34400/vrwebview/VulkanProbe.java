@@ -27,6 +27,7 @@ import android.webkit.WebView;
 import android.widget.FrameLayout;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.lang.ref.WeakReference;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
@@ -255,11 +256,7 @@ public final class VulkanProbe {
         void showIme(String reason, int flags) {
             InputMethodManager imm = (InputMethodManager) owner.getSystemService(Context.INPUT_METHOD_SERVICE);
             int request = ++imeRequests;
-            ResultReceiver receiver = new ResultReceiver(UI) {
-                @Override protected void onReceiveResult(int resultCode, Bundle ignored) {
-                    if (!closed && request == imeRequests) trace("imeResult request=" + request + " reason=" + reason + " code=" + resultCode);
-                }
-            };
+            ResultReceiver receiver = new ImeResultReceiver(this, request, reason);
             imeAccepted = imm != null && imm.showSoftInput(web, flags, receiver);
             trace("imeRequest request=" + request + " reason=" + reason + " accepted=" + imeAccepted
                     + " viewFocus=" + web.hasFocus() + " windowFocus=" + web.hasWindowFocus()
@@ -319,6 +316,20 @@ public final class VulkanProbe {
             if (previousFocus != null && previousFocus.isAttachedToWindow()) previousFocus.requestFocus();
             nativeStop(id); // consumer teardown is deferred until Unity's safe frame
             status = "Host closed";
+        }
+    }
+    // An IME need not reply. Its callback must not retain an obsolete host/Activity.
+    private static final class ImeResultReceiver extends ResultReceiver {
+        final WeakReference<Host> target;
+        final int request;
+        final String reason;
+        ImeResultReceiver(Host host, int request, String reason) {
+            super(UI); target = new WeakReference<>(host); this.request = request; this.reason = reason;
+        }
+        @Override protected void onReceiveResult(int resultCode, Bundle ignored) {
+            Host host = target.get();
+            if (host != null && !host.closed && request == host.imeRequests)
+                host.trace("imeResult request=" + request + " reason=" + reason + " code=" + resultCode);
         }
     }
     private static String viewName(View view) {
