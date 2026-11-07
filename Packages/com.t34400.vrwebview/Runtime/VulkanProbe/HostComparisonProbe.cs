@@ -15,6 +15,8 @@ namespace T34400.VRWebView
         public Camera headCamera;
         // Optional initial-menu accessibility aid. Never reactivate after a trial/focus loss.
         public bool gazeFallback = false;
+        // Probe-only XR Hands 1.7.3 compatibility hook; disable for baseline comparison.
+        public bool synchronizeHandReset = true;
         private AndroidJavaClass bridge;
         private AndroidJavaObject owner;
         private TouchScreenKeyboard keyboard;
@@ -50,7 +52,7 @@ namespace T34400.VRWebView
                 startup = readIntent ? bridge.CallStatic<string>("startupCase", activity) : "menu";
             });
             startupAt = Time.unscaledTime + 3f;
-            Trace("start startupCase=" + startup + " renderer=" + SystemInfo.graphicsDeviceType);
+            Trace("start startupCase=" + startup + " renderer=" + SystemInfo.graphicsDeviceType + " handResetSync=" + synchronizeHandReset);
         }
         private void WithActivity(Action<AndroidJavaObject> action)
         {
@@ -62,7 +64,7 @@ namespace T34400.VRWebView
             if (Application.platform != RuntimePlatform.Android) return;
             CloseKeyboard();
             // Meta's documented system keyboard path. No WebView, DOM copying,
-            // focus reclamation, or hand-reset compatibility hook in this scene.
+            // or focus reclamation. Optional hand-reset synchronization is independent.
             keyboard = TouchScreenKeyboard.Open("", TouchScreenKeyboardType.Default);
             keyboardUntil = Time.unscaledTime + 20f; lastKeyboard = null;
             Trace("TouchScreenKeyboard.Open type=Default returned=" + (keyboard != null));
@@ -77,6 +79,11 @@ namespace T34400.VRWebView
         public void RunNativeWebView() { if (bridge != null) WithActivity(a => bridge.CallStatic("openNativeWebView", a)); }
         public void RunOpaque() { if (bridge != null) WithActivity(a => bridge.CallStatic("launch", a, false)); }
         public void RunTransparent() { if (bridge != null) WithActivity(a => bridge.CallStatic("launch", a, true)); }
+        public void ToggleHandResetSync()
+        {
+            synchronizeHandReset = !synchronizeHandReset;
+            Trace("handResetSyncEnabled=" + synchronizeHandReset);
+        }
         private void RunCase(string mode)
         {
             gazeSuspended = true; dwellTarget = null;
@@ -111,9 +118,10 @@ namespace T34400.VRWebView
             string hands = "R " + input.RightHandDetails + " L " + input.LeftHandDetails + " " + input.RootDetails();
             if (hands != lastHands) { Trace(hands); lastHands = hands; }
             Trace("tick renders=" + renders + " appFocus=" + Application.isFocused + " paused=" + paused + " xrRunning=" + running + " nativeTrial=" + nativeActive
-                + " pointerTracked=" + pointerTracked + " pointerBlocked=" + pointerBlocked + " gazeAllowed=" + gazeAllowed);
+                + " pointerTracked=" + pointerTracked + " pointerBlocked=" + pointerBlocked + " gazeAllowed=" + gazeAllowed + " handResetSync=" + synchronizeHandReset);
             if (status != null) status.text = "HC1  Unity frames=" + Time.frameCount + "  XR running=" + running
                 + "\nappFocus=" + Application.isFocused + " paused=" + paused + " nativeTrial=" + nativeActive
+                + " handResetSync=" + synchronizeHandReset
                 + "\n" + keyboardState + "\nGPU-copy backend inactive in HC1; native controls are separate trials."
                 + "\nPinch/trigger to select. ADB trials do not require hand input."
                 + "\nNative trials return after 20s on the Android UI thread."
@@ -196,7 +204,18 @@ namespace T34400.VRWebView
         }
         private void DeviceChanged(UnityEngine.InputSystem.InputDevice device, UnityEngine.InputSystem.InputDeviceChange change)
         {
-            if (device is MetaAimHand) Trace("handDevice id=" + device.deviceId + " change=" + change + " enabled=" + device.enabled);
+            if (!(device is MetaAimHand hand)) return;
+            string side = hand == MetaAimHand.right ? "R" : hand == MetaAimHand.left ? "L" : "other";
+            Trace("handDevice side=" + side + " id=" + device.deviceId + " change=" + change + " enabled=" + device.enabled);
+            if (synchronizeHandReset && Application.platform == RuntimePlatform.Android
+                && (change == UnityEngine.InputSystem.InputDeviceChange.SoftReset
+                    || change == UnityEngine.InputSystem.InputDeviceChange.HardReset))
+            {
+                // Clear pending gestures; a newly tracked source must release before pressing.
+                press.Reset(); dwellTarget = null;
+                ProbeRayInput.SynchronizeHandReset(hand);
+                Trace("handResetSync side=" + side + " id=" + device.deviceId + " sample=untracked");
+            }
         }
         private void Shutdown()
         {
@@ -230,6 +249,7 @@ namespace T34400.VRWebView
             Button("Unity WebView", -330, -240, () => RunCase("webview"));
             Button("Other Activity", 0, -240, () => RunCase("activity"));
             Button("Transparent Activity", 330, -240, () => RunCase("transparent"));
+            Button("Toggle reset sync", -330, -350, ToggleHandResetSync);
             Button("Recenter", 0, -350, () => placed = false);
             var cube = GameObject.CreatePrimitive(PrimitiveType.Cube); cube.name = "Frame continuity marker";
             cube.transform.SetParent(panel, false); cube.transform.localPosition = new Vector3(0, 400, 0); cube.transform.localScale = Vector3.one * 65;

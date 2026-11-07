@@ -6,6 +6,8 @@ This preview includes an experimental AHardwareBuffer-to-Unity Vulkan/OpenGL ES 
 
 For the unresolved Quest keyboard issue, use **VRWebView > Create Host Comparison Scene** first. HC1 isolates Unity's official keyboard API, same-Activity EditText/WebView, and separate opaque/translucent Activities. See `Documentation~/HostComparison.md` for automated WSL trials and Downloads log capture. The experimental UnityPlayerActivity switch preserves manifest capabilities and detects SDK resets; Meta SDK 207 requires GameActivity for the supported configuration.
 
+Quest 3 observations now include native WebView/system keyboard alongside the Unity VR scene, with Japanese conversion reported for the translucent Activity. Preview.13 adds an optional XR Hands 1.7.3 reset-sync experiment for the remaining hand-ray recovery failure; its effect is awaiting device verification.
+
 Use **VRWebView > Create GPU XR Probe Scene** for the next Quest test. Keep ARM64 enabled and choose Vulkan or OpenGLES3 for comparison. See `Documentation~/GpuXrProbe.md` for controller controls, diagnostics and the device validation sequence.
 
 Import the IME Probe sample through Package Manager, then use **VRWebView > Create IME Probe Scene**. See `Documentation~/ImeProbe.md` for the test matrix and limitations.

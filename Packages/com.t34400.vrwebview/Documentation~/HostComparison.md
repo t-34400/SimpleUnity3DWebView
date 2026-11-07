@@ -2,7 +2,7 @@
 
 目的は「Questのキーボード経路が成立しない」のか「GPU用WebViewホスト固有の問題」なのかを切り分け、別ActivityでUnityのVR表示を継続できるかを測ることです。これは製品方式の決定ではありません。
 
-HC1は既存GX2/HI4とは別のシーンです。GPUコピー用WebView、フォーカス強制復元、HI4の手入力リセット補正を開始しません。既存のGPUプローブは残しています。起動方式・Custom Main Manifest・Meta設定の変更もパッチ自体には含みません。
+HC1は既存GX2/HI4とは別のシーンです。GPUコピー用WebViewとフォーカス強制復元を開始しません。preview.13では、復帰後の手のレイ未追跡を調べるため、HI4と同じXR Hands 1.7.3向けリセット同期を切替可能な状態で追加しました。既存のGPUプローブは残しています。起動方式・Custom Main Manifest・Meta設定の変更もパッチ自体には含みません。
 
 ## 準備
 
@@ -70,9 +70,26 @@ preview.12では `pointerTracked`、`pointerBlocked`、`gazeAllowed` を追加�
 - Unity公式TouchScreenKeyboard：OS側のIME表示失敗・Unityの可視化待ちtimeoutが出た一方、Unityはactive/visibleをtrueにしました。利用者はレイ非表示を報告。キーボード実表示の成否は別途観察と照合します。
 - 同じUnity Activityの標準EditText：利用者が実際のキーボード表示と、その間のUnity画面の更新を確認。確定で戻りますが、手のレイ用デバイスに未追跡状態が残りました。日本語変換の詳細は未報告です。
 - 同じUnity Activityの通常WebView：Windowフォーカスを失った状態で `is not served` によりIME要求を拒否。利用者も未表示を報告。短いログのため20秒終了後の状態は未確認です。
-- 別の不透明ActivityのWebView：起動直後は同じ拒否が出ましたが、約10秒後にWindowフォーカスとnonnull InputConnectionが成立し、利用者がWebViewとキーボードの実表示を確認しました。UnityのUpdate/カメラ描画カウンターは継続しています。HMDへのUnity VRレイヤー継続提示と、日本語編集の詳細は未確認です。
+- 別の不透明ActivityのWebView：起動直後は同じ拒否が出ましたが、約10秒後にWindowフォーカスとnonnull InputConnectionが成立しました。利用者がWebView・キーボードと動くUnity VR画面の同時表示をHMDで確認しました。UnityのUpdate/カメラ描画カウンターも継続しています。日本語編集の詳細は未報告です。
+- 別の半透明ActivityのWebView（preview.12）：利用者がUnity画面との同時表示・日本語変換を確認しました。20秒のautoReturnで復帰した後も、UnityアプリとWindowのフォーカスは有効で、nativeTrialとpointerBlockedはfalseでした。その状態で約8秒間、XR手本体は追跡中なのにMetaAimHandのrawTrackedはfalseのままです。別の試行の自動起動はログにありません。
 
 不透明Activityが約20秒で消えた回はログに `autoReturn` があり、検証コードの自動finishです。利用者が同時に報告したシステムメニューの表示原因は、このアプリ側ログだけでは特定できません。その後のEditTextキーボードには新たな `run case=native` がありました。操作元のログがなかったため、頭の向きによる誤選択は疑いとして扱います。preview.12は復帰後の自動選択を止めますが、手の追跡復元やIMEそのものを直す変更ではありません。
+
+## preview.13: 手のリセット同期を比較する
+
+同時表示・日本語変換の比較ができたため、次は復帰後の手入力を調べます。`Synchronize Hand Reset` は既定ONです。既存HC1シーンもそのまま再ビルドできます。
+
+```bash
+bash Tools/run_host_probe.sh transparent
+```
+
+キーボードで日本語を変換し、20秒の自動復帰後に手をHMDの前で動かしてください。ピンチはいったん離してから行い、レイ表示・ボタン選択が戻るかを確認します。ログにはリセット時の `handResetSync side=R/L ... sample=untracked` と、その後の `rawTracked`、`pointerTracked` が出ます。これらと実際のレイ表示・ピンチ操作を照合します。
+
+同期OFFとの比較はInspectorのチェックを外すか、`menu` で起動して試行前に **Toggle reset sync** を押します。画面のhandResetSync値とログで設定を確認し、その起動中に **Transparent Activity** を手で選んでください。ADBでcaseを起動し直すとシーンの設定に戻ります。
+
+処理はAndroid上のMetaAimHandのSoftReset/HardReset時に限定します。既存の公開updaterへ「未追跡・flagsなし・ピンチなし」のリセット値を一度渡し、SDK内部の前回状態とInput Systemのリセットを揃えます。実際の位置・追跡・ピンチの再通知は次の実プロバイダー更新に任せ、追跡をtrueに偽装しません。リセット前の押下は破棄し、新しく追跡した入力元はいったん離すまで新しい押下にしません。
+
+これはXR Hands 1.7.3のproducer側キャッシュを対象とした検証用互換処理です。SDKはUpdateHandの直接呼出しを通常は非推奨としています。SDKの編集・private fieldの書換え・IgnoreFocus設定への変更・毎フレームの強制更新は行いません。効果はQuest上での確認待ちです。
 
 `accepted=true` や `immActive=true` はキーボード実表示の証明ではありません。入力文字はログに保存せず、Unityキーボードについては文字数だけ記録します。WebViewのDOMと外部入力欄の文字同期、InputConnectionの独自中継は行いません。
 
