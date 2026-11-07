@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "aarSha256": "a37b50be4f3a0e63f6a0e40cbd37b3f0a864f61641cd1dd8f9348fa1f6622f95",
+  "aarSha256": "db6fed906303b085edfe8a6dec8e6375426eb71825344392d7bbff6c6e61caaf",
   "sources": {
     "Android~/build.gradle.kts": "30319db7ac75762e50cc423c2245d8bc704df111839e5be6fd9393f906db67af",
     "Android~/gradle/wrapper/gradle-wrapper.jar": "498495120a03b9a6ab5d155f5de3c8f0d986a449153702fb80fc80e134484f17",
@@ -25,9 +25,9 @@
     "Android~/webview/src/main/cpp/Unity/PROVENANCE.md": "78ed1c61852e0a021cd411e8b2a3fc5615099bbffdf3c50097562a8b4404572a",
     "Android~/webview/src/main/cpp/Unity/Repository-LICENSE.txt": "8ff2aeedfc43211d085e27fc057a2c4c58d665808e2369a97cc43099dc390afb",
     "Android~/webview/src/main/cpp/VulkanBackend.cpp": "193f89b6140e705e381343fb2b06def4338efd478d2e34ff08e17d3a8535f4b4",
-    "Android~/webview/src/main/java/com/t34400/vrwebview/ActivityGpuHostActivity.java": "8a3a619fe64b3d6a46b106fb8a7df02e792b624a201309186f1c480d9b11f02b",
-    "Android~/webview/src/main/java/com/t34400/vrwebview/ActivityGpuLifetime.java": "cc5d50e96d8c390c3eb910a2b8ab199ad3fd7dd3238010cc1344616516747d0c",
-    "Android~/webview/src/main/java/com/t34400/vrwebview/ActivityGpuProbe.java": "29de4e78ec820b19b4db8091b6725a923d73c5a24ba769fb33b679c27368637d",
+    "Android~/webview/src/main/java/com/t34400/vrwebview/ActivityGpuHostActivity.java": "7bf030f6c252442b35df98565529a35c60b63ae070504b8a19e286047db740b3",
+    "Android~/webview/src/main/java/com/t34400/vrwebview/ActivityGpuLifetime.java": "3ea3e78108012e512cfb41412fc3c1fb8c18377a28b74e34b1c6047f205f3298",
+    "Android~/webview/src/main/java/com/t34400/vrwebview/ActivityGpuProbe.java": "fc83ba59c7d534a4bf16b53da82965b73991bad2e58519af731c06bccdc90dfa",
     "Android~/webview/src/main/java/com/t34400/vrwebview/ActivityGpuTouchPolicy.java": "00e04859acc2822048000d01f9f17f877de0e3d96d0c0bc48d77c53b7958b54c",
     "Android~/webview/src/main/java/com/t34400/vrwebview/GpuProbe.java": "2dee4d4fc2f243bae69ee102702047f968dedac5efcf70cfefff0c60132a8a84",
     "Android~/webview/src/main/java/com/t34400/vrwebview/GpuProbeActivity.java": "bbac5a87d6096c066ada1ce7260e355fc8cb89c1e5c120cd4bd208d69aeb27ec",

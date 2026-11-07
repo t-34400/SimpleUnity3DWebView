@@ -2,6 +2,34 @@
 
 HC1で確認した「別ActivityのWebView・システムキーボード・Unity VR画面の同時表示」と「リセット同期による復帰後のレイ表示」を、GPU転送へつなぐ検証です。HC1と元のGPU XRプローブは残しています。AG1では利用者がVulkan描画とIME起動を確認しました。Unityのレイ操作はまだ成立しておらず、preview.15（AG2）でフォーカス取得とタッチWindowの比較を追加しています。
 
+## AG3: カメラ中央＋ピンチで座標を切り分ける
+
+AG2の実機ログでは、textureはOpenXR FOCUSED=5とRightHandJoints tracked=trueへ戻りましたが、UnityRayのタッチ転送はありませんでした。利用者が見た白いレイはQuest側のもので、マゼンタの関節レイが視野外・別方向にある可能性をまだ排除できません。passthroughはVISIBLE=4とWindow focus=falseが継続し、この試行では入力可能な状態に戻りませんでした。NOT_TOUCHABLEによってQuestの3Dパネルを除去できたとは扱いません。
+
+preview.16はWindowフラグを追加変更せず、通常のtextureと同じWindow条件で、カメラ中央＋明示的なピンチを試すheadモードを追加します。
+
+```bash
+bash Tools/run_activity_gpu_probe.sh head
+```
+
+**頭を動かしてUnity画面内の対象へ中央のマゼンタの点を合わせ、ピンチして離します。** 頭を向けて待つだけでは選択しません。手はHMDから見える位置に置き、通常と同じフォーカス・手追跡・鮮度・ジェスチャーの条件を満たす必要があります。
+
+中央方向はCameraのTransformをそのまま仮定せず、XRDisplaySubsystemのrender passから得た左右のview matrixで計算します。これにより、肩から指先へ向ける関節レイの座標・方向と切り離して、UnityのポインターをWebViewへ送れるかを確認します。
+
+Unityレイの先端には、脈動するマゼンタの球を追加しています。headモードでは画面中央付近、textureでは関節レイの先端です。白いQuestポインターとは別に、この点が見えるかを確認してください。目印はUnityの描画順を後ろへ回してCanvasに埋もれにくくしていますが、Questシステムのレイヤーを上書きする実装ではありません。
+
+headのブラウズ中はネイティブ下部ボタンを無効表示にして、同じピンチでネイティブ側の別操作まで起こることを防ぎます。Window自体は通常通りtouchable/focusableです。編集へ入るとネイティブボタンを有効にし、Browseで戻れます。元ページをONにした場合もネイティブ操作を戻します。120秒の自動終了は維持します。
+
+ログに `rayMode`、`hit`、`endViewport`、pinchのDown/Up/Cancelを追加しました。endViewportのx/yが0〜1、zが正なら左眼の視野内です。目印が見えない場合は、この投影値と実際の表示を照合します。数字の転記は不要です。
+
+結果は次の3点を送ってください。
+
+- 別Activityが表示されている間も、脈動するマゼンタの点が見えるか。
+- 頭でPlay/PauseやUnity側のボタンを狙い、ピンチで選択できるか。
+- 入力欄選択・IME・Browseからの復帰ができるか。
+
+このモードは座標・描画・タッチ転送を分ける検証用です。製品の手レイを頭向きへ置き換える設計判断ではありません。
+
 ## AG2への更新と今回の比較
 
 初回ログでは `app=False,XR=unknown` と `pointer=none tracked=False blocked=True` が続き、Unityの `XRDisplaySubsystem.displayFocusChanged` は通知されませんでした。一方、Meta XR FeatureにはOpenXRの4→5が出ています。下部の操作はネイティブのSource/Edit/Browseによるもので、UnityRayの転送記録はありません。透明な見た目でも、Android Windowの入力領域は前面に残っていました。
@@ -61,6 +89,7 @@ bash Tools/run_activity_gpu_probe.sh texture
 
 | mode | 確認するもの | 起動時の動作 |
 | --- | --- | --- |
+| head | カメラ中央＋ピンチによる座標の切り分け | textureと同じWindow条件。自動選択なし、明示pinchのみ |
 | texture | Unity内のテクスチャとUnityレイ操作 | 元WebViewのWindow drawはOFF。自動IME/再生はなし |
 | passthrough | 透明な前面Windowのタッチを除いた比較 | 元ページOFF、ブラウズ中はネイティブタッチOFF。編集中は戻す |
 | native | 元WebViewとUnityテクスチャの比較 | Window draw ON。まずネイティブ側の操作で確認できる |

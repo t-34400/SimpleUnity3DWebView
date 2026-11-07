@@ -110,6 +110,7 @@ public final class ProbeTests {
         try { lifetime.open(0); } catch (IllegalArgumentException expected) { invalidSession = true; }
         check(invalidSession && lifetime.current(32));
         check(ActivityGpuLifetime.mode("passthrough").equals("passthrough"));
+        check(ActivityGpuLifetime.mode("head").equals("head"));
         check(ActivityGpuTouchPolicy.passThrough("passthrough", false, false, false));
         check(!ActivityGpuTouchPolicy.passThrough("texture", false, false, false));
         check(!ActivityGpuTouchPolicy.passThrough("passthrough", true, false, false));

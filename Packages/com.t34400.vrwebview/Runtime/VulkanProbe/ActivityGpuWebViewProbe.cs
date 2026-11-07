@@ -26,7 +26,8 @@ namespace T34400.VRWebView
         private Transform panel, spinner;
         private Text status;
         private LineRenderer ray;
-        private Material rayMaterial;
+        private Material rayMaterial, reticleMaterial;
+        private Transform reticle;
         private readonly ProbeRayInput input = new ProbeRayInput();
         private readonly PointerPressState press = new PointerPressState();
         private JointProbeRay joints;
@@ -39,6 +40,7 @@ namespace T34400.VRWebView
         private long renders;
         private Vector2 lastPoint;
         private string mode = "texture", failure, pointerSource = "none";
+        private string rayDetails = "ray not sampled";
         private float startAt, nextLog;
         private bool started;
         private void Trace(string s) { Debug.Log("[VRWebViewActivityGPU] AG1 frame=" + Time.frameCount + " " + s, this); }
@@ -49,7 +51,7 @@ namespace T34400.VRWebView
             bridge = new AndroidJavaClass("com.t34400.vrwebview.ActivityGpuProbe");
             using (var player = new AndroidJavaClass("com.unity3d.player.UnityPlayer")) unityOwner = player.GetStatic<AndroidJavaObject>("currentActivity");
             mode = bridge.CallStatic<string>("startupMode", unityOwner); sourceVisible = mode == "native";
-            Trace("start revision=AG2 mode=" + mode + " graphics=" + SystemInfo.graphicsDeviceType);
+            Trace("start revision=AG3 mode=" + mode + " graphics=" + SystemInfo.graphicsDeviceType);
         }
         private void Open()
         {
@@ -106,9 +108,11 @@ namespace T34400.VRWebView
             string host = id == 0 ? "" : bridge.CallStatic<string>("status", (long)id);
             string details = "renders=" + renders + " " + focus + " paused=" + paused + " running=" + running
                 + " bits=" + stateBits + " pointer=" + pointerSource + " tracked=" + pointerTracked + " blocked=" + pointerBlocked + " " + joints.Diagnostics;
+            details += " rayMode=" + (mode == "head" ? "head+pinch" : "hand") + " " + rayDetails;
             Trace(details + " " + native.Replace('\n', ' '));
             if (status != null) status.text = "AG1 UNITY TEXTURE (not the native source page)\n" + (failure ?? native) + "\n" + host + "\n" + details
-                + "\nUNITY RAY = MAGENTA. Native toolbar: Browse ends editing; auto return: 120s.";
+                + "\nUNITY RAY/RETICLE = MAGENTA. Head mode: aim with headset, pinch to click (no dwell)."
+                + "\nNative toolbar: Browse ends editing; auto return: 120s.";
         }
         private void RefreshDisplay()
         {
@@ -144,11 +148,23 @@ namespace T34400.VRWebView
             pointerSource = pointerTracked ? sample.Source.ToString() : "none";
             var phase = press.Update(pointerTracked, (int)sample.Source, sample.Pressed);
             if (phase == PointerPhase.Cancel || !pointerTracked) CancelTouch();
-            if (!pointerTracked) { ray.enabled = false; return; }
+            if (!pointerTracked) { ray.enabled = false; if (reticle != null) reticle.gameObject.SetActive(false); rayDetails = "no active Unity pointer"; return; }
             Vector3 origin = sample.Position; Quaternion rotation = sample.Rotation;
             if (headCamera.transform.parent != null) { origin = headCamera.transform.parent.TransformPoint(origin); rotation = headCamera.transform.parent.rotation * rotation; }
-            bool hit = Physics.Raycast(origin, rotation * Vector3.forward, out RaycastHit result, 5f);
-            ray.enabled = true; ray.SetPosition(0, origin); ray.SetPosition(1, hit ? result.point : origin + rotation * Vector3.forward * 3f);
+            Vector3 direction = rotation * Vector3.forward;
+            if (mode == "head" && !TryRenderedHeadRay(out origin, out direction)) {
+                CancelTouch(); press.Reset(); ray.enabled = false; if (reticle != null) reticle.gameObject.SetActive(false);
+                rayDetails = "render-view unavailable"; return;
+            }
+            bool hit = Physics.Raycast(origin, direction, out RaycastHit result, 5f);
+            Vector3 end = hit ? result.point : origin + direction * 3f;
+            ray.enabled = true; ray.SetPosition(0, origin); ray.SetPosition(1, end);
+            if (reticle != null) {
+                reticle.gameObject.SetActive(true); reticle.position = end;
+                reticle.localScale = Vector3.one * (0.02f + 0.005f * Mathf.Sin(Time.unscaledTime * 6));
+            }
+            rayDetails = "pressed=" + sample.Pressed + " hit=" + (hit ? result.collider.name : "none") + " endViewport=" + ProjectEye(end);
+            if (phase.HasValue && phase != PointerPhase.Move) Trace("gesture=" + phase + " " + rayDetails);
             bool onPage = hit && result.collider.gameObject == webRect.gameObject;
             if (onPage) {
                 Vector3 point = webRect.InverseTransformPoint(result.point); Rect rect = webRect.rect, uv = image.uvRect;
@@ -165,6 +181,41 @@ namespace T34400.VRWebView
                 else if (phase == PointerPhase.Up) { Send(1); touching = false; }
                 else if (phase == PointerPhase.Move) Send(2);
             }
+        }
+        // Read the XR render parameters, rather than assuming camera Transform == rendered eye pose.
+        private bool TryEye(int eye, out XRDisplaySubsystem.XRRenderParameter parameter)
+        {
+            parameter = default;
+            if (observedDisplay == null || !observedDisplay.running || headCamera == null) return false;
+            try {
+                int count = observedDisplay.GetRenderPassCount(); if (count == 0) return false;
+                int passIndex = count >= 2 ? eye : 0, parameterIndex = count >= 2 ? 0 : eye;
+                observedDisplay.GetRenderPass(passIndex, out var pass);
+                if (parameterIndex >= pass.GetRenderParameterCount()) return false;
+                pass.GetRenderParameter(headCamera, parameterIndex, out parameter); return true;
+            } catch (IndexOutOfRangeException) { return false; }
+              catch (InvalidOperationException) { return false; }
+        }
+        private bool TryRenderedHeadRay(out Vector3 origin, out Vector3 direction)
+        {
+            origin = direction = Vector3.zero;
+            if (!TryEye(0, out var left)) return false;
+            Matrix4x4 inverse = left.view.inverse;
+            origin = inverse.MultiplyPoint3x4(Vector3.zero); direction = inverse.MultiplyVector(Vector3.back);
+            if (TryEye(1, out var right)) {
+                inverse = right.view.inverse;
+                origin = (origin + inverse.MultiplyPoint3x4(Vector3.zero)) * 0.5f;
+                direction += inverse.MultiplyVector(Vector3.back);
+            }
+            direction.Normalize(); return direction.sqrMagnitude > 0.5f;
+        }
+        private string ProjectEye(Vector3 world)
+        {
+            if (!TryEye(0, out var eye)) return "unavailable";
+            Vector4 clip = eye.projection * (eye.view * new Vector4(world.x, world.y, world.z, 1));
+            if (Mathf.Abs(clip.w) < 0.0001f) return "at-eye";
+            Vector3 viewport = new Vector3(clip.x / clip.w * 0.5f + 0.5f, clip.y / clip.w * 0.5f + 0.5f, -eye.view.MultiplyPoint3x4(world).z);
+            return viewport.ToString("F2");
         }
         private void Send(int action) { if (id != 0) bridge.CallStatic("pointer", (long)id, action, lastPoint.x, lastPoint.y); }
         private void CancelTouch() { if (touching) Send(3); touching = false; }
@@ -184,9 +235,9 @@ namespace T34400.VRWebView
         private void OnDisable() {
             InputSystem.onDeviceChange -= DeviceChanged; Camera.onPostRender -= CameraRendered; RenderPipelineManager.endCameraRendering -= PipelineRendered;
             if (observedDisplay != null) observedDisplay.displayFocusChanged -= DisplayFocus; observedDisplay = null; displayFocus = null;
-            Close(); joints?.Dispose(); joints = null; if (ray != null) ray.enabled = false;
+            Close(); joints?.Dispose(); joints = null; if (ray != null) ray.enabled = false; if (reticle != null) reticle.gameObject.SetActive(false);
         }
-        private void OnDestroy() { Close(); bridge?.Dispose(); unityOwner?.Dispose(); if (panel != null) Destroy(panel.gameObject); if (ray != null) Destroy(ray.gameObject); if (rayMaterial != null) Destroy(rayMaterial); }
+        private void OnDestroy() { Close(); bridge?.Dispose(); unityOwner?.Dispose(); if (panel != null) Destroy(panel.gameObject); if (ray != null) Destroy(ray.gameObject); if (reticle != null) Destroy(reticle.gameObject); if (rayMaterial != null) Destroy(rayMaterial); if (reticleMaterial != null) Destroy(reticleMaterial); }
         private void BuildPanel()
         {
             if (headCamera == null) headCamera = Camera.main;
@@ -207,7 +258,13 @@ namespace T34400.VRWebView
             Destroy(marker.GetComponent<Collider>()); spinner = marker.transform;
             var line = new GameObject("AG1 Unity ray", typeof(LineRenderer)); ray = line.GetComponent<LineRenderer>(); ray.positionCount = 2; ray.useWorldSpace = true; ray.startWidth = ray.endWidth = 0.003f;
             var shader = Shader.Find("Sprites/Default") ?? Shader.Find("UI/Default"); if (shader != null) { rayMaterial = new Material(shader); ray.material = rayMaterial; }
+            if (rayMaterial != null) rayMaterial.renderQueue = 4000;
             ray.startColor = ray.endColor = Color.magenta; ray.enabled = false;
+            var dot = GameObject.CreatePrimitive(PrimitiveType.Sphere); dot.name = "Unity magenta pointer endpoint";
+            dot.GetComponent<Collider>().enabled = false; Destroy(dot.GetComponent<Collider>()); reticle = dot.transform;
+            var dotShader = Shader.Find("Unlit/Color") ?? shader;
+            if (dotShader != null) { reticleMaterial = new Material(dotShader) { color = Color.magenta, renderQueue = 4000 }; dot.GetComponent<Renderer>().material = reticleMaterial; }
+            dot.SetActive(false);
         }
         private Text Label(string name, float y, Vector2 size, string value, int font)
         {

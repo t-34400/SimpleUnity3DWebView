@@ -32,7 +32,10 @@ public final class ActivityGpuHostActivity extends Activity {
     private void button(LinearLayout parent, String name, Runnable action) {
         Button b = new Button(this); b.setText(name); b.setOnClickListener(v -> { ActivityGpuProbe.log("nativeButton=" + name); action.run(); }); buttons.add(b); parent.addView(b, new LinearLayout.LayoutParams(0, -1, 1));
     }
-    void touchPolicyChanged(boolean pass) { for (Button button : buttons) button.setEnabled(!pass); }
+    void touchPolicyChanged(boolean pass) {
+        boolean disabled = pass || (session != null && session.mode.equals("head") && !session.sourceVisible && !session.editing);
+        for (Button button : buttons) if (button.isEnabled() == disabled) button.setEnabled(!disabled);
+    }
     @Override protected void onResume() { super.onResume(); if (session != null && !session.closed) { session.resumed = true; if (session.web != null) session.web.onResume(); session.updateState(); } }
     @Override protected void onPause() { if (session != null && !session.closed) { session.resumed = false; session.cancelTouch(); if (session.web != null) session.web.onPause(); session.updateState(); } super.onPause(); }
     @Override public void onWindowFocusChanged(boolean focused) { super.onWindowFocusChanged(focused); ActivityGpuProbe.log("sourceWindowFocus=" + focused); if (session != null && !session.closed) session.updateState(); }

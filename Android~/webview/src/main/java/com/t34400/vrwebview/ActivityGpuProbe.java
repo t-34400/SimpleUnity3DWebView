@@ -229,6 +229,7 @@ public final class ActivityGpuProbe {
                 owner.touchPolicyChanged(pass);
                 log("id=" + id + " nativeTouchPassthrough=" + pass);
             }
+            if (owner != null) owner.touchPolicyChanged(pass);
             boolean ime = false;
             if (Build.VERSION.SDK_INT >= 30) {
                 WindowInsets insets = web.getRootWindowInsets(); ime = insets != null && insets.isVisible(WindowInsets.Type.ime());

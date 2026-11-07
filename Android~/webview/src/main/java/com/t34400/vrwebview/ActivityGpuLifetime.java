@@ -11,6 +11,6 @@ final class ActivityGpuLifetime {
     boolean current(long candidate) { return id != 0 && id == candidate; }
     boolean close(long candidate) { if (!current(candidate)) return false; id = 0; return true; }
     static String mode(String value) {
-        return "native".equals(value) || "video".equals(value) || "ime".equals(value) || "passthrough".equals(value) ? value : "texture";
+        return "native".equals(value) || "video".equals(value) || "ime".equals(value) || "passthrough".equals(value) || "head".equals(value) ? value : "texture";
     }
 }
