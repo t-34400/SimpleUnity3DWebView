@@ -40,10 +40,10 @@ public final class VulkanProbe {
     private static volatile String status = "Host not created";
     private static final String TAG = "VRWebViewFocus";
     private VulkanProbe() {}
-    private static native Surface nativeSurface(long id);
-    private static native boolean nativeReserve(long id);
-    private static native void nativeCancelReserve(long id);
-    private static native void nativeStop(long id);
+    static native Surface nativeSurface(long id);
+    static native boolean nativeReserve(long id);
+    static native void nativeCancelReserve(long id);
+    static native void nativeStop(long id);
 
     public static void open(Activity owner, long id, int width, int height) {
         UI.post(() -> {

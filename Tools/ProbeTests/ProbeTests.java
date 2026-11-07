@@ -98,6 +98,17 @@ public final class ProbeTests {
         boolean invalidTrial = false;
         try { trial.begin("keyboard"); } catch (IllegalArgumentException expected) { invalidTrial = true; }
         check(invalidTrial && trial.kind().equals("none"));
+        ActivityGpuLifetime lifetime = new ActivityGpuLifetime();
+        check(ActivityGpuLifetime.mode(null).equals("texture") && ActivityGpuLifetime.mode("untrusted").equals("texture"));
+        check(ActivityGpuLifetime.mode("video").equals("video") && ActivityGpuLifetime.mode("ime").equals("ime"));
+        check(lifetime.open(31) && lifetime.current(31));
+        check(!lifetime.open(32)); // Cannot replace a producer before stopping it.
+        check(!lifetime.close(30) && lifetime.current(31));
+        check(lifetime.close(31) && !lifetime.close(31));
+        check(lifetime.open(32) && !lifetime.close(31) && lifetime.current(32)); // Old Activity destroy cannot close replacement.
+        boolean invalidSession = false;
+        try { lifetime.open(0); } catch (IllegalArgumentException expected) { invalidSession = true; }
+        check(invalidSession && lifetime.current(32));
         System.out.println("PASS " + checks + " probe range/geometry/focus/host checks");
     }
 }

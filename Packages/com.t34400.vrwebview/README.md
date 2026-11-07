@@ -2,6 +2,8 @@
 
 Session/input foundations and Android WebView GPU, video and IME comparison probes for Unity 6000.4.
 
+For the next separate-Activity GPU transfer test, use **VRWebView > Create Activity GPU Probe Scene**. AG1 connects a native WebView source to the existing AHardwareBuffer/Vulkan/GLES consumer and adds fixed texture/video/IME comparisons. See `Documentation~/ActivityGpuProbe.md`; actual Unity/Quest operation remains unverified.
+
 This preview includes an experimental AHardwareBuffer-to-Unity Vulkan/OpenGL ES 3 transfer and a same-Activity XR probe. It is not a production browser backend. Standalone Activity results do not establish the new probe's Unity/XR or IME behavior.
 
 For the unresolved Quest keyboard issue, use **VRWebView > Create Host Comparison Scene** first. HC1 isolates Unity's official keyboard API, same-Activity EditText/WebView, and separate opaque/translucent Activities. See `Documentation~/HostComparison.md` for automated WSL trials and Downloads log capture. The experimental UnityPlayerActivity switch preserves manifest capabilities and detects SDK resets; Meta SDK 207 requires GameActivity for the supported configuration.

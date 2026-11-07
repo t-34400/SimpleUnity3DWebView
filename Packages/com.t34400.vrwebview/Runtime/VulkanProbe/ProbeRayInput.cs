@@ -6,7 +6,7 @@ using UnityEngine.XR.Hands;
 namespace T34400.VRWebView
 {
     public enum ProbePointerMode { Auto, RightController, RightHand, LeftHand }
-    internal enum ProbePointerSource { None, RightController, RightHand, LeftHand }
+    internal enum ProbePointerSource { None, RightController, RightHand, LeftHand, RightHandJoints, LeftHandJoints }
     internal struct ProbeRaySample
     {
         internal ProbePointerSource Source;

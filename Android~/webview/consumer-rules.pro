@@ -2,3 +2,7 @@
 -keep class com.t34400.vrwebview.ImeProbe { public *; }
 -keep class com.t34400.vrwebview.GpuProbe { public *; }
 -keep class com.t34400.vrwebview.VulkanProbe { *; }
+-keep class com.t34400.vrwebview.ActivityGpuProbe { public *; }
+-keepclassmembers class com.t34400.vrwebview.ActivityGpuProbe$EditMetadata {
+    @android.webkit.JavascriptInterface <methods>;
+}

@@ -35,6 +35,45 @@ internal static class Program
     public static async Task Main()
     {
         const string manifest = "<manifest xmlns:android='http://schemas.android.com/apk/res/android'><uses-feature android:name='oculus.software.overlay_keyboard' android:required='false'/><application><activity android:name='com.unity3d.player.UnityPlayerGameActivity' android:exported='true'><intent-filter><action android:name='android.intent.action.MAIN'/><category android:name='android.intent.category.LAUNCHER'/><category android:name='com.oculus.intent.category.VR'/></intent-filter><meta-data android:name='com.oculus.vr.focusaware' android:value='true'/><meta-data android:name='android.app.lib_name' android:value='game'/></activity><activity android:name='test.Other'/><meta-data android:name='com.oculus.supportedDevices' android:value='quest3'/></application></manifest>";
+        await Test("owned Activity input requires every ownership, focus and readiness condition", () => Sync(() => {
+            int ready = (int)(ActivityProbeState.Alive | ActivityProbeState.WindowFocus | ActivityProbeState.TextureOnly | ActivityProbeState.Ready | ActivityProbeState.Resumed);
+            Check(ActivityProbeInputPolicy.CanUseOwnedHand(false, true, true, ready), "Valid owned host denied");
+            Check(!ActivityProbeInputPolicy.CanUseOwnedHand(false, true, null, ready), "Unknown XR focus accepted");
+            Check(!ActivityProbeInputPolicy.CanUseOwnedHand(false, true, false, ready), "Lost XR focus accepted");
+            Check(!ActivityProbeInputPolicy.CanUseOwnedHand(true, true, true, ready), "Paused input accepted");
+            Check(!ActivityProbeInputPolicy.CanUseOwnedHand(false, false, true, ready), "Stopped display accepted");
+            foreach (var bit in new[] { ActivityProbeState.Alive, ActivityProbeState.WindowFocus, ActivityProbeState.TextureOnly, ActivityProbeState.Ready, ActivityProbeState.Resumed })
+                Check(!ActivityProbeInputPolicy.CanUseOwnedHand(false, true, true, ready & ~(int)bit), "Missing host condition accepted");
+        }));
+        await Test("native editing and IME always exclude owned-hand routing", () => Sync(() => {
+            const int ready = 1 | 2 | 4 | 32 | 64;
+            Check(!ActivityProbeInputPolicy.CanUseOwnedHand(false, true, true, ready | 8), "DOM editing routed");
+            Check(!ActivityProbeInputPolicy.CanUseOwnedHand(false, true, true, ready | 16), "IME overlay routed");
+            Check(!ActivityProbeInputPolicy.CanUseOwnedHand(false, true, true, 0), "Stale or closed native snapshot routed");
+        }));
+        await Test("joint pinch hysteresis rejects stale and invalid hand samples", () => Sync(() => {
+            var pinch = new ProbePinch();
+            Check(pinch.Update(0.03, 0) && !pinch.Pressed, "Open hand pinched");
+            Check(pinch.Update(0.02, 0.01) && pinch.Pressed, "Pinch not recognized");
+            Check(pinch.Update(0.035, 0.02) && pinch.Pressed, "Pinch jitter released");
+            Check(pinch.Update(0.041, 0.01) && !pinch.Pressed, "Release missed");
+            pinch.Update(0.02, 0);
+            Check(!pinch.Update(0.02, 0.251) && !pinch.Pressed, "Stale pinch survived");
+            foreach (double invalid in new[] { double.NaN, double.PositiveInfinity, -0.1 })
+                Check(!pinch.Update(invalid, 0) && !pinch.Pressed, "Invalid distance accepted");
+            Check(!pinch.Update(0.02, -0.1) && !pinch.Pressed, "Future sample accepted");
+            Check(!pinch.Update(0.02, double.NaN) && !pinch.Pressed, "Invalid age accepted");
+        }));
+        await Test("owned-hand focus loss cancels once and held pinch cannot click on return", () => Sync(() => {
+            var state = new PointerPressState();
+            state.Update(true, 4, false);
+            Check(state.Update(true, 4, true) == PointerPhase.Down, "Initial pinch missing");
+            Check(state.Update(false, 4, true) == PointerPhase.Cancel, "Focus loss did not cancel");
+            Check(state.Update(false, 4, true) == null, "Duplicate cancel");
+            Check(state.Update(true, 4, true) == null && state.Update(true, 4, true) == null, "Held pinch clicked on return");
+            state.Update(true, 4, false);
+            Check(state.Update(true, 4, true) == PointerPhase.Down, "Released hand did not recover");
+        }));
         await Test("entry comparison preserves keyboard, VR, focus and other activity settings", () => Sync(() => {
             string rewritten = HostEntryManifest.Rewrite(manifest, false);
             Check(HostEntryManifest.LauncherName(rewritten) == HostEntryManifest.Activity, "Activity launcher");

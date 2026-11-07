@@ -2,6 +2,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
     <application>
+        <activity android:name="com.t34400.vrwebview.ActivityGpuHostActivity"
+            android:exported="false" android:hardwareAccelerated="true"
+            android:screenOrientation="landscape"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize"
+            android:theme="@style/VRWebViewTransparentHost">
+            <meta-data android:name="com.oculus.vr.focusaware" android:value="true" />
+        </activity>
         <activity android:name="com.t34400.vrwebview.OpaqueHostActivity"
             android:exported="false" android:hardwareAccelerated="true"
             android:screenOrientation="landscape"

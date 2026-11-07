@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "aarSha256": "a2c7e744a789170f92b108bbe8b24726987e629b40510812df22ffed784b2ecd",
+  "aarSha256": "b83498383ada8cd0e8c2ac294f7056f98d62ba57f5d0025e3941ab292335ea2a",
   "sources": {
     "Android~/build.gradle.kts": "30319db7ac75762e50cc423c2245d8bc704df111839e5be6fd9393f906db67af",
     "Android~/gradle/wrapper/gradle-wrapper.jar": "498495120a03b9a6ab5d155f5de3c8f0d986a449153702fb80fc80e134484f17",
@@ -9,8 +9,8 @@
     "Android~/gradlew.bat": "57931b17dd228e5c24dac90e815d0bf82477e831a4618dfab4136f5446b42a9f",
     "Android~/settings.gradle.kts": "64260860199058d92994e3e80574741aa2ab5a5e76cf2516491d4ef40fc65a8f",
     "Android~/webview/build.gradle.kts": "088c1b0e9fe78bc8bacc6d4740372c5cb0f83daa53127b0b62d81f8478845d9d",
-    "Android~/webview/consumer-rules.pro": "65e6e38c71994b6f5dcf087143b2f49b05589cede2bf0d43e2edf79343a12711",
-    "Android~/webview/src/main/AndroidManifest.xml": "48936d9dbc6173f3c358ec0a320365b5a50f86235753bd3773b52085017f7b92",
+    "Android~/webview/consumer-rules.pro": "e11a40cf05fa6890ae7038176d4db58ad36ec1c542c8b85f5c80bb1554e080ce",
+    "Android~/webview/src/main/AndroidManifest.xml": "543ecb4e0982a4b692097bf86dd403d6dabecbfe56bc332b248a90313b75418e",
     "Android~/webview/src/main/assets/vrwebview-gpu-probe.html": "493d60fe61fdb768021c7fec02e7a32714156c46d21ab85d4b318a2ccf0b61d4",
     "Android~/webview/src/main/assets/vrwebview-ime-probe.html": "a20bcaf42287cdb058adaf2f7cd20fc4ee9bd014b648f83cb8183f1d1bb52d5b",
     "Android~/webview/src/main/assets/vrwebview-probe-video.json": "246aedfc0d878b141dc138c82f8a0da070446cd66674c36f0382fb7af0e2883b",
@@ -25,6 +25,9 @@
     "Android~/webview/src/main/cpp/Unity/PROVENANCE.md": "78ed1c61852e0a021cd411e8b2a3fc5615099bbffdf3c50097562a8b4404572a",
     "Android~/webview/src/main/cpp/Unity/Repository-LICENSE.txt": "8ff2aeedfc43211d085e27fc057a2c4c58d665808e2369a97cc43099dc390afb",
     "Android~/webview/src/main/cpp/VulkanBackend.cpp": "193f89b6140e705e381343fb2b06def4338efd478d2e34ff08e17d3a8535f4b4",
+    "Android~/webview/src/main/java/com/t34400/vrwebview/ActivityGpuHostActivity.java": "1b76eff0356591ee5393ce4972318de36279f9eef31d32b523b92af2e953d5c9",
+    "Android~/webview/src/main/java/com/t34400/vrwebview/ActivityGpuLifetime.java": "bc026ed48a6c6a9cd2e432a36a0954757e3505f5d9577edeba4c9b3e65f50e07",
+    "Android~/webview/src/main/java/com/t34400/vrwebview/ActivityGpuProbe.java": "b26082060e5e7917627764753306e7b72a1c724e02a453492cbf38780b44db88",
     "Android~/webview/src/main/java/com/t34400/vrwebview/GpuProbe.java": "2dee4d4fc2f243bae69ee102702047f968dedac5efcf70cfefff0c60132a8a84",
     "Android~/webview/src/main/java/com/t34400/vrwebview/GpuProbeActivity.java": "bbac5a87d6096c066ada1ce7260e355fc8cb89c1e5c120cd4bd208d69aeb27ec",
     "Android~/webview/src/main/java/com/t34400/vrwebview/GpuProbePreview.java": "1f2720d1f041df103b79247f3b883beb7d59a10f371518c93f4673ae0a345701",
@@ -41,7 +44,7 @@
     "Android~/webview/src/main/java/com/t34400/vrwebview/ProbeRange.java": "d768dddd6d7ea7b05aca21b91064749c635c6c41fb538ef9b41cb179f4a4f617",
     "Android~/webview/src/main/java/com/t34400/vrwebview/ProbeWebView.java": "0c8210378cb712d7e15d60e0db3cc2f575691755d2c7cf22aa5d16d20b40622d",
     "Android~/webview/src/main/java/com/t34400/vrwebview/TransparentHostActivity.java": "524fbe2818d9f64c8858faba88c9e1f799da82e327e7a3de6e93f58c9c33be3b",
-    "Android~/webview/src/main/java/com/t34400/vrwebview/VulkanProbe.java": "10236b0c1042b70662dc65ce7aa0500116f83c7968dc12f69ccc2d2c76c3ff5c",
+    "Android~/webview/src/main/java/com/t34400/vrwebview/VulkanProbe.java": "a039e550da9c93bbc73bd6c49c5e37d3fb3202c6b380cd6148c27ba30dda590d",
     "Android~/webview/src/main/res/values/styles.xml": "ec53148930a2916882538c06c4d6aee6725223d6228dabb4be3d81b9d989b836"
   },
   "nativeLibrary": {
