@@ -37,7 +37,9 @@ bash Tools/run_host_probe.sh activity
 bash Tools/run_host_probe.sh transparent
 ```
 
-初回は `keyboard` の結果だけでも切り分けに役立ちます。コントローラーは不要です。画面から選ぶ場合はピンチ、手のレイが取得できない場合は頭をボタンへ2秒向けます。一度実行したら視線を外してから再選択してください。
+初回は `keyboard` の結果だけでも切り分けに役立ちます。コントローラーは不要です。画面から選ぶ場合はピンチを使います。手のレイが取得できない場合はADBでcaseを指定してください。
+
+頭の向きによる2秒の選択は既定でOFFです。Inspectorの `Gaze Fallback` で有効にした場合も、試行開始またはアプリのフォーカス喪失で、その起動中は無効になります。既存シーンでこの設定がONのままでも、復帰後に別の試行を自動選択しません。再び使うには `menu` でアプリを再起動してください。試行後の手入力復元を、頭の向きによる操作で代替できたものとして扱わないためです。
 
 | case | 試す経路 | 戻り方・制約 |
 | --- | --- | --- |
@@ -60,6 +62,17 @@ ADBパスが異なる場合は `VRWEBVIEW_ADB_EXE`、パッケージIDが異な�
 - 20秒後に戻れたか、戻った後の手のレイが使えるか。
 
 ログは `[VRWebViewHost] HC1` を含み、実際のUnity Activityクラス、ライフサイクル、Window/View/IMM、InputConnection数、Unityフレーム・カメラ描画カウンター、OpenXR状態変更を記録します。Android UI側のwatchdogはUnityが停止してもログを続けます。`unityFrameLast` / `unityRenderLast` / `xrRunningLast` は最後に届いた値で、`heartbeatAgeMs` の増加はUnityからの更新停止を示します。フレーム数やカメラ描画数だけでHMDへの継続提示成功とは判定しません。見えているVR画面の観察も必要です。
+
+preview.12では `pointerTracked`、`pointerBlocked`、`gazeAllowed` を追加しています。Unityのボタン操作には `button=... source=hand-or-controller/head-gaze` が出ます。`run case=...` は新しい試行の開始であり、以前のキーボード要求の遅延応答とは区別します。
+
+## Quest 3でのHC1初回観察
+
+- Unity公式TouchScreenKeyboard：OS側のIME表示失敗・Unityの可視化待ちtimeoutが出た一方、Unityはactive/visibleをtrueにしました。利用者はレイ非表示を報告。キーボード実表示の成否は別途観察と照合します。
+- 同じUnity Activityの標準EditText：利用者が実際のキーボード表示と、その間のUnity画面の更新を確認。確定で戻りますが、手のレイ用デバイスに未追跡状態が残りました。日本語変換の詳細は未報告です。
+- 同じUnity Activityの通常WebView：Windowフォーカスを失った状態で `is not served` によりIME要求を拒否。利用者も未表示を報告。短いログのため20秒終了後の状態は未確認です。
+- 別の不透明ActivityのWebView：起動直後は同じ拒否が出ましたが、約10秒後にWindowフォーカスとnonnull InputConnectionが成立し、利用者がWebViewとキーボードの実表示を確認しました。UnityのUpdate/カメラ描画カウンターは継続しています。HMDへのUnity VRレイヤー継続提示と、日本語編集の詳細は未確認です。
+
+不透明Activityが約20秒で消えた回はログに `autoReturn` があり、検証コードの自動finishです。利用者が同時に報告したシステムメニューの表示原因は、このアプリ側ログだけでは特定できません。その後のEditTextキーボードには新たな `run case=native` がありました。操作元のログがなかったため、頭の向きによる誤選択は疑いとして扱います。preview.12は復帰後の自動選択を止めますが、手の追跡復元やIMEそのものを直す変更ではありません。
 
 `accepted=true` や `immActive=true` はキーボード実表示の証明ではありません。入力文字はログに保存せず、Unityキーボードについては文字数だけ記録します。WebViewのDOMと外部入力欄の文字同期、InputConnectionの独自中継は行いません。
 

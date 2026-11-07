@@ -13,7 +13,8 @@ namespace T34400.VRWebView
     public sealed class HostComparisonProbe : MonoBehaviour
     {
         public Camera headCamera;
-        public bool gazeFallback = true;
+        // Optional initial-menu accessibility aid. Never reactivate after a trial/focus loss.
+        public bool gazeFallback = false;
         private AndroidJavaClass bridge;
         private AndroidJavaObject owner;
         private TouchScreenKeyboard keyboard;
@@ -27,6 +28,7 @@ namespace T34400.VRWebView
         private string startup = "menu", lastKeyboard, lastHands;
         private float startupAt, keyboardUntil, nextPulse, dwellSince;
         private bool placed, paused, nativeActive;
+        private bool gazeSuspended, pointerTracked, pointerBlocked, gazeAllowed;
         private long renders;
         private int lastRenderedFrame = -1;
         private VulkanProbeButton dwellTarget, blockedDwell;
@@ -77,7 +79,7 @@ namespace T34400.VRWebView
         public void RunTransparent() { if (bridge != null) WithActivity(a => bridge.CallStatic("launch", a, true)); }
         private void RunCase(string mode)
         {
-            dwellTarget = null;
+            gazeSuspended = true; dwellTarget = null;
             Trace("run case=" + mode);
             switch (mode) {
                 case "keyboard": RunKeyboard(); break;
@@ -108,13 +110,14 @@ namespace T34400.VRWebView
             if (keyboardState != lastKeyboard) { Trace(keyboardState); lastKeyboard = keyboardState; }
             string hands = "R " + input.RightHandDetails + " L " + input.LeftHandDetails + " " + input.RootDetails();
             if (hands != lastHands) { Trace(hands); lastHands = hands; }
-            Trace("tick renders=" + renders + " appFocus=" + Application.isFocused + " paused=" + paused + " xrRunning=" + running + " nativeTrial=" + nativeActive);
+            Trace("tick renders=" + renders + " appFocus=" + Application.isFocused + " paused=" + paused + " xrRunning=" + running + " nativeTrial=" + nativeActive
+                + " pointerTracked=" + pointerTracked + " pointerBlocked=" + pointerBlocked + " gazeAllowed=" + gazeAllowed);
             if (status != null) status.text = "HC1  Unity frames=" + Time.frameCount + "  XR running=" + running
                 + "\nappFocus=" + Application.isFocused + " paused=" + paused + " nativeTrial=" + nativeActive
                 + "\n" + keyboardState + "\nGPU-copy backend inactive in HC1; native controls are separate trials."
-                + "\nPinch/trigger, or aim your head for 2 seconds when no hand ray is available."
+                + "\nPinch/trigger to select. ADB trials do not require hand input."
                 + "\nNative trials return after 20s on the Android UI thread."
-                + "\nLook away after a gaze action before aiming at it again."
+                + "\nOptional gaze input is disabled after a trial or focus loss."
                 + "\nRead logs; no screen transcription is needed.";
         }
         private void UpdateHead()
@@ -136,8 +139,10 @@ namespace T34400.VRWebView
             bool tracked = input.TryRead(ProbePointerMode.Auto, press.ActiveSourceId, out var sample);
             bool blocked = paused || !Application.isFocused || nativeActive || TouchScreenKeyboard.visible
                 || (keyboard != null && keyboard.active);
+            pointerTracked = tracked; pointerBlocked = blocked;
+            gazeAllowed = gazeFallback && !gazeSuspended;
             var phase = press.Update(tracked && !blocked, (int)sample.Source, sample.Pressed);
-            if (blocked || (!tracked && !gazeFallback)) { ray.enabled = false; dwellTarget = null; return; }
+            if (blocked || (!tracked && !gazeAllowed)) { ray.enabled = false; dwellTarget = null; return; }
             Vector3 origin = headCamera.transform.position, direction = headCamera.transform.forward;
             if (tracked)
             {
@@ -155,16 +160,20 @@ namespace T34400.VRWebView
             if (tracked)
             {
                 dwellTarget = null;
-                if (phase == PointerPhase.Down && target != null) { blockedDwell = target; target.Press(); }
+                if (phase == PointerPhase.Down && target != null) { blockedDwell = target; PressButton(target, "hand-or-controller"); }
             }
             else if (target != null && target != blockedDwell)
             {
                 if (target != dwellTarget) { dwellTarget = target; dwellSince = Time.unscaledTime; }
-                else if (Time.unscaledTime - dwellSince >= 2f) { blockedDwell = target; dwellTarget = null; target.Press(); }
+                else if (Time.unscaledTime - dwellSince >= 2f) { blockedDwell = target; dwellTarget = null; PressButton(target, "head-gaze"); }
             }
             else dwellTarget = null;
         }
-        private void OnApplicationFocus(bool value) { Trace("applicationFocus=" + value); if (!value) { press.Reset(); dwellTarget = null; } }
+        private void PressButton(VulkanProbeButton target, string source)
+        {
+            Trace("button=" + target.name + " source=" + source); target.Press();
+        }
+        private void OnApplicationFocus(bool value) { Trace("applicationFocus=" + value); if (!value) { press.Reset(); dwellTarget = null; gazeSuspended = true; } }
         private void OnApplicationPause(bool value) { paused = value; Trace("applicationPause=" + value); }
         private void OnEnable()
         {
