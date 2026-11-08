@@ -21,6 +21,11 @@ SIGNATURES = (
     "public static void launch(android.app.Activity, boolean);",
 )
 
+VULKAN_SIGNATURES = (
+    "public static void openImeProxy(android.app.Activity, long, int, int);",
+    "public static void setImeProxy(long, boolean);",
+)
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -47,7 +52,12 @@ def main():
         for signature in SIGNATURES:
             if signature not in signatures:
                 raise AssertionError("Host JNI method removed or renamed: " + signature)
-    print("PASS R8 shrinking/obfuscation retains all 9 host JNI signatures using packaged consumer rules")
+        gpu = subprocess.check_output([args.javap, "-classpath", str(output),
+                                       "com.t34400.vrwebview.VulkanProbe"], text=True)
+        for signature in VULKAN_SIGNATURES:
+            if signature not in gpu:
+                raise AssertionError("Proxy JNI method removed or renamed: " + signature)
+    print("PASS R8 shrinking/obfuscation retains 9 host and 2 proxy JNI signatures using packaged consumer rules")
     print("NOT RUN: Unity APK minification/build, Android execution, Quest IME")
 
 
