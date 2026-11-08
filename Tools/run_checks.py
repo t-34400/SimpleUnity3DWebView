@@ -24,6 +24,17 @@ def main():
         subprocess.run([args.dotnet, "build", str(ROOT / "Tools/CoreTests/CoreTests.csproj"),
                         "--artifacts-path", str(artifacts), "--ignore-failed-sources", "-v", "minimal"], check=True)
         subprocess.run([args.dotnet, str(artifacts / "bin/CoreTests/debug/CoreTests.dll")], check=True)
+        subprocess.run([args.dotnet, "build", str(ROOT / "Tools/UnitySyntaxChecks/UnitySyntaxChecks.csproj"),
+                        "--artifacts-path", str(artifacts), "--ignore-failed-sources", "-v", "minimal"], check=True)
+        syntax = [args.dotnet, str(artifacts / "bin/UnitySyntaxChecks/debug/UnitySyntaxChecks.dll")]
+        subprocess.run([*syntax, str(PACKAGE)], check=True)
+        fixture = Path(temp) / "syntax-fixture"
+        fixture.mkdir()
+        if subprocess.run([*syntax, str(fixture)], capture_output=True).returncode != 1:
+            raise ValueError("Empty syntax scan was accepted")
+        (fixture / "Invalid.cs").write_text("class Invalid {", encoding="utf-8")
+        if subprocess.run([*syntax, str(fixture)], capture_output=True).returncode != 1:
+            raise ValueError("Invalid C# syntax was accepted")
         subprocess.run([sys.executable, str(ROOT / "Tools/export_unitypackage.py"), "--output", str(Path(temp) / "VRWebView.unitypackage")], check=True)
     ids = set()
     for path in [PACKAGE, *PACKAGE.rglob("*")]:

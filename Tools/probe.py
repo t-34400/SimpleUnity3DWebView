@@ -201,8 +201,9 @@ def main():
     for launcher in (host, activity):
         launcher.add_argument('--package', default=os.environ.get('VRWEBVIEW_PACKAGE', probe_launch.DEFAULT_PACKAGE))
     for name in ('editor-doctor', 'editor-check'):
-        editor = commands.add_parser(name, help='Check installed Unity or run package EditMode tests without HMD')
+        editor = commands.add_parser(name, help='Check installed Unity or run package tests in the Editor without HMD')
         editor.add_argument('--editor', help='Unity executable; also VRWEBVIEW_UNITY_EDITOR')
+        editor.add_argument('--test-platform', choices=('EditMode', 'PlayMode'), default='EditMode')
         if name == 'editor-check':
             editor.add_argument('--log-dir')
             editor.add_argument('--timeout', type=int, default=1200)
@@ -218,12 +219,12 @@ def main():
         if args.command in ('editor-doctor', 'editor-check'):
             import unity_validation
             if args.command == 'editor-doctor':
-                report = unity_validation.doctor(ROOT, editor_version(), args.editor)
+                report = unity_validation.doctor(ROOT, editor_version(), args.editor, args.test_platform)
                 print(json.dumps(report, indent=2))
                 return 0 if report['ready'] else 2
             try:
                 report = unity_validation.run(ROOT, editor_version(), args.editor,
-                    args.log_dir or os.environ.get('VRWEBVIEW_LOG_DIR') or default_log_dir(), args.timeout)
+                    args.log_dir or os.environ.get('VRWEBVIEW_LOG_DIR') or default_log_dir(), args.timeout, args.test_platform)
             except unity_validation.UnityValidationError as error:
                 raise ProbeError(str(error)) from error
             print(json.dumps(report, indent=2))

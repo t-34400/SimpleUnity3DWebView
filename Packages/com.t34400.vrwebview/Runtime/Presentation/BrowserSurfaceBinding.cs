@@ -2,6 +2,20 @@ using System;
 
 namespace T34400.VRWebView.Presentation
 {
+    public enum BrowserSurfaceOrigin { TopLeft, BottomLeft }
+
+    public static class BrowserSurfaceCoordinates
+    {
+        public static bool TryMap(float x, float y, float uvX, float uvY, float uvWidth, float uvHeight,
+            BrowserSurfaceOrigin origin, out float browserX, out float browserY)
+        {
+            browserX = browserY = 0;
+            if (uvWidth == 0 || uvHeight == 0 || (origin != BrowserSurfaceOrigin.TopLeft && origin != BrowserSurfaceOrigin.BottomLeft)) return false;
+            if (!BrowserCoordinates.TryMapTextureUv(x, y, uvX, uvY, uvWidth, uvHeight, out browserX, out float v)) return false;
+            browserY = origin == BrowserSurfaceOrigin.TopLeft ? v : 1f - v;
+            return true;
+        }
+    }
     /// <summary>A borrowed surface observation. Revision is local to its source,
     /// not a native ID, GPU generation or proof that a frame was presented.</summary>
     public sealed class BrowserSurfaceSnapshot<TSurface> where TSurface : class
@@ -10,14 +24,19 @@ namespace T34400.VRWebView.Presentation
         public TSurface Surface { get; }
         public int Width { get; }
         public int Height { get; }
+        public BrowserSurfaceOrigin Origin { get; }
         public bool HasSurface => Surface != null;
 
         public BrowserSurfaceSnapshot(long revision, TSurface surface, int width, int height)
+            : this(revision, surface, width, height, BrowserSurfaceOrigin.TopLeft) { }
+
+        public BrowserSurfaceSnapshot(long revision, TSurface surface, int width, int height, BrowserSurfaceOrigin origin)
         {
             if (revision < 1) throw new ArgumentOutOfRangeException(nameof(revision));
             if (surface == null ? width != 0 || height != 0 : width < 1 || height < 1)
                 throw new ArgumentOutOfRangeException(nameof(width), "A withdrawal has zero extent; a surface has positive extent");
-            Revision = revision; Surface = surface; Width = width; Height = height;
+            if (origin != BrowserSurfaceOrigin.TopLeft && origin != BrowserSurfaceOrigin.BottomLeft) throw new ArgumentOutOfRangeException(nameof(origin));
+            Revision = revision; Surface = surface; Width = width; Height = height; Origin = origin;
         }
     }
 

@@ -7,6 +7,10 @@ POLICY = {
     'T34400.VRWebView.Presentation': {'T34400.VRWebView.Core'},
     'T34400.VRWebView.Browser.Sample': {'T34400.VRWebView.Core'},
 }
+ENGINE_POLICY = {
+    'T34400.VRWebView.Unity': {'T34400.VRWebView.Core', 'T34400.VRWebView.Presentation'},
+    'T34400.VRWebView.UnityUI': {'T34400.VRWebView.Core', 'T34400.VRWebView.Presentation', 'T34400.VRWebView.Unity', 'UnityEngine.UI'},
+}
 
 
 def check(package):
@@ -17,12 +21,14 @@ def check(package):
         if name in assemblies:
             raise ValueError('Duplicate assembly: ' + name)
         assemblies[name] = value
-    for name, allowed in POLICY.items():
+    for name, allowed in {**POLICY, **ENGINE_POLICY}.items():
         value = assemblies.get(name)
         if value is None:
             raise ValueError('Missing upper-layer assembly: ' + name)
-        if value.get('noEngineReferences') is not True:
+        if name in POLICY and value.get('noEngineReferences') is not True:
             raise ValueError('Pure assembly must disable engine references: ' + name)
+        if name in ENGINE_POLICY and value.get('noEngineReferences') is True:
+            raise ValueError('Unity assembly must allow engine references: ' + name)
         unexpected = set(value.get('references', [])) - allowed
         if unexpected:
             raise ValueError('Forbidden upper-layer reference: ' + name + ' -> ' + ', '.join(sorted(unexpected)))
@@ -43,6 +49,8 @@ def check(package):
     for name in assemblies:
         visit(name)
     return dict(pure_boundary_scope=sorted(POLICY), local_assembly_cycles=False, cycle_scope='local_name_references',
+                unity_boundary_scope=sorted(ENGINE_POLICY),
+                outside_boundary_scope=sorted(set(assemblies) - set(POLICY) - set(ENGINE_POLICY)),
                 outside_pure_boundary_scope=sorted(set(assemblies) - set(POLICY)),
                 whole_package_xr_dependency_removal='not_implemented')
 

@@ -1,4 +1,4 @@
-"""Run the existing package EditMode tests; no custom Editor entry point or Player build."""
+"""Run package tests in the Editor; no custom entry point or Player build."""
 from datetime import datetime
 import json
 import os
@@ -10,6 +10,7 @@ import sys
 import xml.etree.ElementTree as ET
 
 TEST_ASSEMBLY = 'T34400.VRWebView.EditMode.Tests'
+PLAYMODE_TEST_ASSEMBLY = 'T34400.VRWebView.PlayMode.Tests'
 TEST_NAMESPACE = 'T34400.VRWebView.Tests.'
 TEST_FILTER = r'^T34400\.VRWebView\.Tests\.'
 
@@ -18,7 +19,9 @@ class UnityValidationError(Exception):
     pass
 
 
-def doctor(project, version, editor=None):
+def doctor(project, version, editor=None, test_platform='EditMode'):
+    if test_platform not in ('EditMode', 'PlayMode'):
+        raise UnityValidationError('Only Editor EditMode/PlayMode tests are supported')
     executable = editor or os.environ.get('VRWEBVIEW_UNITY_EDITOR')
     if not executable:
         roots = (Path('/mnt/c/Program Files/Unity/Hub/Editor'), Path('C:/Program Files/Unity/Hub/Editor'))
@@ -27,12 +30,13 @@ def doctor(project, version, editor=None):
     available = bool(executable and Path(executable).is_file())
     manifest = json.loads((project / 'Packages/manifest.json').read_text())
     testable = 'com.t34400.vrwebview' in manifest.get('testables', [])
-    tests_present = (project / 'Packages/com.t34400.vrwebview/Tests/EditMode').is_dir()
+    tests_present = (project / 'Packages/com.t34400.vrwebview/Tests' / test_platform).is_dir()
     return dict(ready=available and testable and tests_present, editor=executable,
                 expected_editor_version=version, editor_available=available,
                 package_testable=testable, package_tests_present=tests_present,
-                requested_build_target='Android', test_platform='EditMode', test_assembly=TEST_ASSEMBLY,
-                scope='Editor import/compilation and package EditMode tests; no Player build or HMD tests')
+                requested_build_target='Android', test_platform=test_platform,
+                test_assembly=TEST_ASSEMBLY if test_platform == 'EditMode' else PLAYMODE_TEST_ASSEMBLY,
+                scope='Editor import/compilation and package ' + test_platform + ' tests; no Player build or HMD tests')
 
 
 def unity_path(path, executable):
@@ -66,8 +70,8 @@ def read_results(path):
     return dict(total=len(cases), passed=len(cases), failed=0)
 
 
-def run(project, version, editor, output_dir, timeout):
-    setup = doctor(project, version, editor)
+def run(project, version, editor, output_dir, timeout, test_platform='EditMode'):
+    setup = doctor(project, version, editor, test_platform)
     if not setup['ready']:
         raise UnityValidationError('Editor check not run: ' + json.dumps(setup))
     if timeout <= 0:
@@ -77,7 +81,7 @@ def run(project, version, editor, output_dir, timeout):
     output_dir.mkdir(parents=True, exist_ok=True)
     output = output_dir / ('VRWebView-UnityCheck-' + started.strftime('%Y%m%d-%H%M%S-%f'))
     output.mkdir(exist_ok=False)  # A stale XML from a previous run must never establish success.
-    xml = output / 'editmode-results.xml'
+    xml = output / (test_platform.lower() + '-results.xml')
     log = output / 'Editor.log'
     executable = setup['editor']
     report = dict(setup, started_at=started.isoformat(), status='failed', command=None,
@@ -87,7 +91,7 @@ def run(project, version, editor, output_dir, timeout):
     try:
         command = [executable, '-batchmode', '-nographics', '-runTests',
                    '-projectPath', unity_path(project, executable), '-buildTarget', 'Android',
-                   '-testPlatform', 'EditMode', '-assemblyNames', TEST_ASSEMBLY,
+                   '-testPlatform', test_platform, '-assemblyNames', setup['test_assembly'],
                    '-testFilter', TEST_FILTER, '-testResults', unity_path(xml, executable),
                    '-logFile', unity_path(log, executable)]
         report['command'] = command

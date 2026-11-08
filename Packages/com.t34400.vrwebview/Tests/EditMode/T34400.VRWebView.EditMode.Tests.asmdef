@@ -1,6 +1,6 @@
 {
   "name": "T34400.VRWebView.EditMode.Tests",
-  "references": ["T34400.VRWebView.Core", "T34400.VRWebView.UnityUI", "UnityEngine.UI"],
+  "references": ["T34400.VRWebView.Core", "T34400.VRWebView.Presentation", "T34400.VRWebView.Unity", "T34400.VRWebView.UnityUI", "UnityEngine.UI"],
   "includePlatforms": ["Editor"],
   "optionalUnityReferences": ["TestAssemblies"]
 }

@@ -34,6 +34,8 @@ internal static class Program
 
     public static async Task Main()
     {
+        foreach (var scenario in UnityBridgeTests.Scenarios())
+            await Test(scenario.Name, () => Sync(scenario.Run));
         foreach (var scenario in UpperLayerTests.Scenarios())
             await Test(scenario.Name, () => Sync(scenario.Run));
         foreach (var scenario in GpuRetirementTests.Scenarios())

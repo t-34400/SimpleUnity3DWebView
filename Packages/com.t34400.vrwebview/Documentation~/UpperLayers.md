@@ -1,6 +1,6 @@
 # 実機待ちと独立して実装した上位レイヤー
 
-2026-11-08 UTC。今回は純C#の上位状態・表示借用契約とサンプルモデルを実装した。Unity表示コンポーネント、実Texture provider、製品Android backend、IME、実GPUとの接続を実装済みと扱わない。[レイヤー設計](LayeredArchitecture.md)の全移行が完了したわけではない。
+preview.23で実装した純C#の上位状態・表示借用契約とサンプルモデルの記録。preview.24で追加したdispatcher/Texture公開口/表示部品は[UnityView.md](UnityView.md)を参照。製品Android backend、IME、実GPUとの接続はまだ未実装。[レイヤー設計](LayeredArchitecture.md)の全移行が完了したわけではない。
 
 ## 実際に接続した経路
 

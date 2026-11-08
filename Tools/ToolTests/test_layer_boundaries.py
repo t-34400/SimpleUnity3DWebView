@@ -15,6 +15,8 @@ class LayerTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         for name, references in layers.POLICY.items():
             self.write(name, references)
+        for name, references in layers.ENGINE_POLICY.items():
+            self.write(name, references, engine=True)
 
     def write(self, name, references=(), engine=False):
         (self.root / (name + '.asmdef')).write_text(json.dumps(dict(name=name, references=list(references), noEngineReferences=not engine)))
@@ -42,3 +44,15 @@ class LayerTests(unittest.TestCase):
     def test_cycles_outside_new_scope_are_also_rejected(self):
         self.write('Legacy.A', ['Legacy.B']); self.write('Legacy.B', ['Legacy.A'])
         with self.assertRaisesRegex(ValueError, 'cycle'): layers.check(self.root)
+
+    def test_unity_runtime_cannot_reference_xr_or_diagnostics(self):
+        for dependency in ['Unity.XR.Hands', 'T34400.VRWebView.VulkanProbe']:
+            with self.subTest(dependency=dependency):
+                self.write('T34400.VRWebView.Unity', [dependency], engine=True)
+                with self.assertRaisesRegex(ValueError, 'Forbidden'): layers.check(self.root)
+
+    def test_unity_ui_cannot_reference_browser_sample_or_android_backend(self):
+        for dependency in ['T34400.VRWebView.Browser.Sample', 'T34400.VRWebView.Android']:
+            with self.subTest(dependency=dependency):
+                self.write('T34400.VRWebView.UnityUI', [dependency], engine=True)
+                with self.assertRaisesRegex(ValueError, 'Forbidden'): layers.check(self.root)

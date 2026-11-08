@@ -1,0 +1,5 @@
+{
+  "name": "T34400.VRWebView.Unity",
+  "rootNamespace": "T34400.VRWebView",
+  "references": ["T34400.VRWebView.Core", "T34400.VRWebView.Presentation"]
+}

@@ -49,9 +49,10 @@ import os,sys,time
 args=sys.argv
 assert '-runTests' in args and '-batchmode' in args
 assert '-quit' not in args
-assert args[args.index('-testPlatform')+1]=='EditMode'
+platform=os.environ.get('VRWEBVIEW_EDITOR_TEST_PLATFORM','EditMode')
+assert args[args.index('-testPlatform')+1]==platform
 assert args[args.index('-buildTarget')+1]=='Android'
-assert args[args.index('-assemblyNames')+1]=='T34400.VRWebView.EditMode.Tests'
+assert args[args.index('-assemblyNames')+1]=='T34400.VRWebView.'+platform+'.Tests'
 mode=os.environ.get('VRWEBVIEW_EDITOR_TEST_MODE','passed')
 if mode=='timeout': time.sleep(10)
 xml=Path(args[args.index('-testResults')+1]);log=Path(args[args.index('-logFile')+1])
@@ -67,10 +68,10 @@ if mode=='exit-error': sys.exit(17)
 ''')
         self.editor.chmod(0o755)
 
-    def run_check(self, mode='passed', timeout=5):
-        env = dict(os.environ, VRWEBVIEW_EDITOR_TEST_MODE=mode)
+    def run_check(self, mode='passed', timeout=5, test_platform='EditMode'):
+        env = dict(os.environ, VRWEBVIEW_EDITOR_TEST_MODE=mode, VRWEBVIEW_EDITOR_TEST_PLATFORM=test_platform)
         command = [sys.executable, str(TOOLS / 'probe.py'), 'editor-check', '--editor', str(self.editor),
-                   '--log-dir', str(self.output), '--timeout', str(timeout)]
+                   '--log-dir', str(self.output), '--timeout', str(timeout), '--test-platform', test_platform]
         return subprocess.run(command, env=env, capture_output=True, text=True, timeout=15)
 
     def summary(self):
@@ -85,6 +86,23 @@ if mode=='exit-error': sys.exit(17)
         self.assertEqual(summary['status'], 'passed')
         self.assertEqual(summary['tests']['passed'], 1)
         self.assertEqual(summary['observed_editor_version'], '6000.4.5f1')
+
+    def test_playmode_uses_its_own_assembly_platform_and_result_file(self):
+        result = self.run_check(test_platform='PlayMode')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        summary = self.summary()
+        self.assertEqual(summary['test_platform'], 'PlayMode')
+        self.assertEqual(summary['test_assembly'], unity.PLAYMODE_TEST_ASSEMBLY)
+        self.assertEqual(summary['test_results'], 'playmode-results.xml')
+        command = summary['command']
+        self.assertEqual(command[command.index('-testPlatform') + 1], 'PlayMode')
+        self.assertEqual(command[command.index('-assemblyNames') + 1], unity.PLAYMODE_TEST_ASSEMBLY)
+        self.assertNotIn('-buildPlayerPath', command)
+
+    def test_invalid_test_platform_cannot_start_an_editor(self):
+        result = subprocess.run([sys.executable, str(TOOLS / 'probe.py'), 'editor-check', '--test-platform', 'Android'], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 2)
+        self.assertFalse(self.output.exists())
 
     def test_stale_xml_does_not_rescue_a_missing_current_report(self):
         self.output.mkdir()
