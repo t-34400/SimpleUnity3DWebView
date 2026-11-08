@@ -12,13 +12,19 @@ internal static class Program
         var files = Directory.GetFiles(args[0], "*.cs", SearchOption.AllDirectories);
         if (files.Length == 0) { Console.Error.WriteLine("No C# sources found"); return 1; }
         int errors = 0;
+        var profiles = new[] {
+            (Name: "Editor", Symbols: new[] { "UNITY_EDITOR", "UNITY_INCLUDE_TESTS" }),
+            (Name: "Android", Symbols: new[] { "UNITY_ANDROID", "UNITY_INCLUDE_TESTS" }),
+            (Name: "Player", Symbols: new[] { "UNITY_INCLUDE_TESTS" })
+        };
+        foreach (var profile in profiles)
         foreach (string path in files.OrderBy(value => value)) {
-            var tree = CSharpSyntaxTree.ParseText(File.ReadAllText(path), new CSharpParseOptions(LanguageVersion.CSharp9), path);
+            var tree = CSharpSyntaxTree.ParseText(File.ReadAllText(path), new CSharpParseOptions(LanguageVersion.CSharp9, preprocessorSymbols: profile.Symbols), path);
             foreach (var error in tree.GetDiagnostics().Where(value => value.Severity == DiagnosticSeverity.Error)) {
-                Console.Error.WriteLine(error); errors++;
+                Console.Error.WriteLine(profile.Name + ": " + error); errors++;
             }
         }
-        Console.WriteLine("Parsed " + files.Length + " C# files (C# 9 syntax only; no Unity type resolution or Editor compile)");
+        Console.WriteLine("Parsed " + files.Length + " C# files across 3 symbol profiles (C# 9 syntax only; no Unity type resolution or Editor compile)");
         return errors == 0 ? 0 : 1;
     }
 }

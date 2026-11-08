@@ -35,6 +35,10 @@ def main():
         (fixture / "Invalid.cs").write_text("class Invalid {", encoding="utf-8")
         if subprocess.run([*syntax, str(fixture)], capture_output=True).returncode != 1:
             raise ValueError("Invalid C# syntax was accepted")
+        for symbol in ("UNITY_EDITOR", "UNITY_ANDROID"):
+            (fixture / "Invalid.cs").write_text("#if " + symbol + "\nclass Invalid {\n#endif\n", encoding="utf-8")
+            if subprocess.run([*syntax, str(fixture)], capture_output=True).returncode != 1:
+                raise ValueError("Conditional invalid C# syntax was accepted: " + symbol)
         subprocess.run([sys.executable, str(ROOT / "Tools/export_unitypackage.py"), "--output", str(Path(temp) / "VRWebView.unitypackage")], check=True)
     ids = set()
     for path in [PACKAGE, *PACKAGE.rglob("*")]:
