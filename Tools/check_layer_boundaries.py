@@ -1,0 +1,51 @@
+"""Check the implemented pure upper-layer boundaries, not the unfinished package migration."""
+import json
+from pathlib import Path
+
+POLICY = {
+    'T34400.VRWebView.Core': set(),
+    'T34400.VRWebView.Presentation': {'T34400.VRWebView.Core'},
+    'T34400.VRWebView.Browser.Sample': {'T34400.VRWebView.Core'},
+}
+
+
+def check(package):
+    assemblies = {}
+    for path in Path(package).rglob('*.asmdef'):
+        value = json.loads(path.read_text())
+        name = value['name']
+        if name in assemblies:
+            raise ValueError('Duplicate assembly: ' + name)
+        assemblies[name] = value
+    for name, allowed in POLICY.items():
+        value = assemblies.get(name)
+        if value is None:
+            raise ValueError('Missing upper-layer assembly: ' + name)
+        if value.get('noEngineReferences') is not True:
+            raise ValueError('Pure assembly must disable engine references: ' + name)
+        unexpected = set(value.get('references', [])) - allowed
+        if unexpected:
+            raise ValueError('Forbidden upper-layer reference: ' + name + ' -> ' + ', '.join(sorted(unexpected)))
+    visiting, complete = set(), set()
+
+    def visit(name):
+        if name in visiting:
+            raise ValueError('Assembly cycle at: ' + name)
+        if name in complete:
+            return
+        visiting.add(name)
+        for reference in assemblies[name].get('references', []):
+            if reference in assemblies:
+                visit(reference)
+        visiting.remove(name)
+        complete.add(name)
+
+    for name in assemblies:
+        visit(name)
+    return dict(pure_boundary_scope=sorted(POLICY), local_assembly_cycles=False, cycle_scope='local_name_references',
+                outside_pure_boundary_scope=sorted(set(assemblies) - set(POLICY)),
+                whole_package_xr_dependency_removal='not_implemented')
+
+
+if __name__ == '__main__':
+    print(json.dumps(check(Path(__file__).resolve().parents[1] / 'Packages/com.t34400.vrwebview'), indent=2))

@@ -16,6 +16,7 @@
 | D10 | 共通化済み・実環境未確認 | probeごとのlauncherにADB/設定処理が重複 | 共通ADB解決/接続確認とlaunch-host/launch-activityへ統合。旧引数・Intent extrasを合成ADBで確認。実機実行は停止中 |
 | D11 | 未確定 | GLES/Vulkanを製品対応として扱う範囲 | 実機の描画・色・寿命・性能条件を確定。GLESの実装済みと動作確認済みを分ける |
 | D12 | 未着手 | 既存BrowserSessionと実backendが未接続 | backendの成立後に一本の寿命・要求経路へ接続 |
+| D13 | 上位モデル実装・Unity表示未接続 | Browser UIの状態とSession/表示所有権の境界 | 任意sampleのtab管理と表示借用bindingを純C#で実装。実dispatcher/view/factory/providerへの接続とEditor確認は残る |
 
 ## 今回実行するローカル検証
 

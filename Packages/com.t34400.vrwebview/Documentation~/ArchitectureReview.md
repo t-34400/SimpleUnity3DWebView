@@ -69,3 +69,5 @@ UPMは`Packages/com.t34400.vrwebview`、Androidソースは同一リポジトリ
 ## 現行コードからの移行計画
 
 メソッド単位の責務とTexture/native/Javaの所有者は[RuntimeSeparation.md](RuntimeSeparation.md)に整理した。新しいbackendを実装した扱いにはせず、純粋な判定・検証UI・GPU資源・host・配布境界の順で移す。
+
+Git UPM/Samplesのレイヤー構造は[LayeredArchitecture.md](LayeredArchitecture.md)。実機待ちと独立して実装した表示借用契約・Browser sample model・Sessionの所有thread修正は[UpperLayers.md](UpperLayers.md)。サンプルモデルはCoreへ接続したが、製品Android backendや実Textureへ接続した成果ではない。

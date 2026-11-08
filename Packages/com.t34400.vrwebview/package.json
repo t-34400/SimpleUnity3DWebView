@@ -1,6 +1,6 @@
 {
   "name": "com.t34400.vrwebview",
-  "version": "0.1.0-preview.22",
+  "version": "0.1.0-preview.23",
   "displayName": "VRWebView",
   "description": "Browser foundations and experimental same-Activity Vulkan/OpenGL ES 3 WebView probes for Quest/OpenXR. Device validation is required.",
   "unity": "6000.4",
@@ -15,6 +15,11 @@
     "com.unity.xr.openxr": "1.16.1"
   },
   "samples": [
+    {
+      "displayName": "Browser Model (UI-independent)",
+      "description": "Tab/session ownership and command state model. Requires an injected backend; no browser scene or Android implementation is included in this sample.",
+      "path": "Samples~/Browser"
+    },
     {
       "displayName": "IME Probe",
       "description": "Compare host-window and virtual-display WebView input on Android.",

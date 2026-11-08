@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 import zipfile
+from check_layer_boundaries import check as check_layers
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = ROOT / "Packages/com.t34400.vrwebview"
@@ -17,6 +18,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dotnet", default="dotnet")
     args = parser.parse_args()
+    print(json.dumps(check_layers(PACKAGE)))
     with tempfile.TemporaryDirectory(prefix="vrwebview-checks-") as temp:
         artifacts = Path(temp) / "dotnet"
         subprocess.run([args.dotnet, "build", str(ROOT / "Tools/CoreTests/CoreTests.csproj"),

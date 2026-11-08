@@ -15,16 +15,18 @@ namespace T34400.VRWebView
     }
 
     /// <summary>Owns one backend. Invoke APIs on the owner thread. Notifications are dispatched
-    /// through the supplied dispatcher (Unity integrations must supply their main-thread dispatcher).</summary>
+    /// through a serial FIFO owner dispatcher (Unity integrations supply their main-thread dispatcher).</summary>
     public sealed class BrowserSession : IDisposable
     {
         private readonly IBrowserBackend backend;
         private readonly Action<Action> dispatch;
         private readonly CancellationTokenSource lifetime = new CancellationTokenSource();
         private Task initialization;
+        private TaskCompletionSource<bool> initializationCompletion;
         private int generation;
         public BrowserState State { get; private set; } = BrowserState.Created;
         public event Action<BrowserState> StateChanged;
+        public Exception LastNotificationError { get; private set; }
 
         public BrowserSession(IBrowserBackend backend, Action<Action> dispatcher)
         {
@@ -38,6 +40,7 @@ namespace T34400.VRWebView
             if (initialization != null) return initialization;
             if (State != BrowserState.Created) throw new InvalidOperationException("Session cannot initialize.");
             var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            initializationCompletion = completion;
             initialization = completion.Task;
             ChangeState(BrowserState.Initializing);
             _ = InitializeCoreAsync(completion, generation);
@@ -46,21 +49,27 @@ namespace T34400.VRWebView
 
         private async Task InitializeCoreAsync(TaskCompletionSource<bool> completion, int version)
         {
+            Exception failure = null;
             try
             {
                 lifetime.Token.ThrowIfCancellationRequested();
-                await backend.InitializeAsync(lifetime.Token);
-                lifetime.Token.ThrowIfCancellationRequested();
-                if (version != generation) throw new OperationCanceledException();
-                ChangeState(BrowserState.Ready);
-                completion.TrySetResult(true);
+                await backend.InitializeAsync(lifetime.Token).ConfigureAwait(false);
             }
-            catch (OperationCanceledException) { completion.TrySetCanceled(); }
-            catch (Exception error)
+            catch (Exception error) { failure = error; }
+            try
             {
-                if (State != BrowserState.Disposed) ChangeState(BrowserState.Faulted);
-                completion.TrySetException(error);
+                dispatch(() => {
+                    if (version != generation || State == BrowserState.Disposed || lifetime.IsCancellationRequested)
+                    { completion.TrySetCanceled(); return; }
+                    // Both state and notifications belong to the supplied owner context.
+                    State = failure == null ? BrowserState.Ready : BrowserState.Faulted;
+                    if (failure == null) completion.TrySetResult(true);
+                    else if (failure is OperationCanceledException) completion.TrySetCanceled();
+                    else completion.TrySetException(failure);
+                    NotifyState(State);
+                });
             }
+            catch (Exception error) { completion.TrySetException(error); }
         }
 
         public async Task NavigateAsync(string address, CancellationToken cancellationToken = default)
@@ -79,8 +88,24 @@ namespace T34400.VRWebView
         private void ChangeState(BrowserState state)
         {
             State = state;
+            NotifyState(state);
+        }
+
+        private void NotifyState(BrowserState state)
+        {
             int version = generation;
-            dispatch(() => { if (version == generation) StateChanged?.Invoke(state); });
+            try { dispatch(() => {
+                if (version != generation) return;
+                var handlers = StateChanged;
+                if (handlers == null) return;
+                foreach (Action<BrowserState> handler in handlers.GetInvocationList())
+                {
+                    if (version != generation) break;
+                    try { handler(state); }
+                    catch (Exception error) { LastNotificationError = error; }
+                }
+            }); }
+            catch (Exception error) { LastNotificationError = error; }
         }
 
         private void ThrowIfDisposed()
@@ -93,6 +118,7 @@ namespace T34400.VRWebView
             if (State == BrowserState.Disposed) return;
             generation++;
             State = BrowserState.Disposed;
+            initializationCompletion?.TrySetCanceled();
             try { lifetime.Cancel(); }
             finally
             {

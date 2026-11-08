@@ -1,0 +1,6 @@
+{
+  "name": "T34400.VRWebView.Presentation",
+  "rootNamespace": "T34400.VRWebView.Presentation",
+  "noEngineReferences": true,
+  "references": ["T34400.VRWebView.Core"]
+}

@@ -34,6 +34,8 @@ internal static class Program
 
     public static async Task Main()
     {
+        foreach (var scenario in UpperLayerTests.Scenarios())
+            await Test(scenario.Name, () => Sync(scenario.Run));
         foreach (var scenario in GpuRetirementTests.Scenarios())
             await Test(scenario.Name, () => Sync(scenario.Run));
         await Test("host automatic startup waits for readiness and is consumed before dispatch", () => Sync(() => {
@@ -230,8 +232,9 @@ internal static class Program
             var queue = new Queue<Action>(); var seen = new List<BrowserState>();
             var backend = new Backend(); var session = new BrowserSession(backend, a => queue.Enqueue(a));
             session.StateChanged += seen.Add;
-            var init = session.InitializeAsync(); backend.Init.SetResult(true); await init;
-            session.Dispose(); while (queue.Count > 0) queue.Dequeue()();
+            var init = session.InitializeAsync(); var initialNotice = queue.Dequeue();
+            backend.Init.SetResult(true); queue.Dequeue()(); await init;
+            session.Dispose(); initialNotice(); while (queue.Count > 0) queue.Dequeue()();
             Check(seen.Count == 1 && seen[0] == BrowserState.Disposed, "Stale notification delivered");
         });
         await Test("canceled navigation does not reach backend", async () => {

@@ -1,0 +1,6 @@
+{
+  "name": "T34400.VRWebView.Browser.Sample",
+  "rootNamespace": "T34400.VRWebView.Samples.Browser",
+  "noEngineReferences": true,
+  "references": ["T34400.VRWebView.Core"]
+}
