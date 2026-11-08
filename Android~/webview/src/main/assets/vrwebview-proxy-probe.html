@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IP1 borrowed WebView input connection</title>
+<style>
+body{font:18px sans-serif;margin:12px;background:#fff;color:#111}h1{font-size:22px}video{width:100%;max-height:220px;background:#000}
+label{display:block;margin:10px 0}input,textarea,[contenteditable]{font:inherit;display:block;box-sizing:border-box;width:100%;border:1px solid #777;padding:8px}
+button{font:inherit;margin:4px;padding:6px}pre{font:13px monospace;white-space:pre-wrap;overflow-wrap:anywhere}
+.tiles{display:flex;gap:8px;align-items:center}.tile{width:80px;height:60px}.animated{background:#e24;animation:spin 2s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}canvas{border:1px solid #333;width:80px;height:60px}
+</style>
+<h1>IP1 / GPU + borrowed WebView connection</h1>
+<p>Tap Text, try Japanese conversion, then close with Done. Check that the Unity ray and video/scroll controls work again. Use synthetic input only.</p>
+<video id="video" src="video.mp4" playsinline controls loop preload="metadata"></video>
+<div><button id="play">Play / Pause</button><button id="seek">Seek +2 seconds</button></div>
+<pre id="videoState">Video waiting for user playback. Page metadata does not prove GPU capture.</pre>
+<label>Text<input id="text" value="ABC 日本語 XYZ" enterkeyhint="done"></label>
+<label>Second field<input id="second" value="Second 日本語 field" enterkeyhint="search"></label>
+<label>Multiline<textarea id="multiline" rows="2">first line
+second line</textarea></label>
+<label>Contenteditable<div id="editable" contenteditable="true">Editable 日本語 text</div></label>
+<label>Password<input id="password" type="password" autocomplete="off"></label>
+<div class="tiles"><div class="tile animated"></div><canvas id="canvas" width="80" height="60"></canvas><canvas id="webgl" width="80" height="60"></canvas><span id="domFrame"></span></div>
+<p id="glState"></p>
+<button id="change">Change first field from page</button><button id="remove">Arm focused-field removal</button>
+<pre id="events"></pre>
+<script>
+'use strict';
+const video = document.getElementById('video');
+let lastVideoEvent = 'waiting', decodedFrames = 0, videoFrameApi = false;
+for (const name of ['loadedmetadata','playing','pause','seeking','seeked','waiting','ended','error'])
+  video.addEventListener(name, () => { lastVideoEvent = name; });
+document.getElementById('play').onclick = async () => {
+  if (!video.paused) { video.pause(); return; }
+  try { await video.play(); } catch (error) { lastVideoEvent = 'play rejected: ' + error.name; }
+};
+document.getElementById('seek').onclick = () => {
+  if (Number.isFinite(video.duration) && video.duration > 0) video.currentTime = (video.currentTime + 2) % video.duration;
+};
+if ('requestVideoFrameCallback' in video) {
+  videoFrameApi = true;
+  const frame = () => { decodedFrames++; video.requestVideoFrameCallback(frame); };
+  video.requestVideoFrameCallback(frame);
+}
+setInterval(() => {
+  document.getElementById('videoState').textContent = `event=${lastVideoEvent} time=${video.currentTime.toFixed(2)} paused=${video.paused} ready=${video.readyState}\n`
+    + `videoSize=${video.videoWidth}x${video.videoHeight} errorCode=${video.error?.code ?? 'none'} frameCallbacks=${videoFrameApi ? decodedFrames : 'unsupported'}\n`
+    + 'These are page states, not proof that video pixels reached GPU OUTPUT.';
+}, 500);
+const ctx = document.getElementById('canvas').getContext('2d');
+const gl = document.getElementById('webgl').getContext('webgl');
+document.getElementById('glState').textContent = 'Canvas2D=' + !!ctx + ' WebGL=' + !!gl;
+let animationFrame = 0;
+function animate(time) {
+  animationFrame++;
+  document.getElementById('domFrame').textContent = 'DOM ' + animationFrame;
+  if (ctx) { ctx.fillStyle = `hsl(${time / 15 % 360},80%,55%)`; ctx.fillRect(0,0,80,60); ctx.fillStyle='#000'; ctx.fillText(String(animationFrame),4,30); }
+  if (gl) { gl.clearColor((Math.sin(time/600)+1)/2,0.3,0.6,1); gl.clear(gl.COLOR_BUFFER_BIT); }
+  requestAnimationFrame(animate);
+}
+requestAnimationFrame(animate);
+let events = [], removeArmed = false;
+const proxyCounts = {input:0, compositionstart:0, compositionupdate:0, compositionend:0, selectionchange:0};
+window.vrwebviewProxyMetadata = () => {
+  const e = document.activeElement;
+  return {...proxyCounts, editable:!!e && (e.tagName==='INPUT'||e.tagName==='TEXTAREA'||e.isContentEditable===true)};
+};
+for (const name of ['focusin','focusout','compositionstart','compositionupdate','compositionend','input','selectionchange']) {
+  document.addEventListener(name, event => {
+    if (name in proxyCounts) proxyCounts[name]++;
+    const element = document.activeElement;
+    events.push(`${name}: element=${element?.id || element?.tagName} selection=${element?.selectionStart ?? '?'}:${element?.selectionEnd ?? '?'} composing=${event.isComposing ?? '?'}`);
+    document.getElementById('events').textContent = (events = events.slice(-6)).join('\n');
+    if (name === 'focusin' && removeArmed && element && ['INPUT','TEXTAREA'].includes(element.tagName)) {
+      removeArmed = false; setTimeout(() => element.remove(), 2000);
+    }
+  });
+}
+document.getElementById('change').onclick = () => { document.getElementById('text').value = 'Page update 日本語'; };
+document.getElementById('remove').onclick = () => { removeArmed = true; };
+</script></html>

@@ -23,7 +23,7 @@ def analyze(lines, expected='any'):
     """Summarize recorded metadata; do not infer HMD visibility or trial names from order."""
     result = dict(rows=0, host_rows=0, activity_rows=0, focus_rows=0, legacy_rows=0, trials=[],
                   setup_boot_values=[], boot_checks=[], editor_flags=[], xr_transitions=[],
-                  pointer_states=[], issues=[], keyboard_visibility='requires_user_observation',
+                  pointer_states=[], proxy_rows=0, proxy_events=[], issues=[], keyboard_visibility='requires_user_observation',
                   ray_visibility='requires_user_observation')
     for number, line in enumerate(lines, 1):
         if not line.strip():
@@ -36,6 +36,12 @@ def analyze(lines, expected='any'):
         result['legacy_rows'] += int('VRWebViewProbe' in line or 'VRWebViewGpuProbe' in line)
         pid = re.match(r'\d\d-\d\d\s+[\d:.]+\s+(\d+)\s+\d+\s', line)
         location = dict(line=number, pid=int(pid[1]) if pid else None)
+        if 'proxy=IP1' in line:
+            result['proxy_rows'] += 1
+            event = re.search(r'\bevent=([a-z_]+)', line)
+            if event:
+                fields = dict(re.findall(r'\b(generation|op|outcome|enabled|connected|sourceFocus|sourceWindow|proxyFocus|windowFocus|accepted|frames|appFocus|paused|tracked|pressed|source|input|compositionStart|compositionUpdate|compositionEnd|selectionChanges|editable)=([A-Za-z0-9_]+)', line))
+                result['proxy_events'].append(dict(location, event=event[1], **fields))
         if host:
             trial = re.search(r'(?:startupCase=|run case=)([a-z-]+)', line)
             if trial:
@@ -76,6 +82,11 @@ def analyze(lines, expected='any'):
         result['issues'].append('expected_host_rows_missing')
     if expected == 'activity' and not result['activity_rows']:
         result['issues'].append('expected_activity_rows_missing')
+    if expected == 'proxy':
+        if not result['proxy_rows']:
+            result['issues'].append('expected_proxy_protocol_missing')
+        if not any(event['event'] == 'armed' for event in result['proxy_events']):
+            result['issues'].append('proxy_attempt_missing')
     if any(not row['valid'] for row in result['boot_checks']):
         result['issues'].append('boot_expectation_mismatch')
     if any(row['profile_match'] == 'false' for row in result['editor_flags']):
@@ -188,10 +199,10 @@ def main():
     cap = commands.add_parser('capture', help='Capture all probe families with the same tag list')
     cap.add_argument('--label', default='probe')
     cap.add_argument('--log-dir')
-    cap.add_argument('--expect', choices=('any', 'host', 'activity'), default='any')
+    cap.add_argument('--expect', choices=('any', 'host', 'activity', 'proxy'), default='any')
     summary = commands.add_parser('summarize', help='Inspect an existing log offline; no device is needed')
     summary.add_argument('log', type=Path)
-    summary.add_argument('--expect', choices=('any', 'host', 'activity'), default='any')
+    summary.add_argument('--expect', choices=('any', 'host', 'activity', 'proxy'), default='any')
     import probe_launch
     host = commands.add_parser('launch-host', help='Launch an installed HC2 probe; no build/install/capture')
     host.add_argument('case', nargs='?', choices=probe_launch.HOST_CASES, default='menu')

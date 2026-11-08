@@ -46,9 +46,15 @@ public final class VulkanProbe {
     static native void nativeStop(long id);
 
     public static void open(Activity owner, long id, int width, int height) {
+        openInternal(owner, id, width, height, false);
+    }
+    public static void openImeProxy(Activity owner, long id, int width, int height) {
+        openInternal(owner, id, width, height, true);
+    }
+    private static void openInternal(Activity owner, long id, int width, int height, boolean proxyTrial) {
         UI.post(() -> {
             if (HOSTS.containsKey(id)) return;
-            Host host = new Host(owner, id, width, height);
+            Host host = new Host(owner, id, width, height, proxyTrial);
             HOSTS.put(id, host);
             try { host.start(); }
             catch (Exception error) { host.close(); status = "Host failed: " + error.getClass().getSimpleName(); }
@@ -61,9 +67,18 @@ public final class VulkanProbe {
     public static void requestIme(long id) {
         UI.post(() -> {
             Host host = HOSTS.get(id); if (host == null || host.web == null) return;
+            if (host.proxy != null && host.proxy.isEnabled()) { host.proxy.request(); return; }
             host.focusRecovery.claimBrowser();
             host.web.requestFocus();
             host.showIme("manual", 0);
+            host.updateStatus();
+        });
+    }
+    public static void setImeProxy(long id, boolean enabled) {
+        UI.post(() -> {
+            Host host = HOSTS.get(id); if (host == null || host.closed || host.proxy == null) return;
+            host.hideIme(); host.proxy.setEnabled(enabled);
+            host.focusRecovery.setEnabled(false); // Do not mix recovery retries with this trial.
             host.updateStatus();
         });
     }
@@ -91,7 +106,7 @@ public final class VulkanProbe {
         });
     }
     public static void reload(long id) {
-        UI.post(() -> { Host host = HOSTS.get(id); if (host != null && host.web != null) host.web.reload(); });
+        UI.post(() -> { Host host = HOSTS.get(id); if (host != null && host.web != null) { if (host.proxy != null) host.proxy.cancel("reload"); host.web.reload(); } });
     }
     /** Normalized viewport coordinates, y down; never add DOM scroll offsets. */
     public static void pointer(long id, int action, float x, float y) {
@@ -100,6 +115,7 @@ public final class VulkanProbe {
             Host host = HOSTS.get(id); if (host == null || host.web == null) return;
             if (action == MotionEvent.ACTION_DOWN) {
                 host.cancelTouch(); host.downTime = SystemClock.uptimeMillis(); host.touching = true;
+                if (host.proxy != null && host.proxy.isEnabled()) host.proxy.arm();
                 host.focusRecovery.claimBrowser();
                 boolean accepted = host.web.requestFocus();
                 host.trace("touchDown focusRequest=" + accepted);
@@ -111,7 +127,10 @@ public final class VulkanProbe {
                 host.lastTouchAction = action;
                 host.trace("touchAction=" + action);
             }
-            if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) host.touching = false;
+            if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+                host.touching = false;
+                if (host.proxy != null) host.proxy.gestureEnded(action == MotionEvent.ACTION_CANCEL);
+            }
         });
     }
     public static void scroll(long id, float amount) {
@@ -123,7 +142,8 @@ public final class VulkanProbe {
     }
 
     private static final class Host {
-        final Activity owner; final long id; final int width, height;
+        final Activity owner; final long id; final int width, height; final boolean proxyTrial;
+        ImeProxyProbe proxy;
         ProbeWebView web; FrameLayout panel; Surface surface; View previousFocus;
         boolean closed, touching, imeAccepted;
         long downTime;
@@ -141,8 +161,8 @@ public final class VulkanProbe {
             focusReturnAt = 0;
             if (!closed && web != null) returnFocus("timer");
         };
-        Host(Activity owner, long id, int width, int height) {
-            this.owner = owner; this.id = id; this.width = width; this.height = height;
+        Host(Activity owner, long id, int width, int height, boolean proxyTrial) {
+            this.owner = owner; this.id = id; this.width = width; this.height = height; this.proxyTrial = proxyTrial;
         }
         void start() throws Exception {
             surface = nativeSurface(id);
@@ -157,7 +177,7 @@ public final class VulkanProbe {
             web.getSettings().setJavaScriptEnabled(true);
             web.getSettings().setAllowFileAccess(false); web.getSettings().setAllowContentAccess(false);
             web.getSettings().setMediaPlaybackRequiresUserGesture(true);
-            web.setWebViewClient(new ProbeAssets(owner.getAssets()));
+            web.setWebViewClient(new ProbeAssets(owner.getAssets(), proxyTrial));
             web.setWebChromeClient(new WebChromeClient() {
                 @Override public void onPermissionRequest(PermissionRequest request) { request.deny(); }
                 @Override public void onShowCustomView(View view, CustomViewCallback callback) {
@@ -166,6 +186,10 @@ public final class VulkanProbe {
             });
             panel.addView(web, new FrameLayout.LayoutParams(width, height));
             owner.addContentView(panel, new ViewGroup.LayoutParams(width, height));
+            if (proxyTrial) {
+                proxy = new ImeProxyProbe(owner, web, panel, this::trace, () -> { if (!closed && web != null) returnFocus("proxy_done_or_back"); });
+                proxy.setEnabled(true); focusRecovery.setEnabled(false);
+            }
             focusObserver = owner.getWindow().getDecorView().getViewTreeObserver();
             focusObserver.addOnGlobalFocusChangeListener(focusListener);
             trace("hostOpened previous=" + viewName(previousFocus));
@@ -189,13 +213,14 @@ public final class VulkanProbe {
         };
         void updateStatus() {
             if (web == null) return;
+            if (proxy != null) proxy.pollMetadata();
             InputMethodManager imm = (InputMethodManager) owner.getSystemService(Context.INPUT_METHOD_SERVICE);
             boolean active = imm != null && imm.isActive(web);
             String state = "viewFocus=" + web.hasFocus() + " windowFocus=" + web.hasWindowFocus()
                     + " immActive=" + active + " owner=" + viewName(owner.getCurrentFocus())
                     + " inputConnections=" + web.connectionRequests + "/" + web.nonNullConnections;
             if (!state.equals(lastState)) { trace("state " + state); lastState = state; }
-            status = "sameActivity=" + owner.getClass().getSimpleName() + "\nviewFocus=" + web.hasFocus()
+            status = (proxy == null ? "" : "proxy=IP1 enabled=" + proxy.isEnabled() + "\n") + "sameActivity=" + owner.getClass().getSimpleName() + "\nviewFocus=" + web.hasFocus()
                     + " windowFocus=" + web.hasWindowFocus() + " immActive=" + active
                     + " imeAccepted=" + imeAccepted + "\nattached=" + web.isAttachedToWindow() + " shown=" + web.isShown()
                     + " view=" + web.getWidth() + "x" + web.getHeight() + " window=" + panel.getRootView().getWidth() + "x" + panel.getRootView().getHeight()
@@ -218,7 +243,7 @@ public final class VulkanProbe {
             focusReturnAt = 0; UI.removeCallbacks(delayedFocusReturn);
             focusReturns++;
             trace("returnFocus reason=" + reason + " target=" + viewName(previousFocus));
-            cancelTouch(); hideIme(); web.clearFocus();
+            cancelTouch(); hideIme(); if (proxy != null) proxy.cancel("return_unity"); web.clearFocus();
             if (previousFocus != null && previousFocus.isAttachedToWindow()) previousFocus.requestFocus();
             updateStatus();
         }
@@ -299,6 +324,7 @@ public final class VulkanProbe {
         }
         void hideIme() {
             if (web == null) return;
+            if (proxy != null) proxy.hideIme();
             InputMethodManager imm = (InputMethodManager) owner.getSystemService(Context.INPUT_METHOD_SERVICE);
             if (imm != null && imm.isActive(web)) imm.hideSoftInputFromWindow(web.getWindowToken(), 0);
         }
@@ -310,6 +336,7 @@ public final class VulkanProbe {
             if (focusObserver != null && focusObserver.isAlive()) focusObserver.removeOnGlobalFocusChangeListener(focusListener);
             if (web != null) { web.metadataListener = null; web.windowFocusListener = null; }
             cancelTouch(); hideIme();
+            if (proxy != null) { proxy.close(); proxy = null; }
             if (web != null) { web.stopLoading(); web.onPause(); panel.removeView(web); web.destroy(); web = null; }
             if (panel != null && panel.getParent() instanceof ViewGroup) ((ViewGroup) panel.getParent()).removeView(panel);
             if (surface != null) { surface.release(); surface = null; }

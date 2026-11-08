@@ -37,7 +37,7 @@ HostとIMEとproducerには制約上の結び付きがある。自由に組み�
 ## 入力方式の判断
 
 1. 同一Unity ActivityのWebView直接入力を第一候補に残す。WebViewの標準InputConnectionを使えればブラウザーの編集契約を維持できるが、現状は実IME表示に失敗している。
-2. 代理ViewによるInputConnection中継は、同じWindow内でWebViewの接続が生存するかを確かめてから採否を決める。Androidの公開checkInputConnectionProxy契約があることだけを成功の根拠にしない。
+2. 代理ViewによるInputConnection中継は、[IP1](ImeProxyProbe.md)の検証実装を追加した。同じWindow内でWebViewの接続が生存するかを確かめてから採否を決める。Androidの公開checkInputConnectionProxy契約があることだけを成功の根拠にしない。
 3. 旧EditText→DOM全文同期を汎用互換として採用しない。制限付き入力モードを提供するなら、input/textarea等の対象と編集動作を別契約として定義する。
 4. 別Activity常時前面、追加Windowフラグや独自レイによる入力面の迂回は主方式にしない。別Activityの成功はAndroid IME基準として保存する。
 5. Chromium組み込みやNDK化をIME問題の解決策とは扱わない。NDKの役割は現状のGPU連携。

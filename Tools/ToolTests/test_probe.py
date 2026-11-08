@@ -26,6 +26,26 @@ HOST = [
 
 
 class AnalysisTests(unittest.TestCase):
+    def test_proxy_capture_requires_a_real_attempt_not_only_unity_heartbeat(self):
+        report = probe.analyze(['VRWebViewFocus proxy=IP1 event=unity_tick frames=33'], 'proxy')
+        self.assertIn('proxy_attempt_missing', report['issues'])
+
+    def test_proxy_evidence_keeps_api_result_and_dom_metadata_separate_from_visibility(self):
+        report = probe.analyze([
+            'VRWebViewFocus proxy=IP1 event=armed generation=4',
+            'VRWebViewFocus proxy=IP1 event=ime_request generation=4 accepted=true',
+            'VRWebViewFocus proxy=IP1 event=operation generation=4 op=commitText outcome=false',
+            'VRWebViewFocus proxy=IP1 event=dom input=0 compositionStart=0 editable=true'], 'proxy')
+        self.assertEqual(report['issues'], [])
+        self.assertEqual(report['proxy_events'][2]['outcome'], 'false')
+        self.assertEqual(report['proxy_events'][3]['input'], '0')
+        self.assertEqual(report['keyboard_visibility'], 'requires_user_observation')
+        self.assertEqual(report['ray_visibility'], 'requires_user_observation')
+
+    def test_old_focus_logs_cannot_establish_new_proxy_protocol(self):
+        report = probe.analyze(['VRWebViewFocus host=3 imeRequest accepted=true'], 'proxy')
+        self.assertIn('expected_proxy_protocol_missing', report['issues'])
+
     def test_empty_is_not_success(self):
         self.assertIn('empty_log', probe.analyze([], 'host')['issues'])
 

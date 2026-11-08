@@ -1,6 +1,6 @@
 # 現在の状態と整理フェーズ
 
-更新: 2026-11-08 JST。現在は情報整理・設計見直し・技術的負債の解消フェーズ。追加のQuest試験、HC2の再試行、AG3のレイ試験は停止している。今回の新しい観測項目が実機ログへ出るのは、将来APKを更新した後になる。今は実機試行・再ビルドを依頼しない。
+更新: 2026-11-08 JST。現在は情報整理・設計見直し・技術的負債の解消フェーズ。HC2の再試行とAG3のレイ試験は停止を維持する。Android方式を先に評価する方針へ戻し、[IP1](ImeProxyProbe.md)の一往復だけを次の実機検証とする。任意Browser UI sampleの確認は保留で、IP1の前提ではない。IP1の観測には今回のAAR/sceneを含むAPK更新が必要。
 
 ## 現時点の判断
 
@@ -35,6 +35,12 @@
 
 HC2の判定/観測はHostPointerObservation、自動開始とUnity keyboard timeoutの時間条件はHostTrialTimingへ切り出した。Coreとプローブのbackend接続、UI/GPU/hostの分離はまだ完了していない。Unityの参照・GUID・既存シーンを壊すファイル移動は行っていない。
 
+## 次に判断するAndroid側の前提
+
+[IP1 GPU + 借用InputConnection検証](ImeProxyProbe.md)を追加した。同一Unity Activity内で、代理EditTextをIMEの接続先とし、WebViewの本来の接続を借用する。JavaScriptで文字列を反映する方式ではない。UnityのIP1 Startから固定の通常inputを選び、日本語入力・Done・Unity操作復帰の一往復で、接続生存の最初の関門を調べる。
+
+Java/AARの実装・ローカル検証と、Quest上でのIME成立を区別する。製品IBrowserBackendへの接続はこの前提の成立後に行う。失敗した接続へ上位UIを載せたり、同じHC2比較を無条件に再試行したりしない。
+
 ## このフェーズの成果と残作業
 
 - 現在情報の入口を本書へ一本化し、過去の「次の試験」指示を凍結する。
@@ -43,11 +49,11 @@ HC2の判定/観測はHostPointerObservation、自動開始とUnity keyboard tim
 - [実装分離](RuntimeSeparation.md)の最初の判定/観測を実装し、従来の抑止条件を保持する。
 - [GPU寿命](GpuLifetime.md)の世代/退役状態処理を実装・合成検証した。既存Probe/Pumpには未接続で、Texture破棄の動作は変更していない。
 - [上位レイヤー](UpperLayers.md)の表示借用契約とBrowserWorkspace/BrowserTabを実装した。サンプルモデルは既存BrowserSessionへ接続している。製品Android backendには未接続。
-- [Unity表示部品](UnityView.md)としてdispatcher、Texture公開口、RawImage view、pointer/scroll接続を実装した。実Unity 6000.4.5f1で修正後EditMode 14/14成功、終了コード0を確認した。旧PlayMode launcherはXR自動起動とNull graphicsの組合せでnative crash。PlayModeの描画有効化とテスト限定XR抑止を追加し、実再実行は未確認。実Android backendからTexture/入力を供給する接続は未実装。
+- [Unity表示部品](UnityView.md)としてdispatcher、Texture公開口、RawImage view、pointer/scroll接続を実装した。実Unity 6000.4.5f1でEditMode 14/14、修正後PlayMode 3/3と終了コード0を確認した。新しいIP1のEditor menu/sceneの実compile/buildは未確認。実Android backendからTexture/入力を供給する接続は未実装。
 - [Browser UI sample](BrowserUI.md)にタブ列・URL欄・Go/New/Closeとモデル/表示の接続を実装した。実EditorでのUI確認と製品factoryは未確認/未実装。未設定時にfakeページを表示しない。
 - [レイヤー設計](LayeredArchitecture.md)を記録し、新しい純C# assemblyの依存方向を静的検査する。package全体のXR依存除去は未完了。
-- [Editor検証](EditorValidation.md)を共通ツールから起動できるようにした。利用者ログで修正後EditMode全14件とプロセス正常終了を確認した。PlayModeはXR起動時のnative crashを識別し、起動環境を修正した。修正後PlayMode、importしたsampleは未確認。前回の終了停滞の根本原因は未確定。
+- [Editor検証](EditorValidation.md)を共通ツールから起動できるようにした。利用者ログでEditMode全14件、PlayMode全3件とプロセス正常終了を確認した。importしたsampleは保留。前回の終了停滞の根本原因は未確定。
 - ログ採取と起動は共通の`Tools/probe.py`へ集約。従来のcapture/runシェルは互換入口として委譲する。全case/modeの引数と失敗経路を合成ADBで検証し、実機起動は未確認。[診断仕様](Diagnostics.md)を参照。
 - patch-exchangeのWSL修正はmainへ統合済み。[統合結果](FoundationIntegration.md)と[標準手順](StandardWorkflow.md)を参照。新しいmain版CLIで既存ジョブのresumeも確認した。
 
-実機試験を再開する条件は、ログの取得・失敗検出がローカルで検証され、配布CLIの版が統一され、次の一試験が決める設計判断と打ち切り条件が明文化されていること。残るIMEやレイの問題を「解消済み」と宣言しない。
+実機試験の再開条件として、ログの取得・失敗検出、配布CLIの統一、一試験の判断と打ち切り条件を定めた。今回はIP1だけを対象とし、元のHC2/AG3の再開指示にはしない。残るIMEやレイの問題を「解消済み」と宣言しない。

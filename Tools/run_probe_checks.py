@@ -23,12 +23,15 @@ def main():
         subprocess.run([args.javac, "--release", "11", "-d", temp,
                         str(JAVA / "ProbeGeometry.java"), str(JAVA / "ProbeRange.java"),
                         str(JAVA / "ProbeFocusRecovery.java"),
+                        str(JAVA / "BorrowedInputConnection.java"), str(JAVA / "ProxyTrialState.java"),
+                        str(ROOT / "Tools/ProbeTests/ProxyConnectionTests.java"),
                         str(JAVA / "HostTrialState.java"),
                         str(JAVA / "HostEditorProfile.java"),
                         str(JAVA / "ActivityGpuLifetime.java"),
                         str(JAVA / "ActivityGpuTouchPolicy.java"),
                         str(ROOT / "Tools/ProbeTests/ProbeTests.java")], check=True)
         subprocess.run([args.java, "-cp", temp, "com.t34400.vrwebview.ProbeTests"], check=True)
+        subprocess.run([args.java, "-cp", temp, "com.t34400.vrwebview.ProxyConnectionTests"], check=True)
     video = ASSETS / "vrwebview-probe-video.mp4"
     metadata = json.loads(video.with_suffix(".json").read_text())
     assert hashlib.sha256(video.read_bytes()).hexdigest() == metadata["sha256"]
@@ -43,14 +46,14 @@ def main():
     subprocess.run([args.ffmpeg, "-hide_banner", "-v", "error", "-xerror", "-i", str(video), "-f", "null", "-"], check=True)
     aar = ROOT / "Packages/com.t34400.vrwebview/Runtime/Plugins/Android/vrwebview-probe.aar"
     with zipfile.ZipFile(aar) as archive:
-        for name in ("vrwebview-gpu-probe.html", "vrwebview-probe-video.mp4", "vrwebview-probe-video.json"):
+        for name in ("vrwebview-gpu-probe.html", "vrwebview-proxy-probe.html", "vrwebview-probe-video.mp4", "vrwebview-probe-video.json"):
             assert archive.read("assets/" + name) == (ASSETS / name).read_bytes()
         with tempfile.TemporaryDirectory(prefix="vrwebview-probe-aar-") as temp:
             jar = Path(temp) / "classes.jar"; jar.write_bytes(archive.read("classes.jar"))
             with zipfile.ZipFile(jar) as classes:
                 assert "com/t34400/vrwebview/GpuProbeActivity.class" in classes.namelist()
                 assert "com/t34400/vrwebview/GpuProbePreview.class" in classes.namelist()
-                for name in ("HostComparison", "HostComparisonActivity", "OpaqueHostActivity", "TransparentHostActivity", "HostTrialState", "HostProbeEnvironment", "HostProbeEditText", "HostEditorProfile", "HostEditorProfileStore", "ActivityGpuProbe", "ActivityGpuHostActivity", "ActivityGpuLifetime", "ActivityGpuTouchPolicy"):
+                for name in ("HostComparison", "HostComparisonActivity", "OpaqueHostActivity", "TransparentHostActivity", "HostTrialState", "HostProbeEnvironment", "HostProbeEditText", "HostEditorProfile", "HostEditorProfileStore", "ActivityGpuProbe", "ActivityGpuHostActivity", "ActivityGpuLifetime", "ActivityGpuTouchPolicy", "ImeProxyProbe", "BorrowedInputConnection", "ProxyTrialState"):
                     assert "com/t34400/vrwebview/" + name + ".class" in classes.namelist(), name
     print("PASS H.264/AAC media decode, 240 numbered source frames, and exact AAR assets/classes")
     print("NOT RUN: Android GPU rendering/playback/IME; Unity import/build; Quest/OpenXR runtime")

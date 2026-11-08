@@ -10,7 +10,7 @@ import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
 import android.webkit.WebView;
 
-/** Records connection metadata only; never wraps, retains, or logs input text. */
+/** Metadata diagnostics and an opt-in experimental connection borrower; never logs input text. */
 final class ProbeWebView extends WebView {
     int connectionRequests, nonNullConnections, windowFocusChanges, inputType, imeOptions;
     int capturedScrollX, capturedScrollY;
@@ -24,6 +24,9 @@ final class ProbeWebView extends WebView {
     ConnectionMetadataListener connectionMetadataListener;
     interface WindowFocusListener { void onChanged(boolean focused); }
     WindowFocusListener windowFocusListener;
+
+    interface BorrowedConnectionListener { void onCreated(InputConnection connection, EditorInfo info); }
+    BorrowedConnectionListener borrowedConnectionListener;
 
     ProbeWebView(Context context) { super(context); }
 
@@ -39,6 +42,7 @@ final class ProbeWebView extends WebView {
                 + " connectionClass=" + (connection == null ? "none" : connection.getClass().getSimpleName()));
         if (connectionMetadataListener != null)
             connectionMetadataListener.onCreated(connection != null, inputType, imeOptions);
+        if (borrowedConnectionListener != null) borrowedConnectionListener.onCreated(connection, info);
         return connection;
     }
 

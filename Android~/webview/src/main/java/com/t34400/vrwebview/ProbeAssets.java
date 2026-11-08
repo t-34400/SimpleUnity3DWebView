@@ -18,8 +18,9 @@ final class ProbeAssets extends WebViewClient {
     static final String PAGE = "https://vrwebview.invalid/probe/index.html";
     private final byte[] html, video;
 
-    ProbeAssets(AssetManager assets) throws IOException {
-        html = read(assets, "vrwebview-gpu-probe.html");
+    ProbeAssets(AssetManager assets) throws IOException { this(assets, false); }
+    ProbeAssets(AssetManager assets, boolean proxyTrial) throws IOException {
+        html = read(assets, proxyTrial ? "vrwebview-proxy-probe.html" : "vrwebview-gpu-probe.html");
         video = read(assets, "vrwebview-probe-video.mp4");
     }
 

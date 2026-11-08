@@ -10,9 +10,9 @@
 | D04 | 今回対応 | 観察・ログ・仮説・実装予定が混在 | EvidenceLedgerで区別。OpenXR focus/API値から実表示を推定しない |
 | D05 | main統合済み | WSL consumer CLIとmainの機能が分裂 | fc65deaをmainへ反映済み。全277件とmain上の互換40件を確認し、StandardWorkflowへ通常手順を集約 |
 | D06 | 判定/時間条件を分離・GPU状態処理を準備 | 製品Runtimeへ検証UI/Activity/旧互換名が混在 | GPU状態処理は未接続。実Editor確認後のadapter接続、assembly/Android境界、GUID/JNI/scene互換検証後に移動 |
-| D07 | 未解決 | 同一Unity WindowでWebView直接IMEが出ない | 直接経路または条件付き代理接続の採用判断。必要な実機試験を別途限定 |
+| D07 | IP1代理接続の検証実装・実機未確認 | 同一Unity WindowでWebView直接IMEが出ない | IP1一往復でWebView本来のconnection生存を判断。API acceptedではなく日本語実編集とUnity操作復帰を要求 |
 | D08 | 観測改善・実機未解決 | IME後のレイ非表示の原因が混在 | nativeTrial等のgateと実入力復帰不良をログ・実観察で区別 |
-| D09 | 実EditMode全成功・PlayMode環境を修正 | Unity Editorでの継続compile/import検証がない | 実EditMode 14/14と終了コード0を確認。旧PlayModeのXR/Null graphicsクラッシュへ、描画有効化とテスト限定XR抑止を追加。修正後PlayMode/sampleは確認待ち |
+| D09 | 実EditMode/PlayMode全成功・IP1追加分は未確認 | Unity Editorでの継続compile/import検証がない | 実EditMode 14/14・PlayMode 3/3と終了コード0を確認。IP1追加menu/sceneの実compile/buildは残る。任意sample検証は保留 |
 | D10 | 共通化済み・実環境未確認 | probeごとのlauncherにADB/設定処理が重複 | 共通ADB解決/接続確認とlaunch-host/launch-activityへ統合。旧引数・Intent extrasを合成ADBで確認。実機実行は停止中 |
 | D11 | 未確定 | GLES/Vulkanを製品対応として扱う範囲 | 実機の描画・色・寿命・性能条件を確定。GLESの実装済みと動作確認済みを分ける |
 | D12 | 未着手 | 既存BrowserSessionと実backendが未接続 | backendの成立後に一本の寿命・要求経路へ接続 |
@@ -35,7 +35,7 @@ GPU資源については[GpuLifetime.md](GpuLifetime.md)の世代/退役ledger�
 - 一試験ごとの判断対象・終了条件・失敗時の次の判断・必要観察を文書化する。
 - 診断コード自身が止めているレイと、本当の復帰不良を区別できるようにする。
 
-このフェーズでは新しい実機試行を依頼しない。過去のコマンドや「Next」記述は再開指示にしない。
+次の実機試行は[ImeProxyProbe.md](ImeProxyProbe.md)のIP1だけに限定する。過去のHC2/AG3のコマンドや「Next」記述は再開指示にしない。
 
 
 D06以降の具体的な分離順序と資源所有権は[RuntimeSeparation.md](RuntimeSeparation.md)。main統合は完了したが、Unity/Androidの責務分離やIME/レイの問題まで解消した意味ではない。

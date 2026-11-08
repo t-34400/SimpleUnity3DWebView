@@ -17,3 +17,5 @@ Runtime/Presentationに非所有のsurface bindingを追加し、Samples~/Browse
 preview.24ではBrowserDispatcher、BrowserTextureSource、RawImage用BrowserViewを実装しました。Texture公開と標準pointer/scrollの接続部品で、Android producer/factory/sinkではありません。Unity Editorのcompile/import/testは未確認です。契約と残作業はDocumentation~/UnityView.mdを参照してください。
 
 preview.25の任意Browser UI and Model sampleには、既存Canvas配下へタブ/URL/Go/New/Closeとページ枠を生成するbuilderを追加しました。モデルと表示を接続しますが、製品factoryは未実装で、未設定時は操作を無効にします。構成と残作業はDocumentation~/BrowserUI.mdを参照してください。
+
+次のAndroid方式検証は[IP1](Documentation~/ImeProxyProbe.md)。同一Activityの代理ViewからWebView本来のInputConnectionを借用する最小試作で、製品backendとして採用済みではない。任意Browser UI sampleの確認は前提にしない。

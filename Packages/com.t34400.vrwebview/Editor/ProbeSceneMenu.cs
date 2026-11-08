@@ -24,6 +24,22 @@ namespace T34400.VRWebView.Editor
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(path, true) };
             Debug.Log("Created AG1 separate-Activity GPU probe. Keep current GameActivity/Vulkan/ARM64 settings; see ActivityGpuProbe.md for fixed test cases and input focus gates.");
         }
+        [MenuItem("VRWebView/Create Android IME Proxy Probe Scene")]
+        public static void CreateImeProxyProbe()
+        {
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
+            var probe = new GameObject("IP1 GPU + IME proxy", typeof(GpuWebViewProbe)).GetComponent<GpuWebViewProbe>();
+            probe.testInputConnectionProxy = true; probe.restoreBrowserFocus = false;
+            probe.headCamera = Camera.main;
+            if (Camera.main != null) Camera.main.transform.position = Vector3.zero;
+            if (!AssetDatabase.IsValidFolder("Assets/VRWebViewPlayground")) AssetDatabase.CreateFolder("Assets", "VRWebViewPlayground");
+            string path = AssetDatabase.GenerateUniqueAssetPath("Assets/VRWebViewPlayground/ImeProxyProbe.unity");
+            EditorSceneManager.SaveScene(scene, path);
+            EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(path, true) };
+            Debug.Log("Created IP1 same-Activity GPU/borrowed InputConnection probe. Keep existing GameActivity, graphics and keyboard boot settings. No focus retry or trial timer. See ImeProxyProbe.md.");
+        }
+
         [MenuItem("VRWebView/Create GPU XR Probe Scene")]
         public static void CreateGpuXrProbe() { CreateVulkanProbe(); }
 

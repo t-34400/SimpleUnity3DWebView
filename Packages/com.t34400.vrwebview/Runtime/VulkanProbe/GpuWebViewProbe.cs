@@ -17,6 +17,10 @@ namespace T34400.VRWebView
         public bool flipImageVertically = true;
         public ProbePointerMode pointerMode = ProbePointerMode.Auto;
         public bool restoreBrowserFocus = true;
+        public bool testInputConnectionProxy;
+        private bool proxyEnabled;
+        private Text proxyLabel;
+        private float nextProxyTick;
         public bool synchronizeHandReset = true;
         public Camera headCamera;
         private ulong id;
@@ -70,8 +74,10 @@ namespace T34400.VRWebView
                 bridge = new AndroidJavaClass("com.t34400.vrwebview.VulkanProbe");
                 using (var player = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
                 using (var activity = player.GetStatic<AndroidJavaObject>("currentActivity"))
-                    bridge.CallStatic("open", activity, (long)id, width, height);
-                bridge.CallStatic("setFocusRecovery", (long)id, restoreBrowserFocus);
+                    bridge.CallStatic(testInputConnectionProxy ? "openImeProxy" : "open", activity, (long)id, width, height);
+                proxyEnabled = testInputConnectionProxy;
+                if (proxyLabel != null) proxyLabel.text = "Proxy " + (proxyEnabled ? "ON" : "OFF");
+                bridge.CallStatic("setFocusRecovery", (long)id, testInputConnectionProxy ? false : restoreBrowserFocus);
                 image.texture = texture;
             }
             catch (Exception error)
@@ -105,6 +111,14 @@ namespace T34400.VRWebView
         }
         public void RequestIme() { if (id != 0) bridge.CallStatic("requestIme", (long)id); }
         public void ArmFocusReturn() { if (id != 0) bridge.CallStatic("armFocusReturn", (long)id); }
+        public void ToggleImeProxy()
+        {
+            if (!testInputConnectionProxy) return;
+            ResetInput(); proxyEnabled = !proxyEnabled;
+            if (proxyLabel != null) proxyLabel.text = "Proxy " + (proxyEnabled ? "ON" : "OFF");
+            if (id != 0) bridge.CallStatic("setImeProxy", (long)id, proxyEnabled);
+            TraceFocus("proxy=IP1 event=unity_mode enabled=" + proxyEnabled);
+        }
         public void ToggleFocusRecovery()
         {
             restoreBrowserFocus = !restoreBrowserFocus;
@@ -174,6 +188,12 @@ namespace T34400.VRWebView
             UpdateRay();
             if (status == null || Time.unscaledTime < nextStatus) return;
             nextStatus = Time.unscaledTime + 0.5f;
+            if (testInputConnectionProxy && Time.unscaledTime >= nextProxyTick) {
+                nextProxyTick = Time.unscaledTime + 1;
+                TraceFocus("proxy=IP1 event=unity_tick frames=" + Time.frameCount
+                    + " appFocus=" + Application.isFocused + " paused=" + paused
+                    + " tracked=" + pointerTracked + " pressed=" + pointerPressed + " source=" + pointerSource);
+            }
             SubsystemManager.GetSubsystems(displays);
             bool xrRunning = displays.Exists(display => display.running);
             string native = failure ?? (id == 0 ? "Probe closed" : VulkanProbeNative.Status(id));
@@ -187,7 +207,8 @@ namespace T34400.VRWebView
                 + " L=" + input.LeftHandPresent + "/" + input.LeftHandTracked + " controller=" + input.ControllerTracked
                 + "\nappFocus=" + Application.isFocused + " paused=" + paused + " focus/pauseEvents=" + focusEvents + "/" + pauseEvents
                 + "\nR " + input.RightHandDetails + "\n" + roots
-                + "\nPinch: click/drag. Focus +5s: arm recovery before selecting a field.";
+                + (testInputConnectionProxy ? "\nIP1: press IP1 Start, Japanese conversion, Done; verify Unity ray + video/scroll."
+                    : "\nPinch: click/drag. Focus +5s: arm recovery before selecting a field.");
         }
         private void TraceFocus(string value)
         {
@@ -279,10 +300,14 @@ namespace T34400.VRWebView
             image = browser.GetComponent<RawImage>(); image.color = Color.white;
             image.uvRect = new Rect(0, flipImageVertically ? 1 : 0, 1, flipImageVertically ? -1 : 1);
             status = Label("Status", new Vector2(0, 620), new Vector2(1024, 460), "Waiting for GPU probe", 16);
-            Button("IME", -420, RequestIme); Button("Focus", -252, ReturnFocus); Button("Reload", -84, Reload);
+            Button(testInputConnectionProxy ? "IP1 Start" : "IME", -420, RequestIme); Button("Focus", -252, ReturnFocus); Button("Reload", -84, Reload);
             Button("Recreate", 84, Recreate); Button("Resize", 252, Resize); Button("Flip Y", 420, Flip);
-            Button("Focus +5s", 0, ArmFocusReturn, -510, 320);
-            recoveryLabel = Button("Restore " + (restoreBrowserFocus ? "ON" : "OFF"), -350, ToggleFocusRecovery, -510, 300);
+            if (testInputConnectionProxy) {
+                proxyLabel = Button("Proxy ON", 0, ToggleImeProxy, -510, 320);
+            } else {
+                Button("Focus +5s", 0, ArmFocusReturn, -510, 320);
+                recoveryLabel = Button("Restore " + (restoreBrowserFocus ? "ON" : "OFF"), -350, ToggleFocusRecovery, -510, 300);
+            }
             handSyncLabel = Button("Hand sync " + (synchronizeHandReset ? "ON" : "OFF"), 350, ToggleHandResetSync, -510, 300);
             var rayObject = new GameObject("Browser input ray", typeof(LineRenderer)); ray = rayObject.GetComponent<LineRenderer>();
             ray.positionCount = 2; ray.startWidth = ray.endWidth = 0.003f; ray.useWorldSpace = true;
