@@ -95,6 +95,13 @@ public final class VulkanProbe {
             host.updateStatus();
         });
     }
+    public static void requestNativeIme(long id) {
+        UI.post(() -> {
+            Host host = HOSTS.get(id);
+            if (host == null || host.closed || host.proxy == null) return;
+            host.proxy.requestNativeControl();
+        });
+    }
     public static void releaseFocus(long id) {
         UI.post(() -> {
             Host host = HOSTS.get(id); if (host == null || host.web == null) return;
@@ -351,7 +358,9 @@ public final class VulkanProbe {
             if (web == null) return;
             if (proxy != null) proxy.hideIme();
             InputMethodManager imm = (InputMethodManager) owner.getSystemService(Context.INPUT_METHOD_SERVICE);
-            if (imm != null && imm.isActive(web)) imm.hideSoftInputFromWindow(web.getWindowToken(), 0);
+            if (imm != null && imm.isActive(web)) {
+                trace((proxy == null ? "" : "proxy=IP1 ") + "event=app_hide target=web"); imm.hideSoftInputFromWindow(web.getWindowToken(), 0);
+            }
         }
         void close() {
             if (closed) return;

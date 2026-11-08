@@ -114,6 +114,12 @@ namespace T34400.VRWebView
             if (testInputConnectionProxy) TraceFocus("proxy=IP1 event=start_requested host=" + id);
             if (id != 0 && bridge != null) bridge.CallStatic("requestIme", (long)id);
         }
+        public void RequestNativeIme()
+        {
+            if (!testInputConnectionProxy || id == 0 || bridge == null) return;
+            TraceFocus("proxy=IP1 event=native_requested host=" + id);
+            bridge.CallStatic("requestNativeIme", (long)id);
+        }
         public void ArmFocusReturn() { if (id != 0) bridge.CallStatic("armFocusReturn", (long)id); }
         public void ToggleImeProxy()
         {
@@ -211,7 +217,7 @@ namespace T34400.VRWebView
                 + " L=" + input.LeftHandPresent + "/" + input.LeftHandTracked + " controller=" + input.ControllerTracked
                 + "\nappFocus=" + Application.isFocused + " paused=" + paused + " focus/pauseEvents=" + focusEvents + "/" + pauseEvents
                 + "\nR " + input.RightHandDetails + "\n" + roots
-                + (testInputConnectionProxy ? "\nIP1: press IP1 Start, Japanese conversion, Done; verify Unity ray + video/scroll."
+                + (testInputConnectionProxy ? "\nIP2: isolated borrowed IME. Native IME is a control only; it does not edit the page."
                     : "\nPinch: click/drag. Focus +5s: arm recovery before selecting a field.");
         }
         private void TraceFocus(string value)
@@ -304,9 +310,10 @@ namespace T34400.VRWebView
             image = browser.GetComponent<RawImage>(); image.color = Color.white;
             image.uvRect = new Rect(0, flipImageVertically ? 1 : 0, 1, flipImageVertically ? -1 : 1);
             status = Label("Status", new Vector2(0, 620), new Vector2(1024, 460), "Waiting for GPU probe", 16);
-            Button(testInputConnectionProxy ? "IP1 Start" : "IME", -420, RequestIme); Button("Focus", -252, ReturnFocus); Button("Reload", -84, Reload);
+            Button(testInputConnectionProxy ? "IP2 Start" : "IME", -420, RequestIme); Button("Focus", -252, ReturnFocus); Button("Reload", -84, Reload);
             Button("Recreate", 84, Recreate); Button("Resize", 252, Resize); Button("Flip Y", 420, Flip);
             if (testInputConnectionProxy) {
+                Button("Native IME", -350, RequestNativeIme, -510, 300);
                 proxyLabel = Button("Proxy ON", 0, ToggleImeProxy, -510, 320);
             } else {
                 Button("Focus +5s", 0, ArmFocusReturn, -510, 320);

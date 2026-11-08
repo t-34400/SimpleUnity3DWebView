@@ -10,12 +10,16 @@ import android.os.Looper;
 import android.os.SystemClock;
 import org.json.JSONObject;
 import android.text.TextUtils;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.graphics.Rect;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
 import android.view.inputmethod.InputMethodManager;
+import android.view.inputmethod.BaseInputConnection;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import java.lang.ref.WeakReference;
@@ -42,7 +46,12 @@ final class ImeProxyProbe {
     private long nextPoll, pollEpoch;
     private boolean polling;
     private String lastDom;
-    private volatile Boolean lastRelation;
+    private volatile boolean nativeControl;
+    private volatile long activeTicket;
+    private final AtomicInteger queryTraces = new AtomicInteger();
+    private int nativeChanges;
+    private int[] controlFlags;
+    private String controlPrivateOptions;
 
     ImeProxyProbe(Activity owner, ProbeWebView web, FrameLayout panel, Consumer<String> trace, Runnable returnUnity) {
         this.owner = owner; this.web = web; this.panel = panel; this.trace = trace; this.returnUnity = returnUnity;
@@ -55,17 +64,36 @@ final class ImeProxyProbe {
             proxy = new ProxyEditor(owner, this);
             event("initializing", "stage=proxy_configuration");
             proxy.setSingleLine(true); proxy.setFocusableInTouchMode(true);
+            proxy.setImeOptions(EditorInfo.IME_ACTION_DONE);
+            proxy.setOnEditorActionListener((view, action, key) -> {
+                if (!nativeControl || action != EditorInfo.IME_ACTION_DONE) return false;
+                long ticket = activeTicket;
+                UI.post(() -> { if (nativeControl && state.isCurrent(ticket)) {
+                    event("native_done", "generation=" + ticket); returnUnity.run();
+                } });
+                return true;
+            });
+            proxy.addTextChangedListener(new TextWatcher() {
+                @Override public void beforeTextChanged(CharSequence text, int start, int count, int after) {}
+                @Override public void onTextChanged(CharSequence text, int start, int before, int count) {}
+                @Override public void afterTextChanged(Editable text) {
+                    if (!nativeControl || !state.isCurrent(activeTicket)) return;
+                    event("native_text", "generation=" + activeTicket + " changes=" + (++nativeChanges)
+                            + " composing=" + (BaseInputConnection.getComposingSpanStart(text) >= 0));
+                }
+            });
             proxy.setTextColor(Color.TRANSPARENT); proxy.setBackgroundColor(Color.TRANSPARENT);
             proxy.setVisibility(View.GONE);
             event("initializing", "stage=proxy_attach");
             panel.addView(proxy, new FrameLayout.LayoutParams(320, 72, Gravity.END | Gravity.BOTTOM));
         }
-        event("mode", "enabled=" + enabled);
+        event("mode", "enabled=" + enabled + " variant=isolated sourceProxy=false");
     }
     boolean isEnabled() { return state.isEnabled(); }
     void arm() {
         if (!isEnabled()) return;
         cancel("new_gesture"); armTicket = state.arm();
+        queryTraces.set(0);
         event("armed", "generation=" + armTicket);
     }
     void gestureEnded(boolean canceled) {
@@ -101,6 +129,24 @@ final class ImeProxyProbe {
             gestureEnded(false);
         });
     }
+    /** Control only: the same real EditText owns its normal connection, with no DOM text synchronization. */
+    void requestNativeControl() {
+        if (!isEnabled() || proxy == null) { event("native_rejected", "reason=proxy_disabled"); return; }
+        if (controlFlags == null) { event("native_rejected", "reason=source_flags_unavailable"); return; }
+        arm();
+        long ticket = state.capture();
+        if (ticket <= 0) return;
+        armTicket = 0; activeTicket = ticket;
+        proxy.setText(""); // Discard prior synthetic control text before enabling metadata observation.
+        proxy.setInputType(controlFlags[0]); proxy.setImeOptions(controlFlags[1]);
+        proxy.setPrivateImeOptions(controlPrivateOptions);
+        nativeChanges = 0; nativeControl = true;
+        showRequested = false; waitingForWindow = false;
+        proxy.setVisibility(View.VISIBLE);
+        boolean focused = proxy.requestFocus();
+        event("native_start", "generation=" + ticket + " accepted=" + focused + " variant=isolated matchedFlags=true");
+        UI.post(() -> show(ticket));
+    }
     private void sourceCreated(InputConnection connection, EditorInfo info) {
         if (!isEnabled()) return;
         event("source_connection", "connected=" + (connection != null) + " sourceFocus=" + web.hasFocus()
@@ -114,7 +160,9 @@ final class ImeProxyProbe {
         if (!state.isCurrent(ticket) || proxy == null) return;
         if (lease != null) lease.invalidate();
         lease = new BorrowedInputConnection(ticket, target); sourceInfo = info;
-        showRequested = false; waitingForWindow = false; lastRelation = null;
+        controlFlags = new int[]{info.inputType, info.imeOptions}; controlPrivateOptions = info.privateImeOptions;
+        activeTicket = ticket; nativeControl = false;
+        showRequested = false; waitingForWindow = false;
         event("handoff", "generation=" + ticket + " sourceFocus=" + web.hasFocus()
                 + " sourceWindow=" + web.hasWindowFocus());
         proxy.setVisibility(View.VISIBLE);
@@ -125,14 +173,15 @@ final class ImeProxyProbe {
         UI.post(() -> show(ticket)); // One request, or one deferral until the Window returns.
     }
     private void show(long ticket) {
-        if (!state.isCurrent(ticket) || lease == null || !lease.isValid() || proxy == null) return;
+        if (!state.isCurrent(ticket) || proxy == null || (!nativeControl && (lease == null || !lease.isValid()))) return;
         if (showRequested) return;
         if (!proxy.hasWindowFocus()) { waitingForWindow = true; event("await_window", "generation=" + ticket); return; }
         waitingForWindow = false; showRequested = true;
         InputMethodManager imm = (InputMethodManager) owner.getSystemService(Context.INPUT_METHOD_SERVICE);
         if (imm != null) imm.restartInput(proxy);
         boolean accepted = imm != null && imm.showSoftInput(proxy, 0);
-        event("ime_request", "generation=" + ticket + " accepted=" + accepted + " proxyFocus=" + proxy.hasFocus()
+        event("ime_request", "generation=" + ticket + " variant=isolated editor=" + (nativeControl ? "native" : "borrowed")
+                + " accepted=" + accepted + " proxyFocus=" + proxy.hasFocus()
                 + " windowFocus=" + proxy.hasWindowFocus() + " immProxy=" + (imm != null && imm.isActive(proxy))
                 + " immSource=" + (imm != null && imm.isActive(web)));
     }
@@ -182,10 +231,13 @@ final class ImeProxyProbe {
     void hideIme() {
         if (proxy == null) return;
         InputMethodManager imm = (InputMethodManager) owner.getSystemService(Context.INPUT_METHOD_SERVICE);
-        if (imm != null && imm.isActive(proxy)) imm.hideSoftInputFromWindow(proxy.getWindowToken(), 0);
+        if (imm != null && imm.isActive(proxy)) {
+            event("app_hide", "target=proxy"); imm.hideSoftInputFromWindow(proxy.getWindowToken(), 0);
+        }
     }
     void cancel(String reason) {
         state.cancel(); armTicket = 0; candidate = null; candidateInfo = null;
+        activeTicket = 0; nativeControl = false;
         pollEpoch++; polling = false;
         if (lease != null) lease.invalidate(); lease = null; sourceInfo = null;
         waitingForWindow = false; showRequested = false;
@@ -219,28 +271,49 @@ final class ImeProxyProbe {
         ProxyEditor(Context context, ImeProxyProbe owner) { super(context); this.owner = owner; }
         // Keep TextView's native editor check. The superclass constructor can invoke
         // virtual methods before this subclass has assigned owner.
-        @Override public InputConnection onCreateInputConnection(EditorInfo info) { return owner == null ? null : owner.createConnection(info); }
+        @Override public InputConnection onCreateInputConnection(EditorInfo info) {
+            if (owner == null) return null;
+            if (!owner.nativeControl) return owner.createConnection(info);
+            if (!owner.state.isCurrent(owner.activeTicket)) return null;
+            InputConnection connection = super.onCreateInputConnection(info);
+            // Keep TextView's own context/selection and connection; match only the source routing flags.
+            info.inputType = owner.controlFlags[0]; info.imeOptions = owner.controlFlags[1];
+            info.privateImeOptions = owner.controlPrivateOptions;
+            owner.event("native_connection", "generation=" + owner.activeTicket + " connected=" + (connection != null)
+                    + " type=0x" + Integer.toHexString(info.inputType) + " imeOptions=0x" + Integer.toHexString(info.imeOptions));
+            return connection;
+        }
         @Override public boolean checkInputConnectionProxy(View view) {
-            if (owner == null || owner.lease == null || !owner.lease.isValid()) return false;
-            boolean allowed = view == owner.web;
-            if (!allowed) { try { allowed = owner.web.checkInputConnectionProxy(view); } catch (RuntimeException ignored) {} }
-            if (owner.lastRelation == null || owner.lastRelation != allowed) {
-                owner.lastRelation = allowed; owner.event("proxy_relation", "accepted=" + allowed);
+            if (owner != null && owner.activeTicket > 0 && owner.queryTraces.get() < 16) {
+                java.util.List<String> rows = ImeCallMetadata.describe(new Throwable().getStackTrace());
+                if (!rows.isEmpty()) {
+                    int query = owner.queryTraces.incrementAndGet();
+                    if (query > 16) return false;
+                    owner.event("proxy_query", "query=" + query + " accepted=false target=" + (view == owner.web ? "web" : "other"));
+                    for (String row : rows) owner.event("ime_call_frame", "query=" + query + " " + row);
+                }
             }
-            return allowed;
+            // Only this EditText is served. Granting the source/provider proxy also authorizes
+            // Chromium's source-view isActive/hide/restart paths after focus has moved away.
+            // Isolation also blocks source selection/session updates; viability is still experimental.
+            return false;
+        }
+        @Override protected void onFocusChanged(boolean focused, int direction, Rect previous) {
+            super.onFocusChanged(focused, direction, previous);
+            if (owner != null) owner.event("proxy_focus_changed", "focused=" + focused);
         }
         @Override public void onWindowFocusChanged(boolean focused) {
             super.onWindowFocusChanged(focused);
             if (owner == null) return;
             owner.event("proxy_window", "focused=" + focused);
-            BorrowedInputConnection current = owner.lease;
-            if (focused && owner.waitingForWindow && current != null) UI.post(() -> owner.show(current.generation));
+            long ticket = owner.activeTicket;
+            if (focused && owner.waitingForWindow && ticket > 0) UI.post(() -> owner.show(ticket));
         }
         @Override public boolean onKeyPreIme(int keyCode, KeyEvent event) {
             if (owner != null && keyCode == KeyEvent.KEYCODE_BACK && event.getAction() == KeyEvent.ACTION_UP) {
-                BorrowedInputConnection current = owner.lease;
-                if (current != null) UI.post(() -> {
-                    if (owner.state.isCurrent(current.generation)) owner.returnUnity.run();
+                long ticket = owner.activeTicket;
+                if (ticket > 0) UI.post(() -> {
+                    if (owner.state.isCurrent(ticket)) owner.returnUnity.run();
                 });
                 return true;
             }

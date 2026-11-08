@@ -26,6 +26,36 @@ HOST = [
 
 
 class AnalysisTests(unittest.TestCase):
+    def test_combined_capture_requires_new_ime_trial_and_media_evidence_without_claiming_success(self):
+        report = probe.analyze([
+            'VRWebViewFocus proxy=IP1 event=mode enabled=true variant=isolated sourceProxy=false',
+            'VRWebViewFocus proxy=IP1 event=armed generation=4',
+            'VRWebViewFocus proxy=IP1 event=ime_request variant=isolated editor=borrowed accepted=true',
+            'VRWebViewFocus video=bundled request=1 event=response status=206 start=0',
+            'VRWebViewFocus host=1 video=bundled event=sample time=6.1 paused=false'], 'ime-video')
+        self.assertEqual(report['issues'], [])
+        self.assertTrue(report['isolated_ime_variant'])
+        self.assertEqual(report['keyboard_visibility'], 'requires_user_observation')
+        self.assertEqual(report['video_playback'], 'requires_runtime_analysis_and_user_observation')
+
+    def test_old_ime_and_video_logs_cannot_establish_new_isolated_trial(self):
+        report = probe.analyze([
+            'VRWebViewFocus proxy=IP1 event=armed generation=4',
+            'VRWebViewFocus proxy=IP1 event=ime_request accepted=true',
+            'VRWebViewFocus video=bundled request=1 event=response status=206 start=0',
+            'VRWebViewFocus video=bundled event=sample time=6.1 paused=false'], 'ime-video')
+        self.assertIn('expected_isolated_ime_variant_missing', report['issues'])
+        self.assertIn('expected_borrowed_ime_request_missing', report['issues'])
+
+    def test_native_control_alone_cannot_establish_borrowed_input_viability(self):
+        report = probe.analyze([
+            'VRWebViewFocus proxy=IP1 event=mode enabled=true variant=isolated',
+            'VRWebViewFocus proxy=IP1 event=armed generation=4',
+            'VRWebViewFocus proxy=IP1 event=ime_request variant=isolated editor=native accepted=true'], 'ime-video')
+        self.assertIn('expected_borrowed_ime_request_missing', report['issues'])
+        self.assertIn('expected_video_response_missing', report['issues'])
+        self.assertIn('expected_video_sample_missing', report['issues'])
+
     def test_video_only_capture_does_not_require_an_ime_attempt_or_prove_playback(self):
         report = probe.analyze([
             'VRWebViewFocus video=bundled request=1 event=response status=206 start=0',
