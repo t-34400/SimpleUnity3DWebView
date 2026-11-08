@@ -40,7 +40,7 @@ def analyze(lines, expected='any'):
             result['proxy_rows'] += 1
             event = re.search(r'\bevent=([a-z_]+)', line)
             if event:
-                fields = dict(re.findall(r'\b(generation|op|outcome|enabled|connected|sourceFocus|sourceWindow|proxyFocus|windowFocus|accepted|frames|appFocus|paused|tracked|pressed|source|input|compositionStart|compositionUpdate|compositionEnd|selectionChanges|editable)=([A-Za-z0-9_]+)', line))
+                fields = dict(re.findall(r'\b(generation|op|outcome|enabled|connected|sourceFocus|sourceWindow|proxyFocus|windowFocus|accepted|frames|appFocus|paused|tracked|pressed|source|input|compositionStart|compositionUpdate|compositionEnd|selectionChanges|editable|stage|error|reason|host)=([A-Za-z0-9_]+)', line))
                 result['proxy_events'].append(dict(location, event=event[1], **fields))
         if host:
             trial = re.search(r'(?:startupCase=|run case=)([a-z-]+)', line)
@@ -85,7 +85,11 @@ def analyze(lines, expected='any'):
     if expected == 'proxy':
         if not result['proxy_rows']:
             result['issues'].append('expected_proxy_protocol_missing')
-        if not any(event['event'] == 'armed' for event in result['proxy_events']):
+        if any(event['event'] == 'host_start_failed' for event in result['proxy_events']):
+            result['issues'].append('proxy_host_initialization_failed')
+        if any(event['event'] == 'ime_request_rejected' for event in result['proxy_events']):
+            result['issues'].append('proxy_start_rejected')
+        if not any(event['event'] in ('armed', 'start_requested') for event in result['proxy_events']):
             result['issues'].append('proxy_attempt_missing')
     if any(not row['valid'] for row in result['boot_checks']):
         result['issues'].append('boot_expectation_mismatch')

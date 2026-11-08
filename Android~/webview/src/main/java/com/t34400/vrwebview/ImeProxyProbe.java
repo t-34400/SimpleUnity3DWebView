@@ -51,11 +51,14 @@ final class ImeProxyProbe {
     void setEnabled(boolean enabled) {
         cancel("mode_change"); state.setEnabled(enabled);
         if (enabled && proxy == null) {
+            event("initializing", "stage=proxy_constructor");
             proxy = new ProxyEditor(owner, this);
+            event("initializing", "stage=proxy_configuration");
             proxy.setSingleLine(true); proxy.setFocusableInTouchMode(true);
             proxy.setTextColor(Color.TRANSPARENT); proxy.setBackgroundColor(Color.TRANSPARENT);
             proxy.setVisibility(View.GONE);
-            panel.addView(proxy, new FrameLayout.LayoutParams(320, 72, Gravity.RIGHT | Gravity.BOTTOM));
+            event("initializing", "stage=proxy_attach");
+            panel.addView(proxy, new FrameLayout.LayoutParams(320, 72, Gravity.END | Gravity.BOTTOM));
         }
         event("mode", "enabled=" + enabled);
     }
@@ -214,10 +217,11 @@ final class ImeProxyProbe {
     private static final class ProxyEditor extends EditText {
         final ImeProxyProbe owner;
         ProxyEditor(Context context, ImeProxyProbe owner) { super(context); this.owner = owner; }
-        @Override public boolean onCheckIsTextEditor() { return owner.lease != null && owner.lease.isValid(); }
-        @Override public InputConnection onCreateInputConnection(EditorInfo info) { return owner.createConnection(info); }
+        // Keep TextView's native editor check. The superclass constructor can invoke
+        // virtual methods before this subclass has assigned owner.
+        @Override public InputConnection onCreateInputConnection(EditorInfo info) { return owner == null ? null : owner.createConnection(info); }
         @Override public boolean checkInputConnectionProxy(View view) {
-            if (owner.lease == null || !owner.lease.isValid()) return false;
+            if (owner == null || owner.lease == null || !owner.lease.isValid()) return false;
             boolean allowed = view == owner.web;
             if (!allowed) { try { allowed = owner.web.checkInputConnectionProxy(view); } catch (RuntimeException ignored) {} }
             if (owner.lastRelation == null || owner.lastRelation != allowed) {
@@ -227,12 +231,13 @@ final class ImeProxyProbe {
         }
         @Override public void onWindowFocusChanged(boolean focused) {
             super.onWindowFocusChanged(focused);
+            if (owner == null) return;
             owner.event("proxy_window", "focused=" + focused);
             BorrowedInputConnection current = owner.lease;
             if (focused && owner.waitingForWindow && current != null) UI.post(() -> owner.show(current.generation));
         }
         @Override public boolean onKeyPreIme(int keyCode, KeyEvent event) {
-            if (keyCode == KeyEvent.KEYCODE_BACK && event.getAction() == KeyEvent.ACTION_UP) {
+            if (owner != null && keyCode == KeyEvent.KEYCODE_BACK && event.getAction() == KeyEvent.ACTION_UP) {
                 BorrowedInputConnection current = owner.lease;
                 if (current != null) UI.post(() -> {
                     if (owner.state.isCurrent(current.generation)) owner.returnUnity.run();

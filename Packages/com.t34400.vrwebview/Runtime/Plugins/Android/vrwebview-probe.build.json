@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "aarSha256": "ef65be2ce9f28c0382addaeb85b9d2eeaae2968d1949a1f7cfb2874833ee013c",
+  "aarSha256": "17ce28af1c6e9a1218fd63547c4eb653788e4aa7dce1cf05d8425e61965ba7bc",
   "sources": {
     "Android~/build.gradle.kts": "30319db7ac75762e50cc423c2245d8bc704df111839e5be6fd9393f906db67af",
     "Android~/gradle/wrapper/gradle-wrapper.jar": "498495120a03b9a6ab5d155f5de3c8f0d986a449153702fb80fc80e134484f17",
@@ -38,12 +38,13 @@
     "Android~/webview/src/main/java/com/t34400/vrwebview/HostComparisonActivity.java": "36dded3688cb000c6440a3e8a0170f2f9b7ff7ded60406018dc052a6b3e3805a",
     "Android~/webview/src/main/java/com/t34400/vrwebview/HostEditorProfile.java": "db5f89476ceef6e8a34ab1ec1dfa1bb5f6fe11c6c3ceaf6cfe011d10eb1aaee6",
     "Android~/webview/src/main/java/com/t34400/vrwebview/HostEditorProfileStore.java": "d01562818ed53f554cbc492b79374ba4af82e6998df4bf2f37e93fe3b0b679de",
+    "Android~/webview/src/main/java/com/t34400/vrwebview/HostFailureMetadata.java": "66d84ccfebc4458f451ae5b1cae312b6abb4759e1abfbedd3894f7633c41bc59",
     "Android~/webview/src/main/java/com/t34400/vrwebview/HostProbeEditText.java": "ebd5ba67eb80ebc23fce60f45b1c21607b57d88c0048a910750910182e0843be",
     "Android~/webview/src/main/java/com/t34400/vrwebview/HostProbeEnvironment.java": "e00b396a646a4235d2975e645790da44530372a2865565f62e7fb66bd1e3390e",
     "Android~/webview/src/main/java/com/t34400/vrwebview/HostTrialState.java": "2e0e9f974166390df1ba022b1ec1cf2f6edae780dd1072b0534a5095141f1870",
     "Android~/webview/src/main/java/com/t34400/vrwebview/ImeProbe.java": "e17207cc446cf9f19bedc6d08d5deaf8fc9b438d23b99a65d5d80ed0df5f81e7",
     "Android~/webview/src/main/java/com/t34400/vrwebview/ImeProbeActivity.java": "4c8e3b5f9f65cdf7d81144e50ff10cc7f409a1c2c2ba0d8d55e6ce8ce4d6aead",
-    "Android~/webview/src/main/java/com/t34400/vrwebview/ImeProxyProbe.java": "8310cd39f2845f48ad7fa07f44d16789764a5c365277f002aed1aa48f2ed1afe",
+    "Android~/webview/src/main/java/com/t34400/vrwebview/ImeProxyProbe.java": "d4385a8257e978e8df6f20091842df069d1fff185fc04536d4b56fd4a7247cfd",
     "Android~/webview/src/main/java/com/t34400/vrwebview/OpaqueHostActivity.java": "05cd650290548ec4dd98ab20264a4feeb62fa29a9ff10279ac0faad331e6ea59",
     "Android~/webview/src/main/java/com/t34400/vrwebview/ProbeAssets.java": "28076441d7680d6afcf0167a26121055a37515d4d835e3c29f2429758f1665d7",
     "Android~/webview/src/main/java/com/t34400/vrwebview/ProbeFocusRecovery.java": "c33b7fec3e78aed114036f83a3915f134da03bbc59b3df8ac08ee1134b67ca41",
@@ -52,12 +53,12 @@
     "Android~/webview/src/main/java/com/t34400/vrwebview/ProbeWebView.java": "b813af131c358a7f74d0bbcf474739994189920b9bed3fb80cc47b278e6b68be",
     "Android~/webview/src/main/java/com/t34400/vrwebview/ProxyTrialState.java": "9c1c682a3829c6e7c29444cc0a4a5f3a727c6975f94448583a33d754f887fcfb",
     "Android~/webview/src/main/java/com/t34400/vrwebview/TransparentHostActivity.java": "524fbe2818d9f64c8858faba88c9e1f799da82e327e7a3de6e93f58c9c33be3b",
-    "Android~/webview/src/main/java/com/t34400/vrwebview/VulkanProbe.java": "b72a2dccd07510fd7f507937af3998b5b32c7d5d4cf8fb17d5860b3efe8ce1eb",
+    "Android~/webview/src/main/java/com/t34400/vrwebview/VulkanProbe.java": "1392897515d6c13eb5ec5b0dfc11219c58c0e98d4d78d86d59e55a66ec7269a1",
     "Android~/webview/src/main/res/values/styles.xml": "ec53148930a2916882538c06c4d6aee6725223d6228dabb4be3d81b9d989b836"
   },
   "nativeLibrary": {
     "path": "Packages/com.t34400.vrwebview/Runtime/Plugins/Android/arm64-v8a/libGfxPluginVRWebView.so",
-    "sha256": "4f6248e6cdf803e04966d1bf2404aa79976eb4060abd9a7457993bfd9846fd5f",
+    "sha256": "33062fbd2729ab08994d7bd36d562ab8876847f8503077e548318a1de8fac4b7",
     "abi": "arm64-v8a",
     "ndk": "27.2.12479018"
   },

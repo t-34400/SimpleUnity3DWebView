@@ -26,6 +26,17 @@ HOST = [
 
 
 class AnalysisTests(unittest.TestCase):
+    def test_proxy_start_on_a_failed_host_reports_the_initialization_problem(self):
+        report = probe.analyze([
+            'VRWebViewFocus host=1 proxy=IP1 event=host_start_failed stage=proxy_construct error=NullPointerException',
+            'VRWebViewFocus proxy=IP1 event=start_requested host=1',
+            'VRWebViewFocus host=1 proxy=IP1 event=ime_request_rejected reason=host_unavailable'], 'proxy')
+        self.assertIn('proxy_host_initialization_failed', report['issues'])
+        self.assertIn('proxy_start_rejected', report['issues'])
+        self.assertNotIn('proxy_attempt_missing', report['issues'])
+        self.assertEqual(report['proxy_events'][0]['stage'], 'proxy_construct')
+        self.assertEqual(report['proxy_events'][0]['error'], 'NullPointerException')
+
     def test_proxy_capture_requires_a_real_attempt_not_only_unity_heartbeat(self):
         report = probe.analyze(['VRWebViewFocus proxy=IP1 event=unity_tick frames=33'], 'proxy')
         self.assertIn('proxy_attempt_missing', report['issues'])

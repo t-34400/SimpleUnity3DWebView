@@ -80,3 +80,13 @@ python3 Tools/probe.py capture --expect proxy --label IP1 --log-dir "$vrwebview_
 公開InputConnection interfaceの借用・失効・closeの所有権・Handler委譲・診断の非干渉は、Androidを模倣しない純Java interfaceの実行テストで確認する。Android AARのcompile/lintと収録クラス・asset・provenanceを確認する。Unity C#は構文検査までで、この新しいmenu/sceneの実Editor compile、Quest上のproxy生存、IME実表示・日本語編集・入力復帰は未確認。
 
 参照したAOSP Android 14のcheckInputConnectionProxyとChromium 128のfocus/接続resetは一般実装の根拠であり、実機provider154/Horizonの完全な仕様ではない。[設計の見直し](ArchitectureReview.md)の採用条件を変えたものではない。
+
+## preview.29 — 代理Viewの初期化失敗への対応
+
+利用者提供の22:12の実機ログでは、Unityの追跡・pinchとProxy ON/OFFの切替を確認した。一方、Android側はmode_change直後、mode/host_startedの前にhostClosedとなり、再生成でも同じ経路だった。WebView/IMEの評価前にhost.startの例外処理へ入ったと判断する。旧実装は例外class/stackをlogcatへ出しておらず、受領ログから例外型とthrow位置は断定できない。
+
+コードにはEditTextのsuperclass構築中にも呼ばれ得るonCheckIsTextEditorから、代入前のownerを参照する欠陥があった。このoverrideを外して標準EditTextの判定を使い、ほかのoverrideもowner代入前は安全に返す。これは実機の例外位置を確認したという意味ではない。
+
+今後はinitializingの段階、host_start_failedのstage/例外class/上位8stack frame、host_started、Startボタン由来のstart_requestedとhost不在のime_request_rejectedを記録する。Throwable messageやcause messageは出さない。失敗したhostは登録から外し、closeで失敗理由を上書きしない。
+
+同じIP1シーンを使用し、まずページ表示とhost_startedを確認してから従来の一往復を行う。scene再生成、EditorテストやサンプルUIテストは追加しない。今回の修正後のAndroid widget構築・Quest表示は実機での確認待ち。

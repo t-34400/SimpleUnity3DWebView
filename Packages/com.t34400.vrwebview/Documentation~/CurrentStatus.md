@@ -39,6 +39,8 @@ HC2の判定/観測はHostPointerObservation、自動開始とUnity keyboard tim
 
 [IP1 GPU + 借用InputConnection検証](ImeProxyProbe.md)を追加した。同一Unity Activity内で、代理EditTextをIMEの接続先とし、WebViewの本来の接続を借用する。JavaScriptで文字列を反映する方式ではない。UnityのIP1 Startから固定の通常inputを選び、日本語入力・Done・Unity操作復帰の一往復で、接続生存の最初の関門を調べる。
 
+IP1の初回実機ログでは、Unityのpinchとモード切替が動く一方、Android hostが代理View初期化中に終了した。コンストラクター中の未初期化参照を修正し、初期化段階と例外class/stackをlogcatへ追加した。修正後の実機確認待ちで、IME方式の成否はまだ判定できない。
+
 Java/AARの実装・ローカル検証と、Quest上でのIME成立を区別する。製品IBrowserBackendへの接続はこの前提の成立後に行う。失敗した接続へ上位UIを載せたり、同じHC2比較を無条件に再試行したりしない。
 
 ## このフェーズの成果と残作業

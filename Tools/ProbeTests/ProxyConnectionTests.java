@@ -53,6 +53,17 @@ public final class ProxyConnectionTests {
         state.setEnabled(false); check(!state.isCurrent(modeTicket)); state.arm(); check(state.capture() == -1);
         state.setEnabled(true); state.arm(); long closing = state.capture(); state.close();
         check(!state.isCurrent(closing)); state.setEnabled(true); state.arm(); check(state.capture() == -1);
+        RuntimeException failure = new NullPointerException("private input must not be logged");
+        failure.initCause(new IllegalStateException("private cause"));
+        StackTraceElement[] frames = new StackTraceElement[12];
+        for (int i = 0; i < frames.length; i++) frames[i] = new StackTraceElement("Example.Widget", "constructorCallback", "Widget.java", 42 + i);
+        failure.setStackTrace(frames);
+        List<String> diagnostic = HostFailureMetadata.describe(failure, "proxy_construct");
+        check(diagnostic.size() == 9);
+        check(diagnostic.get(0).contains("error=NullPointerException"));
+        check(diagnostic.get(0).contains("stage=proxy_construct"));
+        check(diagnostic.get(1).contains("class=Example.Widget method=constructorCallback line=42"));
+        check(diagnostic.stream().noneMatch(row -> row.contains("private") || row.contains("input must")));
         System.out.println("PASS " + checks + " borrowed-connection and proxy trial checks; no Android runtime claim");
     }
 }

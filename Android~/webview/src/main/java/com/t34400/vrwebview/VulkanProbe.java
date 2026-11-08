@@ -57,7 +57,16 @@ public final class VulkanProbe {
             Host host = new Host(owner, id, width, height, proxyTrial);
             HOSTS.put(id, host);
             try { host.start(); }
-            catch (Exception error) { host.close(); status = "Host failed: " + error.getClass().getSimpleName(); }
+            catch (Exception error) {
+                HOSTS.remove(id);
+                for (String row : HostFailureMetadata.describe(error, host.startStage))
+                    host.trace((proxyTrial ? "proxy=IP1 " : "") + row);
+                try { host.close(); }
+                catch (RuntimeException cleanup) {
+                    for (String row : HostFailureMetadata.describe(cleanup, "host_cleanup")) host.trace(row);
+                }
+                finally { status = "Host failed at " + host.startStage + ": " + error.getClass().getSimpleName(); }
+            }
         });
     }
     public static void close(long id) {
@@ -66,7 +75,11 @@ public final class VulkanProbe {
     public static String status() { return status; }
     public static void requestIme(long id) {
         UI.post(() -> {
-            Host host = HOSTS.get(id); if (host == null || host.web == null) return;
+            Host host = HOSTS.get(id);
+            if (host == null || host.closed || host.web == null) {
+                Log.i(TAG, "[VRWebViewFocus] host=" + id + " proxy=IP1 event=ime_request_rejected reason=host_unavailable");
+                return;
+            }
             if (host.proxy != null && host.proxy.isEnabled()) { host.proxy.request(); return; }
             host.focusRecovery.claimBrowser();
             host.web.requestFocus();
@@ -151,6 +164,7 @@ public final class VulkanProbe {
         int fullscreenRequests, imeRequests, focusReturns, focusChanges, focusRecoveries, lastTouchAction = -1;
         final ProbeFocusRecovery focusRecovery = new ProbeFocusRecovery();
         String lastFocusMove = "none", lastState;
+        String startStage = "new_host";
         ViewTreeObserver focusObserver;
         final ViewTreeObserver.OnGlobalFocusChangeListener focusListener = (before, after) -> {
             focusChanges++;
@@ -165,9 +179,11 @@ public final class VulkanProbe {
             this.owner = owner; this.id = id; this.width = width; this.height = height; this.proxyTrial = proxyTrial;
         }
         void start() throws Exception {
+            startStage = "native_surface";
             surface = nativeSurface(id);
             if (surface == null) throw new IllegalStateException("Native surface unavailable");
             previousFocus = owner.getCurrentFocus();
+            startStage = "webview_construct";
             panel = new FrameLayout(owner);
             web = new ProbeWebView(owner);
             web.metadataListener = this::trace;
@@ -177,6 +193,7 @@ public final class VulkanProbe {
             web.getSettings().setJavaScriptEnabled(true);
             web.getSettings().setAllowFileAccess(false); web.getSettings().setAllowContentAccess(false);
             web.getSettings().setMediaPlaybackRequiresUserGesture(true);
+            startStage = "local_assets";
             web.setWebViewClient(new ProbeAssets(owner.getAssets(), proxyTrial));
             web.setWebChromeClient(new WebChromeClient() {
                 @Override public void onPermissionRequest(PermissionRequest request) { request.deny(); }
@@ -184,18 +201,24 @@ public final class VulkanProbe {
                     fullscreenRequests++; callback.onCustomViewHidden();
                 }
             });
+            startStage = "webview_attach";
             panel.addView(web, new FrameLayout.LayoutParams(width, height));
             owner.addContentView(panel, new ViewGroup.LayoutParams(width, height));
             if (proxyTrial) {
+                startStage = "proxy_construct";
                 proxy = new ImeProxyProbe(owner, web, panel, this::trace, () -> { if (!closed && web != null) returnFocus("proxy_done_or_back"); });
                 proxy.setEnabled(true); focusRecovery.setEnabled(false);
             }
+            startStage = "focus_observer";
             focusObserver = owner.getWindow().getDecorView().getViewTreeObserver();
             focusObserver.addOnGlobalFocusChangeListener(focusListener);
             trace("hostOpened previous=" + viewName(previousFocus));
             traceCapabilities();
+            startStage = "page_load";
             web.loadUrl(ProbeAssets.PAGE);
             UI.post(draw);
+            startStage = "started";
+            trace((proxyTrial ? "proxy=IP1 " : "") + "event=host_started stage=" + startStage);
         }
         final Runnable draw = new Runnable() {
             @Override public void run() {

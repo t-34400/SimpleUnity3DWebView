@@ -109,7 +109,11 @@ namespace T34400.VRWebView
         {
             Close(); width = width == 1024 ? 800 : 1024; height = width == 1024 ? 768 : 600; Open();
         }
-        public void RequestIme() { if (id != 0) bridge.CallStatic("requestIme", (long)id); }
+        public void RequestIme()
+        {
+            if (testInputConnectionProxy) TraceFocus("proxy=IP1 event=start_requested host=" + id);
+            if (id != 0 && bridge != null) bridge.CallStatic("requestIme", (long)id);
+        }
         public void ArmFocusReturn() { if (id != 0) bridge.CallStatic("armFocusReturn", (long)id); }
         public void ToggleImeProxy()
         {
