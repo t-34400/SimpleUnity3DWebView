@@ -64,3 +64,8 @@ UPMは`Packages/com.t34400.vrwebview`、Androidソースは同一リポジトリ
 ## 次の設計判断へ進む条件
 
 まず診断と配布を安定させる。その後、直接入力と代理接続のどちらか一つの未成立条件を対象に、成功・失敗の両方で次の判断が決まる試験だけを計画する。GPU描画の成功をIME成立へ、APIのacceptedを実表示へ読み替えない。
+
+
+## 現行コードからの移行計画
+
+メソッド単位の責務とTexture/native/Javaの所有者は[RuntimeSeparation.md](RuntimeSeparation.md)に整理した。新しいbackendを実装した扱いにはせず、純粋な判定・検証UI・GPU資源・host・配布境界の順で移す。

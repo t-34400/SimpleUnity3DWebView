@@ -8,7 +8,7 @@
 | D02 | 今回対応 | captureごとのタグ/フィルターで必要なログが消える | 共通collectorへ委譲。別プローブの行も保存し、対象不一致を明示 |
 | D03 | 今回対応 | 空ファイルやADBエラーを採取完了と誤認 | 接続確認、raw log/summary/stderr保存、欠落・0バイトを非0終了で報告 |
 | D04 | 今回対応 | 観察・ログ・仮説・実装予定が混在 | EvidenceLedgerで区別。OpenXR focus/API値から実表示を推定しない |
-| D05 | main統合待ち | WSL consumer CLIとmainの機能が分裂 | 既存4コミットを基盤としてレビュー・テスト・main統合し、標準applyへ戻す |
+| D05 | main統合済み | WSL consumer CLIとmainの機能が分裂 | fc65deaをmainへ反映済み。全277件とmain上の互換40件を確認し、StandardWorkflowへ通常手順を集約 |
 | D06 | 未着手 | 製品Runtimeへ検証UI/Activity/旧互換名が混在 | assembly/Androidモジュール境界の移行案、GUID/JNI/scene互換検証後に移動 |
 | D07 | 未解決 | 同一Unity WindowでWebView直接IMEが出ない | 直接経路または条件付き代理接続の採用判断。必要な実機試験を別途限定 |
 | D08 | 未解決 | IME後のレイ非表示の原因が混在 | nativeTrial等のgateと実入力復帰不良をログ・実観察で区別 |
@@ -25,9 +25,12 @@ Unity/C#/Android/nativeの挙動は変更しない。AAR/.soを再生成せず�
 
 ## 実機試験を再開する前の条件
 
-- D05の標準CLIへの統合、または一本に固定した暫定consumerの版を明示し、途中でmainへ切り替えない。
+- 統合済みmainのCLIへ揃え、古い一時CLIや修正ブランチ由来のものと取り違えない。
 - collectorが必要な診断行の欠落を検出し、試行後に情報不足が判明する頻度を減らす。
 - 一試験ごとの判断対象・終了条件・失敗時の次の判断・必要観察を文書化する。
 - 診断コード自身が止めているレイと、本当の復帰不良を区別できるようにする。
 
 このフェーズでは新しい実機試行を依頼しない。過去のコマンドや「Next」記述は再開指示にしない。
+
+
+D06以降の具体的な分離順序と資源所有権は[RuntimeSeparation.md](RuntimeSeparation.md)。main統合は完了したが、Unity/Androidの責務分離やIME/レイの問題まで解消した意味ではない。

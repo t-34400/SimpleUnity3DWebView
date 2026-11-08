@@ -40,7 +40,8 @@
 - 現在情報の入口を本書へ一本化し、過去の「次の試験」指示を凍結する。
 - [設計の見直し](ArchitectureReview.md)で、実装済み・提案・保留を分ける。
 - [技術的負債台帳](TechnicalDebt.md)で完了条件を定める。
+- [実装分離の具体計画](RuntimeSeparation.md)で、現行メソッド・資源所有者・変更順序を対応付ける。
 - ログ採取は共通の`Tools/probe.py`へ集約。従来の二つのcaptureシェルは互換入口として委譲する。[診断仕様](Diagnostics.md)を参照。
-- patch-exchangeのWSL修正はmain未統合。[基盤統合資料](FoundationIntegration.md)を製品パッチと分けて扱う。統合前にmainのCLIへ切り替えない。
+- patch-exchangeのWSL修正はmainへ統合済み。[統合結果](FoundationIntegration.md)と[標準手順](StandardWorkflow.md)を参照。新しいmain版CLIで既存ジョブのresumeも確認した。
 
 実機試験を再開する条件は、ログの取得・失敗検出がローカルで検証され、配布CLIの版が統一され、次の一試験が決める設計判断と打ち切り条件が明文化されていること。残るIMEやレイの問題を「解消済み」と宣言しない。

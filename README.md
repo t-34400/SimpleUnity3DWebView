@@ -8,7 +8,7 @@ Unity 6000.4 / Meta Quest向けWebViewの再設計プロジェクトです。現
 - [設計の見直し](Packages/com.t34400.vrwebview/Documentation~/ArchitectureReview.md)：残す境界と採用・保留の判断。
 - [技術的負債](Packages/com.t34400.vrwebview/Documentation~/TechnicalDebt.md)：今回の整理範囲と残る完了条件。
 - [共通診断仕様](Packages/com.t34400.vrwebview/Documentation~/Diagnostics.md)：一つのcollectorと旧コマンドの互換入口。
-- [転送基盤の統合課題](Packages/com.t34400.vrwebview/Documentation~/FoundationIntegration.md)：WSL修正ブランチとmainの未統合状態。
+- [転送基盤の統合課題](Packages/com.t34400.vrwebview/Documentation~/FoundationIntegration.md)：WSL修正のmain統合結果と通常の適用手順。
 
 ## ソースと配布
 
