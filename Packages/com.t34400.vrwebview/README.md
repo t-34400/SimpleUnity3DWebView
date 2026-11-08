@@ -9,3 +9,5 @@ CoreはUnity/Metaから独立した基礎実装です。GPU/IME/XRプローブ�
 ログ取得と起動はリポジトリの`Tools/probe.py`へ集約しました。Diagnostics.mdに旧capture/runコマンドの互換動作と失敗の扱いをまとめています。過去の検証ページは経緯を残す資料であり、現在の実行依頼ではありません。
 
 配布UPM内に検証実装が混在している点は負債として記録しています。この整理では既存のUnity参照・GUID・JNIとAndroid/nativeバイナリを保持し、ファイル移動は行っていません。HC2の判定/観測と自動開始/keyboard timeoutの時間条件をUnity依存のない処理へ切り出し、既存条件を維持しています。Editor検証の入口はEditorValidation.mdです。
+
+GpuRetirementLedgerは複数世代の退役と一度だけの破棄権を表す純C#の状態処理です。現在のProbe/Pumpには未接続で、実際のTexture破棄やnativeの動作は変えていません。契約と未確認事項はDocumentation~/GpuLifetime.mdを参照してください。

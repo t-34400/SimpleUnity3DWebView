@@ -9,7 +9,7 @@
 | D03 | 今回対応 | 空ファイルやADBエラーを採取完了と誤認 | 接続確認、raw log/summary/stderr保存、欠落・0バイトを非0終了で報告 |
 | D04 | 今回対応 | 観察・ログ・仮説・実装予定が混在 | EvidenceLedgerで区別。OpenXR focus/API値から実表示を推定しない |
 | D05 | main統合済み | WSL consumer CLIとmainの機能が分裂 | fc65deaをmainへ反映済み。全277件とmain上の互換40件を確認し、StandardWorkflowへ通常手順を集約 |
-| D06 | 判定/観測・時間条件を分離済み | 製品Runtimeへ検証UI/Activity/旧互換名が混在 | assembly/Androidモジュール境界の移行案、GUID/JNI/scene互換検証後に移動 |
+| D06 | 判定/時間条件を分離・GPU状態処理を準備 | 製品Runtimeへ検証UI/Activity/旧互換名が混在 | GPU状態処理は未接続。実Editor確認後のadapter接続、assembly/Android境界、GUID/JNI/scene互換検証後に移動 |
 | D07 | 未解決 | 同一Unity WindowでWebView直接IMEが出ない | 直接経路または条件付き代理接続の採用判断。必要な実機試験を別途限定 |
 | D08 | 観測改善・実機未解決 | IME後のレイ非表示の原因が混在 | nativeTrial等のgateと実入力復帰不良をログ・実観察で区別 |
 | D09 | 起動基盤追加・実Editor未確認 | Unity Editorでの継続compile/import検証がない | EditorValidationの共通コマンドを追加。実Editorでのimport/compile・EditMode成功を確認してから完了とする |
@@ -24,6 +24,8 @@
 HC2の判定と観測を切り出し、抑止・gaze・Cancel条件を維持する。Android/native、AAR/.soとprovenanceは保持する。ローカル検証からQuestやUnity Editorの成功を追加しない。
 
 Editor確認待ちの間に、自動開始/Unity keyboard timeoutの時間条件をHostTrialTimingへ分離した。既存3秒待ち・readiness・一度だけの取り出し・20秒上限を維持する。これはtrial action/host寿命の全面分離ではない。launcherも共通化し、旧run入口はPythonの共通経路へ委譲する。
+
+GPU資源については[GpuLifetime.md](GpuLifetime.md)の世代/退役ledgerを実装・合成検証した。既存のList/Texture/pumpへの接続はまだ行っていない。state成功からnative fence完了や実Textureの安全な解放を確認済みとは呼ばない。
 
 ## 実機試験を再開する前の条件
 

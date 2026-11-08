@@ -34,6 +34,8 @@ internal static class Program
 
     public static async Task Main()
     {
+        foreach (var scenario in GpuRetirementTests.Scenarios())
+            await Test(scenario.Name, () => Sync(scenario.Run));
         await Test("host automatic startup waits for readiness and is consumed before dispatch", () => Sync(() => {
             var timing = new HostTrialTiming();
             Check(!timing.TryTakeStartup(100, true, false, true, true, true, out _), "Unarmed menu started a trial");

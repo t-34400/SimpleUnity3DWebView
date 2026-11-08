@@ -78,3 +78,9 @@ host生成・UI threadへの要求・閉じる通知を、試験シナリオのt
 RunCaseのaction、Java bridge、keyboardの実体とClose、gaze/gesture、UI生成はHostComparisonProbeに残す。上記20秒はUnity keyboard用の診断上限で、Android側native trialの20秒timerとは別。どちらもIME確定やシステムキーボード実表示の証拠ではない。
 
 起動待ち・各readiness喪失・一度だけの取り出し・再arm・keyboard差し替えを5つの時間順シナリオで検証した。新しいUnity APIは追加していないが、MonoBehaviour側の配線を含む実Editorコンパイルは引き続き未確認。
+
+## GPU退役の状態処理
+
+`GpuRetirementLedger`を追加し、複数のmanaged世代、退役、native照会ticket、一度だけの破棄権と受付確認を純C#で表した。Closeや時間経過をGPU完了と扱わず、退役後のsubmitと現在のVrAlive==0観測を条件にする。古い世代・前のpump pass・別ledgerの返信は現在の登録へ作用しない。
+
+これは分離先の状態処理を実装・検証した段階。既存Probe/Pumpの退役List、Texture所有、render event、Destroy、Java/nativeの処理は変更しておらず、実体への接続はEditor確認後に行う。接続契約と残る限界は[GpuLifetime.md](GpuLifetime.md)。
