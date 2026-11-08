@@ -26,6 +26,26 @@ HOST = [
 
 
 class AnalysisTests(unittest.TestCase):
+    def test_video_only_capture_does_not_require_an_ime_attempt_or_prove_playback(self):
+        report = probe.analyze([
+            'VRWebViewFocus video=bundled request=1 event=response status=206 start=0',
+            'VRWebViewFocus host=1 video=bundled event=sample time=6.1 paused=false'], 'video')
+        self.assertEqual(report['issues'], [])
+        self.assertEqual(report['video_responses'], 1)
+        self.assertEqual(report['video_samples'], 1)
+        self.assertEqual(report['proxy_events'], [])
+        self.assertEqual(report['video_playback'], 'requires_runtime_analysis_and_user_observation')
+
+    def test_old_ip1_logs_cannot_establish_video_diagnostics(self):
+        report = probe.analyze(['VRWebViewFocus proxy=IP1 event=unity_tick frames=33'], 'video')
+        self.assertIn('expected_video_response_missing', report['issues'])
+        self.assertIn('expected_video_sample_missing', report['issues'])
+
+    def test_request_without_page_sample_is_an_incomplete_video_capture(self):
+        report = probe.analyze(['VRWebViewFocus video=bundled request=1 event=response status=206'], 'video')
+        self.assertNotIn('expected_video_response_missing', report['issues'])
+        self.assertIn('expected_video_sample_missing', report['issues'])
+
     def test_proxy_start_on_a_failed_host_reports_the_initialization_problem(self):
         report = probe.analyze([
             'VRWebViewFocus host=1 proxy=IP1 event=host_start_failed stage=proxy_construct error=NullPointerException',

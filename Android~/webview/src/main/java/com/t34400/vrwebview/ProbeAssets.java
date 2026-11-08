@@ -58,10 +58,10 @@ final class ProbeAssets extends WebViewClient {
             long id = REQUESTS.incrementAndGet();
             // Never log URLs or raw request headers. IDs distinguish cancelled preloads/reloads.
             String prefix = "[VRWebViewFocus] video=bundled request=" + id + " ";
-            Log.i("VRWebView", prefix + "event=response status=" + range.status + " start=" + range.start
+            Log.i("VRWebViewFocus", prefix + "event=response status=" + range.status + " start=" + range.start
                     + " responseBytes=" + range.length + " totalBytes=" + data.length + " rangePresent=" + (header != null));
             stream = new ProbeMediaStream(data, (int) range.start, (int) range.length,
-                    event -> Log.i("VRWebView", prefix + event));
+                    event -> Log.i("VRWebViewFocus", prefix + event));
         }
         return new WebResourceResponse(isVideo ? "video/mp4" : "text/html", isVideo ? null : "UTF-8",
                 range.status, reason, headers, stream);

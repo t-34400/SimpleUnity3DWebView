@@ -107,12 +107,12 @@ preview.29の実機ログではhost初期化と代理接続生成は成功した
 
 次の採取ではページのPlay/Pauseで再生し、止まってから5秒ほど待つ。その後Reloadを一度だけ行い、再びPlay/Pauseで再生する。追加のscene作成、Editor/Sampleテスト、graphics API切替は不要。入力欄やIP1 Startを押す必要はなく、今回は動画だけを調べられる。画面の番号や診断文字の転記は不要。
 
-`--expect proxy`はIP1 Start/armedを要求するので、動画だけの採取では既存の通常captureを使う。
+`--expect proxy`はIP1 Start/armedを要求するので、動画だけの採取では`--expect video`を使う。これは動画の応答とページ内サンプルの両方を必要とし、旧APKやUnity heartbeatだけでは採取成立としない。summaryの成立は再生成功を意味しない。
 
 ```bash
 cd /mnt/c/source/Unity/SimpleUnity3DWebView
 vrwebview_logs="/mnt/c/Users/tmiyoshi/Downloads/VRWebView-Video-$(date +%Y%m%d-%H%M%S)"
-python3 Tools/probe.py capture --label Video --log-dir "$vrwebview_logs"
+python3 Tools/probe.py capture --expect video --label Video --log-dir "$vrwebview_logs"
 ```
 
 動画の要求/読み取りが途切れるのか、全データを消費してもbufferedが伸びないのか、ページの時間そのものが止まるのかを同じログで区別する。`suspend`だけ、closeだけ、frameCallbacksの数だけで原因を決めない。

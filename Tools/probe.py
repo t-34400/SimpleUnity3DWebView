@@ -24,7 +24,8 @@ def analyze(lines, expected='any'):
     result = dict(rows=0, host_rows=0, activity_rows=0, focus_rows=0, legacy_rows=0, trials=[],
                   setup_boot_values=[], boot_checks=[], editor_flags=[], xr_transitions=[],
                   pointer_states=[], proxy_rows=0, proxy_events=[], issues=[], keyboard_visibility='requires_user_observation',
-                  ray_visibility='requires_user_observation')
+                  ray_visibility='requires_user_observation', video_responses=0, video_samples=0,
+                  video_playback='requires_runtime_analysis_and_user_observation')
     for number, line in enumerate(lines, 1):
         if not line.strip():
             continue
@@ -36,6 +37,9 @@ def analyze(lines, expected='any'):
         result['legacy_rows'] += int('VRWebViewProbe' in line or 'VRWebViewGpuProbe' in line)
         pid = re.match(r'\d\d-\d\d\s+[\d:.]+\s+(\d+)\s+\d+\s', line)
         location = dict(line=number, pid=int(pid[1]) if pid else None)
+        if 'VRWebViewFocus' in line and 'video=bundled ' in line:
+            result['video_responses'] += int('event=response ' in line)
+            result['video_samples'] += int('event=sample ' in line)
         if 'proxy=IP1' in line:
             result['proxy_rows'] += 1
             event = re.search(r'\bevent=([a-z_]+)', line)
@@ -82,6 +86,11 @@ def analyze(lines, expected='any'):
         result['issues'].append('expected_host_rows_missing')
     if expected == 'activity' and not result['activity_rows']:
         result['issues'].append('expected_activity_rows_missing')
+    if expected == 'video':
+        if not result['video_responses']:
+            result['issues'].append('expected_video_response_missing')
+        if not result['video_samples']:
+            result['issues'].append('expected_video_sample_missing')
     if expected == 'proxy':
         if not result['proxy_rows']:
             result['issues'].append('expected_proxy_protocol_missing')
@@ -203,10 +212,10 @@ def main():
     cap = commands.add_parser('capture', help='Capture all probe families with the same tag list')
     cap.add_argument('--label', default='probe')
     cap.add_argument('--log-dir')
-    cap.add_argument('--expect', choices=('any', 'host', 'activity', 'proxy'), default='any')
+    cap.add_argument('--expect', choices=('any', 'host', 'activity', 'proxy', 'video'), default='any')
     summary = commands.add_parser('summarize', help='Inspect an existing log offline; no device is needed')
     summary.add_argument('log', type=Path)
-    summary.add_argument('--expect', choices=('any', 'host', 'activity', 'proxy'), default='any')
+    summary.add_argument('--expect', choices=('any', 'host', 'activity', 'proxy', 'video'), default='any')
     import probe_launch
     host = commands.add_parser('launch-host', help='Launch an installed HC2 probe; no build/install/capture')
     host.add_argument('case', nargs='?', choices=probe_launch.HOST_CASES, default='menu')
