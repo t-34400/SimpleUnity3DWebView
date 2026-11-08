@@ -1,5 +1,7 @@
 # IME Probe
 
+> **現在は整理フェーズで実機試験を停止しています。** 本書は過去の検証手順です。現在の判断は[CurrentStatus.md](CurrentStatus.md)、共通の取得仕様は[Diagnostics.md](Diagnostics.md)を参照してください。以下の「次の試験」は現在の実行依頼ではありません。
+
 ## 観測するもの
 
 同じ静的HTMLを使い、Android標準WebViewとVirtualDisplay上のWebViewを比較するための検証用実装です。別EditTextやDOM全文置換による入力中継は使いません。

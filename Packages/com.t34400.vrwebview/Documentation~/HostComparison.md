@@ -1,5 +1,7 @@
 # HC1: keyboard and Activity host comparison
 
+> **現在は整理フェーズで実機試験を停止しています。** 本書は過去の検証手順です。現在の判断は[CurrentStatus.md](CurrentStatus.md)、共通の取得仕様は[Diagnostics.md](Diagnostics.md)を参照してください。以下の「次の試験」は現在の実行依頼ではありません。
+
 > preview.17以降の現在の試行手順は[HC2: KeyboardComparison.md](KeyboardComparison.md)。以下はHC1の調査経緯・補助比較の記録。HC2シーンはGameActivityとboot OFF/ONの選択を要求するため、以下の旧手順だけでは実行しない。別Activity常時前面の製品案とAG3の追加試験は保留している。
 
 目的は「Questのキーボード経路が成立しない」のか「GPU用WebViewホスト固有の問題」なのかを切り分け、別ActivityでUnityのVR表示を継続できるかを測ることです。これは製品方式の決定ではありません。

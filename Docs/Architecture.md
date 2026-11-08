@@ -1,5 +1,7 @@
 # Architecture boundaries
 
+> Historical foundation notes. Current design and implementation status: [ArchitectureReview](../Packages/com.t34400.vrwebview/Documentation~/ArchitectureReview.md).
+
 - BrowserSession owns exactly one IBrowserBackend. Public session operations are owner-thread APIs; a Unity integration must provide a Unity-main-thread dispatcher. Core alone does not claim thread-safe session mutation.
 - RequestLedger is thread-safe correlation for native responses. IDs are not recycled. Detach advances generation and cancels pending responses; duplicates/stale generations are ignored. Per-request timeout and production native transport remain to be implemented.
 - PointerCapture owns one gesture. A second controller cannot steal it. Cancellation is explicit. BrowserPointerSource maps actual RectTransform bounds and supports a null Overlay Canvas camera. It does not implement Android delivery yet.

@@ -1,0 +1,150 @@
+{
+  "updated_jst": "2026-11-08",
+  "policy": "Observations, logs, source references and hypotheses are distinct; hashes identify supplied logs, not reproduced runs",
+  "entries": [
+    {
+      "id": "E01",
+      "configuration": "Standalone H0/H1/V1",
+      "source_kind": "user_report",
+      "source_log_sha256": null,
+      "observed": [
+        "H0/H1の動画・音声・日本語入力が成功",
+        "H1のTARGET動画も動いていた",
+        "V1の動画・音声は成功、日本語入力は失敗"
+      ],
+      "limits": [
+        "Unityと同一ActivityでのIME成立を示さない"
+      ]
+    },
+    {
+      "id": "E02",
+      "configuration": "H1 Window draw OFF after scroll transform fix",
+      "source_kind": "user_report",
+      "source_log_sha256": null,
+      "observed": [
+        "スクロール・入力・動画・音声を確認"
+      ],
+      "limits": [
+        "VISIBLE/attachを保った構成。Window除去・detach・GONE化の成功とは異なる"
+      ]
+    },
+    {
+      "id": "E03",
+      "configuration": "Unity Vulkan/GPU probe, hand input",
+      "source_kind": "user_report",
+      "source_log_sha256": null,
+      "observed": [
+        "上下反転修正後、ピンチで動画再生停止・スクロールが可能",
+        "入力欄選択でキーボードは出ずレイ消失"
+      ],
+      "limits": [
+        "現在構成での製品IMEは未成立",
+        "GLESの実機成功へ一般化しない"
+      ]
+    },
+    {
+      "id": "E04",
+      "configuration": "HC1 same Unity GameActivity, standard EditText",
+      "source_kind": "user_report_and_log",
+      "source_log_sha256": "6015188b412f9ff4ab843fa82a7b318f3c4733a26ebfcaedb14dd63d93dc583a",
+      "observed": [
+        "システムキーボードが実表示",
+        "表示中もUnity画面が更新"
+      ],
+      "limits": [
+        "日本語編集の詳細は別途未確認",
+        "終了直後にはnativeTrialによるレイ抑止が残り得る"
+      ]
+    },
+    {
+      "id": "E05",
+      "configuration": "HC1 same Unity GameActivity, normal-window WebView",
+      "source_kind": "user_report_and_log",
+      "source_log_sha256": "1b9e61faf173d62bddbcb432a8eb229d0f0a0523d2391b389dc4be3982ed4a2d",
+      "observed": [
+        "キーボード非表示",
+        "Window focus喪失後、WebViewがserved viewではないとしてIME要求を拒否"
+      ],
+      "limits": [
+        "後の試行では非null接続・accepted=trueでも実表示なし。API成功を表示成功としない"
+      ]
+    },
+    {
+      "id": "E06",
+      "configuration": "HC1 separate opaque/translucent Activity",
+      "source_kind": "user_report_and_log",
+      "source_log_sha256": null,
+      "observed": [
+        "Unity VR画面とネイティブWebView/keyboardの同時表示",
+        "半透明Activityで日本語変換を確認"
+      ],
+      "limits": [
+        "通常のUnity入力が利用できる証明ではない",
+        "自動returnは検証timerによるものを含む",
+        "詳細な編集全項目は未確認"
+      ]
+    },
+    {
+      "id": "E07",
+      "configuration": "HC1 preview.13 hand reset sync",
+      "source_kind": "user_report_and_log",
+      "source_log_sha256": "96090d0b5e6a2bdbfa9c132ea6f8cb93ffd837879eb7f0b413db731b01deed5a",
+      "observed": [
+        "復帰後のレイ表示を利用者が確認",
+        "ログでMetaAimのrawTracked復帰とUI選択を確認"
+      ],
+      "limits": [
+        "XR Hands 1.7.3向けの版依存実験",
+        "全ケース・全SDKの復帰保証ではない"
+      ]
+    },
+    {
+      "id": "E08",
+      "configuration": "AG1 separate Activity GPU transfer",
+      "source_kind": "user_report_and_log",
+      "source_log_sha256": "a48ca0ab3bd372d96e005a963fa34f832df5910e13662277e5b5eec8c28225d6",
+      "observed": [
+        "GPU描画とIME起動を確認",
+        "ネイティブWindow位置でシステムレイが遮られる"
+      ],
+      "limits": [
+        "通常Unity操作の成立を示さない",
+        "この構成の動画・音声・日本語全条件は別途未確認"
+      ]
+    },
+    {
+      "id": "E09",
+      "configuration": "AG2 texture / FLAG_NOT_TOUCHABLE passthrough",
+      "source_kind": "user_report_and_log",
+      "source_log_sha256": "f7257de074b0eb63df8700791df617375656d517e0864b7494386bf8d61be623",
+      "observed": [
+        "両方で白いシステムレイがネイティブ領域に遮られると報告",
+        "textureではXR FOCUSEDと新鮮な手関節データを取得した区間がある",
+        "passthroughではXR VISIBLEのまま入力を再開できていない"
+      ],
+      "limits": [
+        "Unityレイでの実操作は未成立",
+        "2構成のfocus結果を同一扱いしない"
+      ]
+    },
+    {
+      "id": "E10",
+      "configuration": "HC2 OFF: keyboard → native → webview → native-webinfo",
+      "source_kind": "user_confirmed_order_and_filtered_log",
+      "source_log_sha256": "bca16eca58b32ae0b6c1d5eed09ba5410acad58e90155bc14f1b2825d59ba29e",
+      "observed": [
+        "順序とoff指定を利用者が明示確認",
+        "2番と4番でキーボード表示、入力後レイ非表示を報告",
+        "1回目にはIME show失敗とUnity timeout",
+        "2回目・4回目の入力後にXR 4→5を確認"
+      ],
+      "limits": [
+        "HC2/bootCheck/nativeConnection/editorProfile等の行が欠落",
+        "実属性値一致とAPK内boot値のログ確認は未完了",
+        "nativeTrialの20秒抑止と持続的な復帰不良を判別できない",
+        "ONとの比較は未確認",
+        "保持ログ回収は0バイトで失敗。原因は未確定"
+      ]
+    }
+  ]
+}

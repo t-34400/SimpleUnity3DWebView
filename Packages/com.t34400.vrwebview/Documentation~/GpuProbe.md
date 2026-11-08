@@ -1,5 +1,7 @@
 # 動画・GPU・IMEの比較プローブ
 
+> **現在は整理フェーズで実機試験を停止しています。** 本書は過去の検証手順です。現在の判断は[CurrentStatus.md](CurrentStatus.md)、共通の取得仕様は[Diagnostics.md](Diagnostics.md)を参照してください。以下の「次の試験」は現在の実行依頼ではありません。
+
 次段階の同一Unity Activity / Vulkan / XR検証は[VulkanProbe.md](VulkanProbe.md)を参照。以下は比較基準として残す独立Activity版。
 
 このプローブは独立したAndroid Activityで動く。UnityのテクスチャやOpenXRレイヤーへ描く本番backendではない。独立Activityへ切り替わる間、Unity側は休止し得る。

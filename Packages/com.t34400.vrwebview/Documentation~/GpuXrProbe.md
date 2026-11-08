@@ -1,5 +1,7 @@
 # GPU / 同一Unity Activity / XR検証（GX2）
 
+> **現在は整理フェーズで実機試験を停止しています。** 本書は過去の検証手順です。現在の判断は[CurrentStatus.md](CurrentStatus.md)、共通の取得仕様は[Diagnostics.md](Diagnostics.md)を参照してください。以下の「次の試験」は現在の実行依頼ではありません。
+
 H1の`Window draw: off`でスクロール・入力・動画音声が動くことはQuest 3で利用者が確認済み。
 GX2はその方式をUnityのVulkanまたはOpenGL ES 3テクスチャへ接続する**新しい実験**であり、H1の成功を引き継いで合格とはしない。
 Unity Editorのimport/build、実機GPU共有、同一Unity WindowのIME、XRの継続動作は未検証。

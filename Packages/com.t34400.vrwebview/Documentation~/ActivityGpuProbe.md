@@ -1,5 +1,7 @@
 # AG1: 別ActivityからUnityテクスチャへ
 
+> **現在は整理フェーズで実機試験を停止しています。** 本書は過去の検証手順です。現在の判断は[CurrentStatus.md](CurrentStatus.md)、共通の取得仕様は[Diagnostics.md](Diagnostics.md)を参照してください。以下の「次の試験」は現在の実行依頼ではありません。
+
 HC1で確認した「別ActivityのWebView・システムキーボード・Unity VR画面の同時表示」と「リセット同期による復帰後のレイ表示」を、GPU転送へつなぐ検証です。HC1と元のGPU XRプローブは残しています。AG1では利用者がVulkan描画とIME起動を確認しました。Unityのレイ操作はまだ成立しておらず、preview.15（AG2）でフォーカス取得とタッチWindowの比較を追加しています。
 
 ## AG3: カメラ中央＋ピンチで座標を切り分ける

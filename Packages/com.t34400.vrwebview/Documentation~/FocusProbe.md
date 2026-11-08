@@ -1,5 +1,7 @@
 # HI4: Unity / WebViewのフォーカス診断
 
+> **現在は整理フェーズで実機試験を停止しています。** 本書は過去の検証手順です。現在の判断は[CurrentStatus.md](CurrentStatus.md)、共通の取得仕様は[Diagnostics.md](Diagnostics.md)を参照してください。以下の「次の試験」は現在の実行依頼ではありません。
+
 HI4はWindow復帰時の限定的なfocus復元に加え、手入力resetの再同期と編集接続後のIME表示要求を含む。キーボード表示の修正完了を意味しない。描画backendはGX2のまま、入力表示が`input=HI4`になる。
 
 ## これまでのQuest実機結果

@@ -1,5 +1,7 @@
 # HC2: Unity ActivityでのIME・入力属性比較
 
+> **現在は整理フェーズで実機試験を停止しています。** 本書は過去の検証手順です。現在の判断は[CurrentStatus.md](CurrentStatus.md)、共通の取得仕様は[Diagnostics.md](Diagnostics.md)を参照してください。以下の「次の試験」は現在の実行依頼ではありません。
+
 preview.17。別Activity常時前面の製品案・AG3のレイ調整は保留し、同じUnity Activityからの直接入力の成立条件を調べる。WebView本来の入力接続を維持し、入力接続の代理中継やDOMへの文字同期は追加していない。
 
 ## 比較するもの
