@@ -23,6 +23,7 @@ namespace T34400.VRWebView
         private bool listening;
         private Exception reportedInputError;
         public BrowserSurfaceSnapshot<Texture> CurrentSurface => current;
+        public bool IsConfigured => source != null;
         public Exception LastInputError => router.LastError;
         public Exception LastPresentationError { get; private set; }
 
@@ -51,6 +52,7 @@ namespace T34400.VRWebView
             if (version != cleared) return; // Reentrant newer binding wins.
             source = next; sink = input; owner = dispatcher;
             if (isActiveAndEnabled) Attach();
+            else registration = dispatcher.Track(new Connection(this, version));
         }
 
         public void Unbind()
@@ -93,6 +95,8 @@ namespace T34400.VRWebView
             long attached = ++version;
             var dispatcher = owner;
             var schedule = dispatcher.Scheduler;
+            var previousLifetime = registration; registration = null;
+            previousLifetime?.Dispose(); // The previous configuration version is obsolete.
             registration = dispatcher.Track(new Connection(this, attached));
             // Owner-thread withdrawals clear the RawImage synchronously before the
             // resource owner can retire its target. Worker events stay queued.
@@ -145,7 +149,8 @@ namespace T34400.VRWebView
             if (version == cleared) {
                 current = null;
                 if (image != null) { image.texture = null; image.enabled = false; }
-                if (forget) { source = null; sink = null; owner = null; }
+                if (forget || owner == null || !owner.IsRunning) { source = null; sink = null; owner = null; }
+                else if (source != null) registration = owner.Track(new Connection(this, cleared));
             }
             ReportInputError();
             return cleared;

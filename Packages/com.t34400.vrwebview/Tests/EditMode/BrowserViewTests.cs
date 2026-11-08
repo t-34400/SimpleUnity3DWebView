@@ -131,5 +131,11 @@ namespace T34400.VRWebView.Tests
             long revision = source.Current.Revision; source.Publish(first); Assert.AreEqual(revision, source.Current.Revision);
             pointer.OnDrag(At(.4f, .5f)); Assert.AreEqual(2, sink.Points.Count); Assert.AreEqual(PointerPhase.Move, sink.Points[1].Phase);
         }
+        [Test] public void InactiveViewConfigurationStillBelongsToDispatcherScope()
+        {
+            viewObject.SetActive(false); source.Publish(first); view.Bind(source, null, dispatcher);
+            Assert.IsTrue(view.IsConfigured); dispatcher.Close(); Assert.IsFalse(view.IsConfigured);
+            dispatcher.InitializeOnOwnerThread(); viewObject.SetActive(true); Assert.IsNull(image.texture);
+        }
     }
 }

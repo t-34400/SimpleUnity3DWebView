@@ -66,6 +66,7 @@ Canvas配下のRawImageとBrowserPointerSourceを使うMonoBehaviour。Canvas・
 - pointer位置は表示中のuvRectと原点を通してブラウザーの左上原点へ変換する。crop/mirrorやcapture後の範囲外dragを扱い、二重にYを反転しない。
 - source/targetの交換、撤回、Disable、Unbindでは、旧入力先へ一度Cancelを要求してから参照を外す。新しいtargetへ保持中のgestureを移さない。
 - viewだけのDisableは接続設定を保持し、同じscope内の再Enable時にsource.Currentから復帰する。Unbindとdispatcher scope終了は接続設定も外す。
+- 非表示中や非active objectへのBindもscopeへ登録する。scope終了後の再Enableで古いprovider/入力先を再利用しない。IsConfiguredは表示中かどうかではなく接続設定の有無を示す。
 - SetInteractionEnabled(false)は入力を取消し、以後のTexture交換で勝手に入力を再開しない。trueへの復元は所有者が明示する。
 - binding解除やview破棄でsource/Session/TextureはDispose/Destroyしない。
 
