@@ -23,6 +23,21 @@ class ResultTests(unittest.TestCase):
             path.write_text('<test-run result="Passed" total="0"/>')
             with self.assertRaises(unity.UnityValidationError): unity.read_results(path)
 
+    def test_failed_child_report_retains_failure_and_location(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / 'result.xml'
+            path.write_text('<test-run result="Failed(Child)" total="2">'
+                '<test-case fullname="T34400.VRWebView.Tests.PointerTests.Success" result="Passed"/>'
+                '<test-case fullname="T34400.VRWebView.Tests.PointerTests.Cancel" result="Failed">'
+                '<failure><message>Expected: 1; But was: 0</message>'
+                '<stack-trace>PointerTests.cs:30</stack-trace></failure></test-case></test-run>')
+            report = unity.inspect_results(path)
+            self.assertEqual((report['total'], report['passed'], report['failed']), (2, 1, 1))
+            self.assertEqual(report['failures'][0]['stack_trace'], 'PointerTests.cs:30')
+            self.assertIn('Expected: 1', report['failures'][0]['message'])
+            with self.assertRaisesRegex(unity.UnityValidationError, 'PointerTests.Cancel'):
+                unity.read_results(path)
+
     def test_namespace_filter_matches_the_existing_unity_test_class(self):
         import re
         self.assertIsNotNone(re.search(unity.TEST_FILTER, 'T34400.VRWebView.Tests.PointerTests.ForeignPointerDoesNotReleaseOwner'))
@@ -47,6 +62,7 @@ class LauncherTests(unittest.TestCase):
 from pathlib import Path
 import os,sys,time
 args=sys.argv
+with Path(__file__).with_suffix('.launches').open('a') as launches: launches.write('launch\\n')
 assert '-runTests' in args and '-batchmode' in args
 assert '-quit' not in args
 platform=os.environ.get('VRWEBVIEW_EDITOR_TEST_PLATFORM','EditMode')
@@ -58,20 +74,23 @@ if mode=='timeout': time.sleep(10)
 xml=Path(args[args.index('-testResults')+1]);log=Path(args[args.index('-logFile')+1])
 if mode!='no-log': log.write_text('Initialize engine version: '+('6000.3.0f1' if mode=='wrong-version' else '6000.4.5f1')+' (fixture)\\n')
 if mode!='no-xml':
- result='Skipped' if mode=='skipped' else 'Failed' if mode=='failed' else 'Passed'
+ result='Skipped' if mode=='skipped' else 'Failed' if mode in ('failed','failed-exit','failed-hang') else 'Passed'
  name='Other.Tests.Sample' if mode=='foreign' else 'T34400.VRWebView.Tests.PointerTests.Sample'
  case='' if mode=='zero' else '<test-case fullname="'+name+'" result="'+result+'"/>'
  root_result='Failed' if mode=='root-failed' else 'Passed'
  total='0' if mode=='zero' else '4' if mode=='wrong-total' else '1'
  xml.write_text('<test-run result="'+root_result+'" total="'+total+'">'+case+'</test-run>')
+if mode in ('passed-hang','failed-hang'): time.sleep(10)
+if mode=='failed-exit': sys.exit(2)
 if mode=='exit-error': sys.exit(17)
 ''')
         self.editor.chmod(0o755)
 
-    def run_check(self, mode='passed', timeout=5, test_platform='EditMode'):
+    def run_check(self, mode='passed', timeout=5, test_platform='EditMode', shutdown_timeout=60):
         env = dict(os.environ, VRWEBVIEW_EDITOR_TEST_MODE=mode, VRWEBVIEW_EDITOR_TEST_PLATFORM=test_platform)
         command = [sys.executable, str(TOOLS / 'probe.py'), 'editor-check', '--editor', str(self.editor),
-                   '--log-dir', str(self.output), '--timeout', str(timeout), '--test-platform', test_platform]
+                   '--log-dir', str(self.output), '--timeout', str(timeout), '--test-platform', test_platform,
+                   '--shutdown-timeout', str(shutdown_timeout)]
         return subprocess.run(command, env=env, capture_output=True, text=True, timeout=15)
 
     def summary(self):
@@ -143,6 +162,72 @@ if mode=='exit-error': sys.exit(17)
     def test_timeout_is_failure_and_retains_summary(self):
         self.assertEqual(self.run_check('timeout', timeout=1).returncode, 2)
         self.assertEqual(self.summary()['status'], 'failed')
+
+    def test_failed_xml_is_preserved_with_nonzero_exit(self):
+        result = self.run_check('failed-exit')
+        self.assertEqual(result.returncode, 2)
+        summary = self.summary()
+        self.assertEqual(summary['exit_code'], 2)
+        self.assertTrue(summary['process_exit_observed'])
+        self.assertEqual(summary['tests']['failed'], 1)
+        self.assertEqual(summary['test_report']['failures'][0]['name'], 'T34400.VRWebView.Tests.PointerTests.Sample')
+        self.assertIn('PointerTests.Sample', result.stdout)
+
+    def test_failed_xml_is_not_hidden_by_shutdown_timeout(self):
+        result = self.run_check('failed-hang', shutdown_timeout=.2)
+        self.assertEqual(result.returncode, 2)
+        summary = self.summary()
+        self.assertEqual(summary['failure_kind'], 'editor_exit_timeout')
+        self.assertEqual(summary['tests']['failed'], 1)
+        self.assertIsNone(summary['exit_code'])
+        self.assertFalse(summary['process_exit_observed'])
+        self.assertTrue(summary['process_cleanup']['child_exit_observed'])
+        self.assertLess(summary['elapsed_seconds'], 4)
+        self.assertIn('1 total, 0 passed, 1 failed', result.stdout)
+        self.assertEqual(self.editor.with_suffix('.launches').read_text().splitlines(), ['launch'])
+
+    def test_passing_xml_without_exit_is_not_success(self):
+        result = self.run_check('passed-hang', shutdown_timeout=.2)
+        self.assertEqual(result.returncode, 2)
+        summary = self.summary()
+        self.assertEqual(summary['status'], 'failed')
+        self.assertEqual(summary['failure_kind'], 'editor_exit_timeout')
+        self.assertEqual(summary['tests']['passed'], 1)
+        self.assertFalse(summary['process_exit_observed'])
+
+    def test_invalid_shutdown_timeout_cannot_launch(self):
+        self.assertEqual(self.run_check(shutdown_timeout=0).returncode, 2)
+        self.assertFalse(self.editor.with_suffix('.launches').exists())
+        self.assertFalse(self.output.exists())
+
+    def test_in_progress_summary_exists_before_test_results(self):
+        def inspect_running(*args):
+            summary = self.summary()
+            self.assertEqual(summary['status'], 'running')
+            self.assertEqual(summary['phase'], 'running_tests_or_importing')
+            self.assertFalse(summary['process_exit_observed'])
+            raise unity.UnityValidationError('synthetic wait failure')
+        with mock.patch.object(unity, 'wait_for_editor', side_effect=inspect_running):
+            with self.assertRaises(unity.UnityValidationError):
+                unity.run(TOOLS.parent, '6000.4.5f1', str(self.editor), self.output, 5)
+        self.assertEqual(self.summary()['status'], 'failed')
+        self.assertTrue(self.summary()['process_cleanup']['kill_requested'])
+
+    def test_heartbeat_reports_waiting_phase_without_relaunch(self):
+        from io import StringIO
+        process = mock.Mock()
+        process.poll.return_value = None
+        process.wait.side_effect = subprocess.TimeoutExpired('fixture', .25)
+        report = {'phase': 'running_tests_or_importing'}
+        with mock.patch.object(unity.time, 'monotonic', side_effect=[31, 61]), \
+             mock.patch.object(unity, 'collect_results', return_value=False), \
+             mock.patch.object(unity, 'save_summary') as save, \
+             mock.patch('sys.stdout', new_callable=StringIO) as output:
+            with self.assertRaises(unity.UnityValidationError):
+                unity.wait_for_editor(process, report, self.output, self.root / 'x.xml', self.root / 'Editor.log', 0, 60, 10)
+        self.assertIn('31s elapsed; phase=running_tests_or_importing', output.getvalue())
+        save.assert_called_once()
+        self.assertEqual(report['failure_kind'], 'overall_timeout')
 
     def test_path_translation_failure_still_writes_a_failure_summary(self):
         with mock.patch.object(unity, 'unity_path', side_effect=unity.UnityValidationError('synthetic path conversion failure')):

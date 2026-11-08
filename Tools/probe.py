@@ -207,6 +207,7 @@ def main():
         if name == 'editor-check':
             editor.add_argument('--log-dir')
             editor.add_argument('--timeout', type=int, default=1200)
+            editor.add_argument('--shutdown-timeout', type=float, default=60, help='Maximum process-exit wait after test XML is saved')
     args = parser.parse_args()
     try:
         if args.command in ('launch-host', 'launch-activity'):
@@ -224,7 +225,7 @@ def main():
                 return 0 if report['ready'] else 2
             try:
                 report = unity_validation.run(ROOT, editor_version(), args.editor,
-                    args.log_dir or os.environ.get('VRWEBVIEW_LOG_DIR') or default_log_dir(), args.timeout, args.test_platform)
+                    args.log_dir or os.environ.get('VRWEBVIEW_LOG_DIR') or default_log_dir(), args.timeout, args.test_platform, args.shutdown_timeout)
             except unity_validation.UnityValidationError as error:
                 raise ProbeError(str(error)) from error
             print(json.dumps(report, indent=2))
