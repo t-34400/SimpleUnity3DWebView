@@ -4,7 +4,7 @@
 
 ## 一つの取得器
 
-Python 3.10以上の標準ライブラリのみ使用。`Tools/probe.py`の`doctor`、`capture`、`summarize`へまとめる。既存の`capture_host_probe.sh`と`capture_activity_gpu_probe.sh`は互換入口として同じcaptureへ委譲する。launcherとUnity/Androidの実験コードは今回変更しない。
+Python 3.10以上の標準ライブラリのみ使用。`Tools/probe.py`へ接続確認・採取・解析・起動をまとめる。既存のcaptureシェルとrunシェルは互換入口として共通ツールへ委譲する。Android/nativeの実験コードは変更していない。
 
 - 全プローブ共通のAndroidタグを取得し、sed等で本文を捨てない。
 - 対象外プローブの診断行が来てもrawログには保存する。期待したプローブが不在なら失敗として知らせる。
@@ -22,7 +22,7 @@ ADBは`--adb`、`VRWEBVIEW_ADB_EXE`、インストールされたUnity Editorの
 # 読み取り専用の接続チェック。アプリを終了・起動しない
 python3 Tools/probe.py doctor
 
-# 再開時だけ使用するライブ採取。別端末から既存launcherを実行する
+# 再開時だけ使用するライブ採取。別ターミナルからlauncherを実行する
 python3 Tools/probe.py capture --label host-off --expect host
 
 # 既存ログを端末なしで検査する
@@ -51,3 +51,19 @@ PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s Tools/ToolTests -v
 新しいHC2コードは`pointerObservation=Ready`と、`pointerBlockReasons`、`rayPolicyPermitted`、`raySuppressionReason`を記録する。20秒trialによる抑止、Unity keyboardの状態、追跡元なしを分けて解析する。古いログではこれらを推測で埋めない。rayPolicyPermittedはHMD実表示の判定ではない。
 
 Editor用には`editor-doctor`と`editor-check`を追加した。同じTools/probe.pyから利用し、ADBやHMDを必要としない。詳細は[EditorValidation.md](EditorValidation.md)。これは今すぐの試行依頼ではない。
+
+## 起動処理の共通化
+
+実機試験の停止は継続。以下は保守上の仕様で、追加試行の依頼ではない。
+
+`launch-host [case] [off|on]`と`launch-activity [mode]`を追加した。旧`bash Tools/run_host_probe.sh ...`と`bash Tools/run_activity_gpu_probe.sh ...`も同じ引数で委譲する。case/mode、default、Intent extraの名前と値は保持する。出力はJSONとなり、`status=launch_requested`、`runtime_outcome=not_observed`を返す。起動要求の成功から、scene/case実行・boot実値・キーボードやrayの実表示は推定しない。
+
+ADBとserialの解決はcapture/doctorと共通。直接呼ぶ場合の`--adb`と`--serial`はsubcommandの前へ指定する。packageは`--package`、`VRWEBVIEW_PACKAGE`、既存defaultの順。
+
+1. 引数・packageを確認する。不正ならADBを呼ばない。
+2. 接続を確認し、launcherをresolveする。指定package内のUnityPlayerGameActivity/UnityPlayerActivityだけを受け付ける。
+3. 確認できた対象packageのみforce-stopし、元のIntent extrasで起動する。
+
+resolve・force-stop・startの各処理に30秒のtimeoutを設け、非0終了だけでなく終了0で返るAndroidのError/Exception等も失敗にする。既存ActivityへのIntent配送を示す`Activity not started`も新しい比較試行の成功にはしない。start失敗/timeout後に自動再試行はしない。起動要求が部分的に実行された可能性は残る。
+
+build/install、scene選択、boot設定の変更、logcat消去・自動採取は行わない。`off/on`は従来どおりAPKのboot設定に対する期待値であり、設定変更ではない。合成ADBで全case/mode・旧入口・serial・改行・各段階の失敗を検証し、Questでの起動は未確認。

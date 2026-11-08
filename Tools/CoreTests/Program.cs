@@ -34,6 +34,48 @@ internal static class Program
 
     public static async Task Main()
     {
+        await Test("host automatic startup waits for readiness and is consumed before dispatch", () => Sync(() => {
+            var timing = new HostTrialTiming();
+            Check(!timing.TryTakeStartup(100, true, false, true, true, true, out _), "Unarmed menu started a trial");
+            timing.ArmStartup("native-webinfo", 10);
+            Check(!timing.TryTakeStartup(12.99f, true, false, true, true, true, out _), "Startup delay was shortened");
+            Check(timing.TryTakeStartup(13, true, false, true, true, true, out var mode) && mode == "native-webinfo", "Due ready trial was lost");
+            Check(timing.StartupCase == "menu", "Pending case survived dispatch");
+            Check(!timing.TryTakeStartup(100, true, false, true, true, true, out _), "Trial replayed after dispatch");
+        }));
+        await Test("host startup survives each readiness interruption without restarting its deadline", () => Sync(() => {
+            for (int gate = 0; gate < 5; gate++) {
+                var timing = new HostTrialTiming(); timing.ArmStartup("webview", 0);
+                Check(!timing.TryTakeStartup(20, gate != 0, gate == 1, gate != 2, gate != 3, gate != 4, out _), "Readiness gate was bypassed: " + gate);
+                Check(timing.StartupCase == "webview", "Blocked startup was consumed");
+                Check(timing.TryTakeStartup(20.1f, true, false, true, true, true, out var mode) && mode == "webview", "Recovered readiness restarted the delay");
+            }
+        }));
+        await Test("host bridge rearm replaces a pending trial and menu never auto launches", () => Sync(() => {
+            var timing = new HostTrialTiming(); timing.ArmStartup("native", 0);
+            timing.ArmStartup("menu", 1);
+            Check(!timing.TryTakeStartup(100, true, false, true, true, true, out _), "Reopened menu replayed an old trial");
+            timing.ArmStartup("keyboard", 100);
+            Check(!timing.TryTakeStartup(102, true, false, true, true, true, out _), "New startup inherited the old deadline");
+            Check(timing.TryTakeStartup(103, true, false, true, true, true, out var mode) && mode == "keyboard", "New pending startup missing");
+        }));
+        await Test("host keyboard timeout is independent of startup and cannot close an absent instance", () => Sync(() => {
+            var timing = new HostTrialTiming(); timing.ArmStartup("native", 0); timing.ArmKeyboardTimeout(5);
+            Check(!timing.ShouldCloseKeyboard(24.99f, true), "Keyboard closed early");
+            Check(timing.ShouldCloseKeyboard(25, true), "Keyboard timeout missed its boundary");
+            Check(!timing.ShouldCloseKeyboard(100, false), "Absent keyboard was closed");
+            Check(timing.TryTakeStartup(100, true, false, true, true, true, out _), "Keyboard timeout consumed the pending startup");
+            timing.ArmStartup("menu", 100);
+            Check(timing.ShouldCloseKeyboard(100, true), "Reopening the bridge reset the keyboard timeout");
+        }));
+        await Test("host keyboard replacement starts a fresh deadline without treating time as IME completion", () => Sync(() => {
+            var timing = new HostTrialTiming(); timing.ArmKeyboardTimeout(0);
+            timing.ArmKeyboardTimeout(15);
+            Check(!timing.ShouldCloseKeyboard(20, true), "Replacement inherited the first keyboard deadline");
+            Check(timing.ShouldCloseKeyboard(35, true), "Replacement did not retain the 20 second diagnostic timeout");
+            var observation = new HostPointerObservation(false, true, true, true, false, true, false, true);
+            Check(observation.Blocked && !observation.RayPolicyPermitted, "A diagnostic timer was confused with actual trial/IME state");
+        }));
         await Test("host IME return separates trial suppression from missing tracking", () => Sync(() => {
             var editing = new HostPointerObservation(false, false, true, false, false, true, false, true);
             Check(editing.Blocked && !editing.RayPolicyPermitted, "Editing did not suppress input");

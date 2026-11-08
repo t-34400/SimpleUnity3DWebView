@@ -6,6 +6,6 @@
 
 CoreはUnity/Metaから独立した基礎実装です。GPU/IME/XRプローブは製品用Android backendへ接続されていません。Vulkanの描画、別ActivityのIME等の個別成功を製品全体の成功とは扱いません。
 
-ログ取得はリポジトリの`Tools/probe.py`へ集約しました。Diagnostics.mdに旧captureコマンドの互換動作と取得失敗の扱いをまとめています。過去の検証ページは経緯を残す資料であり、現在の実行依頼ではありません。
+ログ取得と起動はリポジトリの`Tools/probe.py`へ集約しました。Diagnostics.mdに旧capture/runコマンドの互換動作と失敗の扱いをまとめています。過去の検証ページは経緯を残す資料であり、現在の実行依頼ではありません。
 
-配布UPM内に検証実装が混在している点は負債として記録しています。この整理では既存のUnity参照・GUID・JNIとAndroid/nativeバイナリを保持し、ファイル移動は行っていません。HC2の判定/観測をUnity依存のない値型へ切り出し、既存の抑止条件を維持しています。Editor検証の入口はEditorValidation.mdです。
+配布UPM内に検証実装が混在している点は負債として記録しています。この整理では既存のUnity参照・GUID・JNIとAndroid/nativeバイナリを保持し、ファイル移動は行っていません。HC2の判定/観測と自動開始/keyboard timeoutの時間条件をUnity依存のない処理へ切り出し、既存条件を維持しています。Editor検証の入口はEditorValidation.mdです。

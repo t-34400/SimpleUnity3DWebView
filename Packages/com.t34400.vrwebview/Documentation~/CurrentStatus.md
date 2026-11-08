@@ -33,7 +33,7 @@
 
 `Runtime/Core`は状態・要求・座標等の基礎実装。`IBrowserBackend`の製品用Android実装はまだ存在せず、Coreと現在のGPU/IMEプローブは接続されていない。`Runtime/UnityUI`は入力アダプタの基礎。`Runtime/Android`、`Runtime/VulkanProbe`、`Android~`の各Probeは検証実装を含む。
 
-HC2の判定/観測はHostPointerObservationへ切り出した。Coreとプローブのbackend接続、UI/GPU/hostの分離はまだ完了していない。Unityの参照・GUID・既存シーンを壊すファイル移動は行っていない。
+HC2の判定/観測はHostPointerObservation、自動開始とUnity keyboard timeoutの時間条件はHostTrialTimingへ切り出した。Coreとプローブのbackend接続、UI/GPU/hostの分離はまだ完了していない。Unityの参照・GUID・既存シーンを壊すファイル移動は行っていない。
 
 ## このフェーズの成果と残作業
 
@@ -42,7 +42,7 @@ HC2の判定/観測はHostPointerObservationへ切り出した。Coreとプロ�
 - [技術的負債台帳](TechnicalDebt.md)で完了条件を定める。
 - [実装分離](RuntimeSeparation.md)の最初の判定/観測を実装し、従来の抑止条件を保持する。
 - [Editor検証](EditorValidation.md)を共通ツールから起動できるようにした。本クラウドで実Editorは未検出で、実コンパイルは未確認。
-- ログ採取は共通の`Tools/probe.py`へ集約。従来の二つのcaptureシェルは互換入口として委譲する。[診断仕様](Diagnostics.md)を参照。
+- ログ採取と起動は共通の`Tools/probe.py`へ集約。従来のcapture/runシェルは互換入口として委譲する。全case/modeの引数と失敗経路を合成ADBで検証し、実機起動は未確認。[診断仕様](Diagnostics.md)を参照。
 - patch-exchangeのWSL修正はmainへ統合済み。[統合結果](FoundationIntegration.md)と[標準手順](StandardWorkflow.md)を参照。新しいmain版CLIで既存ジョブのresumeも確認した。
 
 実機試験を再開する条件は、ログの取得・失敗検出がローカルで検証され、配布CLIの版が統一され、次の一試験が決める設計判断と打ち切り条件が明文化されていること。残るIMEやレイの問題を「解消済み」と宣言しない。

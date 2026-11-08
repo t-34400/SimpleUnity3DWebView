@@ -26,9 +26,10 @@ namespace T34400.VRWebView
         private Material rayMaterial;
         private readonly ProbeRayInput input = new ProbeRayInput();
         private readonly PointerPressState press = new PointerPressState();
+        private readonly HostTrialTiming timing = new HostTrialTiming();
         private readonly List<XRDisplaySubsystem> displays = new List<XRDisplaySubsystem>();
-        private string startup = "menu", lastKeyboard, lastHands;
-        private float startupAt, keyboardUntil, nextPulse, dwellSince;
+        private string lastKeyboard, lastHands;
+        private float nextPulse, dwellSince;
         private bool placed, paused, nativeActive;
         private bool gazeSuspended, pointerTracked, pointerBlocked, gazeAllowed;
         private HostPointerObservation pointerObservation;
@@ -49,12 +50,13 @@ namespace T34400.VRWebView
             bridge = new AndroidJavaClass("com.t34400.vrwebview.HostComparison");
             using (var player = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
                 owner = player.GetStatic<AndroidJavaObject>("currentActivity");
+            string startup = timing.StartupCase;
             WithActivity(activity => {
                 bridge.CallStatic("start", activity);
                 startup = readIntent ? bridge.CallStatic<string>("startupCase", activity) : "menu";
             });
-            startupAt = Time.unscaledTime + 3f;
-            Trace("start startupCase=" + startup + " renderer=" + SystemInfo.graphicsDeviceType + " handResetSync=" + synchronizeHandReset);
+            timing.ArmStartup(startup, Time.unscaledTime);
+            Trace("start startupCase=" + timing.StartupCase + " renderer=" + SystemInfo.graphicsDeviceType + " handResetSync=" + synchronizeHandReset);
         }
         private void WithActivity(Action<AndroidJavaObject> action)
         {
@@ -68,7 +70,7 @@ namespace T34400.VRWebView
             // Meta's documented system keyboard path. No WebView, DOM copying,
             // or focus reclamation. Optional hand-reset synchronization is independent.
             keyboard = TouchScreenKeyboard.Open("", TouchScreenKeyboardType.Default);
-            keyboardUntil = Time.unscaledTime + 20f; lastKeyboard = null;
+            timing.ArmKeyboardTimeout(Time.unscaledTime); lastKeyboard = null;
             Trace("TouchScreenKeyboard.Open type=Default returned=" + (keyboard != null));
         }
         public void CloseKeyboard()
@@ -105,11 +107,11 @@ namespace T34400.VRWebView
             UpdateHead();
             SubsystemManager.GetSubsystems(displays);
             bool running = displays.Exists(d => d.running);
-            if (startup != "menu" && bridge != null && !paused && placed && running && Application.isFocused && Time.unscaledTime >= startupAt)
-            { string mode = startup; startup = "menu"; RunCase(mode); }
+            if (timing.TryTakeStartup(Time.unscaledTime, bridge != null, paused, placed, running, Application.isFocused, out var mode))
+                RunCase(mode);
             if (spinner != null) spinner.localRotation = Quaternion.Euler(0, Time.unscaledTime * 60f, Time.unscaledTime * 35f);
             if (bridge != null) nativeActive = bridge.CallStatic<bool>("isTrialActive");
-            if (keyboard != null && Time.unscaledTime >= keyboardUntil) CloseKeyboard();
+            if (timing.ShouldCloseKeyboard(Time.unscaledTime, keyboard != null)) CloseKeyboard();
             UpdatePointer();
             if (Time.unscaledTime < nextPulse) return;
             nextPulse = Time.unscaledTime + 1f;

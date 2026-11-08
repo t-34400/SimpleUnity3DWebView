@@ -1,6 +1,6 @@
 # 実装を分離する順序と所有権
 
-2026-11-08 JST。現行ソースを読んで決めた分離計画。以下の分離先の役割は目標。HC2の判定/観測だけをHostPointerObservationへ切り出した。既存MonoBehaviourの名前・namespace・assembly・GUID・JNI・シーンは保持する。
+2026-11-08 JST。現行ソースを読んで決めた分離計画。以下の分離先の役割は目標。HC2の判定/観測をHostPointerObservation、自動開始とUnity keyboard timeoutの時間条件をHostTrialTimingへ切り出した。既存MonoBehaviourの名前・namespace・assembly・GUID・JNI・シーンは保持する。
 
 ## 現在混在している責務
 
@@ -66,3 +66,15 @@ host生成・UI threadへの要求・閉じる通知を、試験シナリオのt
 ログには`pointerBlockReasons`、`rayPolicyPermitted`、`raySuppressionReason`を追加した。NativeTrialが終わっていない場合と、抑止なしでも追跡元がない場合を分ける。rayPolicyPermittedはコード上の許可で、HMD内にrayが実表示された証拠ではない。
 
 関連する5つの時間順シナリオを純C#で検証した。Editor確認の入口は[EditorValidation.md](EditorValidation.md)。UI生成・GPU target・Android hostの切り出しはまだ行っていない。
+
+## Editor確認を待たずに進めた時間条件の分離
+
+`HostTrialTiming`はUnity APIを呼ばず、HC2が渡すunscaledTimeで次の既存条件を判定する。
+
+- bridge開始後3秒を過ぎ、bridgeあり・pauseなし・panel配置済み・XR稼働・Application focusありのとき、pendingのstartup caseを一度だけ取り出す。実行前にmenuへ戻す。
+- readinessが欠けてもpendingを消さず、復帰時に新たな3秒待ちを始めない。bridgeを開き直す場合は既存どおり再設定する。
+- Unity keyboardのOpenから20秒で、instanceが残っている場合だけCloseを要求する。別のOpenでは期限を更新する。
+
+RunCaseのaction、Java bridge、keyboardの実体とClose、gaze/gesture、UI生成はHostComparisonProbeに残す。上記20秒はUnity keyboard用の診断上限で、Android側native trialの20秒timerとは別。どちらもIME確定やシステムキーボード実表示の証拠ではない。
+
+起動待ち・各readiness喪失・一度だけの取り出し・再arm・keyboard差し替えを5つの時間順シナリオで検証した。新しいUnity APIは追加していないが、MonoBehaviour側の配線を含む実Editorコンパイルは引き続き未確認。

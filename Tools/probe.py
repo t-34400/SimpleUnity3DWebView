@@ -192,6 +192,14 @@ def main():
     summary = commands.add_parser('summarize', help='Inspect an existing log offline; no device is needed')
     summary.add_argument('log', type=Path)
     summary.add_argument('--expect', choices=('any', 'host', 'activity'), default='any')
+    import probe_launch
+    host = commands.add_parser('launch-host', help='Launch an installed HC2 probe; no build/install/capture')
+    host.add_argument('case', nargs='?', choices=probe_launch.HOST_CASES, default='menu')
+    host.add_argument('boot', nargs='?', choices=('off', 'on'))
+    activity = commands.add_parser('launch-activity', help='Launch an installed Activity GPU probe')
+    activity.add_argument('mode', nargs='?', choices=probe_launch.ACTIVITY_MODES, default='texture')
+    for launcher in (host, activity):
+        launcher.add_argument('--package', default=os.environ.get('VRWEBVIEW_PACKAGE', probe_launch.DEFAULT_PACKAGE))
     for name in ('editor-doctor', 'editor-check'):
         editor = commands.add_parser(name, help='Check installed Unity or run package EditMode tests without HMD')
         editor.add_argument('--editor', help='Unity executable; also VRWEBVIEW_UNITY_EDITOR')
@@ -200,6 +208,13 @@ def main():
             editor.add_argument('--timeout', type=int, default=1200)
     args = parser.parse_args()
     try:
+        if args.command in ('launch-host', 'launch-activity'):
+            request = probe_launch.LaunchRequest('host' if args.command == 'launch-host' else 'activity',
+                args.case if args.command == 'launch-host' else args.mode, args.package, getattr(args, 'boot', None))
+            command = adb_command(args)
+            check_device(command)
+            print(json.dumps(probe_launch.launch(command, request), indent=2))
+            return 0
         if args.command in ('editor-doctor', 'editor-check'):
             import unity_validation
             if args.command == 'editor-doctor':
@@ -226,7 +241,7 @@ def main():
             if result['issues']:
                 return 2
         return 0
-    except (ProbeError, OSError) as error:
+    except (ProbeError, probe_launch.LaunchError, OSError) as error:
         print('ERROR:', error, file=sys.stderr)
         return 2
 
