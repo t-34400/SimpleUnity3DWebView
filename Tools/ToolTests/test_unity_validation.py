@@ -67,12 +67,19 @@ assert '-runTests' in args and '-batchmode' in args
 assert '-quit' not in args
 platform=os.environ.get('VRWEBVIEW_EDITOR_TEST_PLATFORM','EditMode')
 assert args[args.index('-testPlatform')+1]==platform
+assert ('-nographics' in args)==(platform=='EditMode')
+assert ('-vrwebviewEditorTestsWithoutXR' in args)==(platform=='PlayMode')
 assert args[args.index('-buildTarget')+1]=='Android'
 assert args[args.index('-assemblyNames')+1]=='T34400.VRWebView.'+platform+'.Tests'
 mode=os.environ.get('VRWEBVIEW_EDITOR_TEST_MODE','passed')
 if mode=='timeout': time.sleep(10)
 xml=Path(args[args.index('-testResults')+1]);log=Path(args[args.index('-logFile')+1])
 if mode!='no-log': log.write_text('Initialize engine version: '+('6000.3.0f1' if mode=='wrong-version' else '6000.4.5f1')+' (fixture)\\n')
+if platform=='PlayMode' and mode not in ('no-isolation','native-crash','no-log'):
+ with log.open('a') as stream: stream.write('VRWEBVIEW_EDITOR_TESTS: XR auto-start isolation verified before scene load\\n')
+if mode=='native-crash':
+ with log.open('a') as stream: stream.write('xrCreateSession: XR_ERROR_GRAPHICS_DEVICE_INVALID\\nNative Crash Reporting\\n')
+ sys.exit(5)
 if mode!='no-xml':
  result='Skipped' if mode=='skipped' else 'Failed' if mode in ('failed','failed-exit','failed-hang') else 'Passed'
  name='Other.Tests.Sample' if mode=='foreign' else 'T34400.VRWebView.Tests.PointerTests.Sample'
@@ -117,6 +124,37 @@ if mode=='exit-error': sys.exit(17)
         self.assertEqual(command[command.index('-testPlatform') + 1], 'PlayMode')
         self.assertEqual(command[command.index('-assemblyNames') + 1], unity.PLAYMODE_TEST_ASSEMBLY)
         self.assertNotIn('-buildPlayerPath', command)
+        self.assertNotIn('-nographics', command)
+        self.assertIn(unity.XR_ISOLATION_ARGUMENT, command)
+        self.assertTrue(summary['xr_isolation_verified'])
+        self.assertEqual(summary['graphics_mode'], 'enabled')
+
+    def test_editmode_remains_headless_without_the_playmode_override(self):
+        self.assertEqual(self.run_check().returncode, 0)
+        summary = self.summary()
+        self.assertIn('-nographics', summary['command'])
+        self.assertNotIn(unity.XR_ISOLATION_ARGUMENT, summary['command'])
+        self.assertFalse(summary['xr_isolation_requested'])
+        self.assertEqual(summary['graphics_mode'], 'null')
+
+    def test_passing_playmode_xml_without_isolation_evidence_is_failure(self):
+        result = self.run_check('no-isolation', test_platform='PlayMode')
+        self.assertEqual(result.returncode, 2)
+        summary = self.summary()
+        self.assertFalse(summary['xr_isolation_verified'])
+        self.assertEqual(summary['tests']['passed'], 1)
+        self.assertEqual(summary['exit_code'], 0)
+        self.assertIn('PlayMode XR isolation was not verified', summary['error'])
+
+    def test_native_crash_and_missing_xml_retain_the_underlying_diagnostic(self):
+        result = self.run_check('native-crash', test_platform='PlayMode')
+        self.assertEqual(result.returncode, 2)
+        summary = self.summary()
+        self.assertEqual(summary['exit_code'], 5)
+        self.assertTrue(summary['native_crash_observed'])
+        self.assertTrue(summary['xr_graphics_device_invalid_observed'])
+        self.assertIn('Editor native crash', summary['error'])
+        self.assertIn('XML is missing', summary['error'])
 
     def test_invalid_test_platform_cannot_start_an_editor(self):
         result = subprocess.run([sys.executable, str(TOOLS / 'probe.py'), 'editor-check', '--test-platform', 'Android'], capture_output=True, text=True)

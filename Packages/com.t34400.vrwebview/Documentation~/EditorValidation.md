@@ -13,6 +13,12 @@ python3 Tools/probe.py editor-check
 
 `editor-doctor`はインストールされたEditorとテスト設定を確認するだけで、Editorを起動しない。`editor-check`はUnity Test Frameworkをbatchmodeで起動し、Androidをactive buildTargetとしてpackageのEditor内テストを実行する。既定はEditMode、`--test-platform PlayMode`でEditor内PlayModeを選べる。Player/APKのビルド、HMD試験、製品シーン生成、IME方式変更は行わない。PlayMode test内では一時GameObjectを作る。
 
+EditModeは従来どおり`-nographics`を使う。PlayModeは描画を有効にして起動し、専用引数`-vrwebviewEditorTestsWithoutXR`を付ける。通常のEditor PlayやAPKにはこの引数を渡さない。
+
+PlayMode test assembly内のEditor限定helperが、batchmode・runTests・PlayMode・このpackageのassembly名・専用引数の全一致時だけ動く。`SubsystemRegistration`でEditorの`XRGeneralSettings.Instance`参照を一時的にnullにする。XR Management 4.5.2は`AfterAssembliesLoaded`/`BeforeSplashScreen`でこの参照を確認するため、自動initialize/startを行わない。serialized設定・Android設定・loader一覧は編集も保存もしない。通常のドメイン再ロードではXR ManagementがEditor参照を再構築し、再ロードなしの場合はEnteredEditMode/終了時に旧参照を戻す。別ownerが新しい参照を設定していれば上書きしない。
+
+`BeforeSceneLoad`でも参照が外れていることを確認し、`VRWEBVIEW_EDITOR_TESTS: XR auto-start isolation verified before scene load`を記録する。PlayMode成功には、この観測行も必須とする。helperの実Editor実行順・挙動は今回の修正後にはまだ未確認で、合成launcher成功を代用にしない。これはXR機器不要のlifecycleテスト環境であり、XR統合の検証にはならない。
+
 Editorは`--editor PATH`または`VRWEBVIEW_UNITY_EDITOR`で指定できる。未指定ではProjectVersionの版に対応するWindows/WSLのUnity Hub配置、PATHのUnityを確認する。WSLからWindows Unity.exeを呼ぶ場合は、project/results/logのパスをwslpathでWindows形式へ変換する。PATHへshellコマンド文字列を渡す形式ではない。
 
 出力先は既存の`VRWEBVIEW_LOG_DIR`または`--log-dir`。WSLでは既定のDownloadsを使う。実行ごとに新しい`VRWebView-UnityCheck-...`フォルダーへ次を保存する。
@@ -34,6 +40,7 @@ summaryは起動前から作成し、`status=running`と`phase`を更新する�
 - `T34400.VRWebView.Tests.`内のtest-caseが1件以上あり、すべてPassed。
 - rootの結果と件数が整合し、Skipped/Failed/Inconclusiveのケースがない。
 - Editor.logが存在し、空ではない。ログにEditor版が記録された場合はProjectVersionと一致する。
+- Native Crash Reportingが記録されていない。PlayModeでは専用helperのXR抑止確認行が存在する。
 
 過去のXML、0件、他namespaceのテストだけ、終了コード0だけでは成功にしない。XMLがすべてPassedでも、終了が観測できない場合は失敗とする。timeoutでは自分が起動した子プロセスだけにkillを要求し、全Unity/Hub/Java/ADBをまとめて終了しない。WSLからWindows exeを起動した場合、WSL側の子の終了だけでWindows Editorの終了は保証できず、summaryと端末にその限界を明示する。再度プロジェクトを開く前に、そのbatch Editorが閉じていることを確認する。summaryのEditor版は期待値と観測値を分け、観測できなかった版を確認済みとは呼ばない。
 
@@ -58,3 +65,18 @@ Unity dispatcher/view部品は[UnityView.md](UnityView.md)に実装範囲を示�
 - `summary.json`: `84fdbe54f172b3aa6361000ab0ee23d62546b308869906c888a267fb32b0027b`
 - `editmode-results.xml`: `e47f21db565b649116f26d87f761d6fe68ab1c992ca28ea95cb4a3a91ac0ee6f`
 - `Editor.log`: `cdb788388e7f832065883599d09fd4b7cdda000a47c9b42c31f343effeefeb24`
+
+## その後の利用者ログ
+
+2026-11-08 19:50:28–19:52:21 JSTのEditMode再実行は14/14 Passed、終了コード0、process_exit_observed=true、113.444秒。summary/XML/logを照合した。前回の終了停滞は再現しなかったが、その根本原因の確定とは異なる。
+
+20:25:46–20:28:21 JSTの旧launcherによるPlayModeは終了コード5、154.535秒、結果XMLなし。ログにはNullGfxDevice、XR Managementの自動初期化、MetaのUnsupported Graphics API: 4、xrCreateSessionのXR_ERROR_GRAPHICS_DEVICE_INVALID、続いてOpenXR message loop内のNative Crash Reportingがある。3テストの成功・失敗を示すXMLはなく、テスト開始前のXR起動でクラッシュしたと扱う。
+
+preview.27ではPlayModeの-nographicsを外し、前述のテスト限定XR抑止を追加した。テスト本体3件や製品Runtime、Android/native設定は変更しない。ログにnative crashとXR graphics errorがある場合はsummaryへ別々に残し、XML欠落だけを主因として表示しない。修正後PlayModeは利用者環境での確認待ち。
+
+受領ZIP SHA-256:
+
+- EditMode ZIP: `ceab97e8d30a68353e20d41c95af1802d1e9122cd88c2e9dec2526e865d14012`
+- PlayMode ZIP: `34752802e91ae571f944a64417041614eb10950f9d2bef8e15292129d5599300`
+
+XR Managementの根拠は利用者提供のdependency sources（4.5.2、fingerprint f589c7ba49ff63cadb66fd77cdfb09f538674e1a）。`Runtime/XRGeneralSettings.cs`の2つの自動初期化methodと、`Editor/XRGeneralSettingsPerBuildTarget.cs`のStandalone参照構築を確認した。実行ログのpackage cache fingerprintとも一致する。

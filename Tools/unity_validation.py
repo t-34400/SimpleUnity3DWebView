@@ -14,6 +14,8 @@ TEST_ASSEMBLY = 'T34400.VRWebView.EditMode.Tests'
 PLAYMODE_TEST_ASSEMBLY = 'T34400.VRWebView.PlayMode.Tests'
 TEST_NAMESPACE = 'T34400.VRWebView.Tests.'
 TEST_FILTER = r'^T34400\.VRWebView\.Tests\.'
+XR_ISOLATION_ARGUMENT = '-vrwebviewEditorTestsWithoutXR'
+XR_ISOLATION_MARKER = 'VRWEBVIEW_EDITOR_TESTS: XR auto-start isolation verified before scene load'
 
 
 class UnityValidationError(Exception):
@@ -36,6 +38,8 @@ def doctor(project, version, editor=None, test_platform='EditMode'):
                 expected_editor_version=version, editor_available=available,
                 package_testable=testable, package_tests_present=tests_present,
                 requested_build_target='Android', test_platform=test_platform,
+                graphics_mode='enabled' if test_platform == 'PlayMode' else 'null',
+                xr_isolation_requested=test_platform == 'PlayMode',
                 test_assembly=TEST_ASSEMBLY if test_platform == 'EditMode' else PLAYMODE_TEST_ASSEMBLY,
                 scope='Editor import/compilation and package ' + test_platform + ' tests; no Player build or HMD tests')
 
@@ -127,6 +131,15 @@ def collect_log(report, log, version):
     report['observed_editor_version'] = observed[1] if observed else None
     if observed and observed[1] != version:
         errors.append('Observed Editor version differs from the project version')
+    report['native_crash_observed'] = 'Native Crash Reporting' in text or 'A crash has been intercepted' in text
+    report['xr_graphics_device_invalid_observed'] = 'XR_ERROR_GRAPHICS_DEVICE_INVALID' in text
+    if report['native_crash_observed']:
+        errors.append('Editor native crash recorded in Editor.log'
+                      + (' during OpenXR graphics initialization' if report['xr_graphics_device_invalid_observed'] else ''))
+    if report.get('xr_isolation_requested'):
+        report['xr_isolation_verified'] = XR_ISOLATION_MARKER in text
+        if not report['xr_isolation_verified']:
+            errors.append('PlayMode XR isolation was not verified in Editor.log')
     return errors
 
 
@@ -211,11 +224,15 @@ def run(project, version, editor, output_dir, timeout, test_platform='EditMode',
     print('Running Editor package tests. Reports:', output, flush=True)
     save_summary(output, report, started)
     try:
-        command = [executable, '-batchmode', '-nographics', '-runTests',
+        command = [executable, '-batchmode', '-runTests',
                    '-projectPath', unity_path(project, executable), '-buildTarget', 'Android',
                    '-testPlatform', test_platform, '-assemblyNames', setup['test_assembly'],
                    '-testFilter', TEST_FILTER, '-testResults', unity_path(xml, executable),
                    '-logFile', unity_path(log, executable)]
+        if test_platform == 'EditMode':
+            command.append('-nographics')
+        else:
+            command.append(XR_ISOLATION_ARGUMENT)
         report['command'] = command
         process = subprocess.Popen(command)  # Exactly one launch; no retries.
         report['child_pid'] = process.pid
@@ -224,14 +241,13 @@ def run(project, version, editor, output_dir, timeout, test_platform='EditMode',
         wait_for_editor(process, report, output, xml, log, started, timeout, shutdown_timeout)
         # Preserve XML even when process exit is nonzero. A timeout must not hide test failures.
         collect_results(report, xml)
-        errors = []
+        errors = collect_log(report, log, version)
         if report['exit_code']:
             errors.append('Unity exited with code ' + str(report['exit_code']))
         try:
             read_results(xml)
         except UnityValidationError as failure:
             errors.append(str(failure))
-        errors.extend(collect_log(report, log, version))
         if errors:
             raise UnityValidationError('; '.join(errors))
         report['status'] = 'passed'

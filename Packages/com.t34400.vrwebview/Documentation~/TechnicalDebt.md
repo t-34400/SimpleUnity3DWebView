@@ -12,7 +12,7 @@
 | D06 | 判定/時間条件を分離・GPU状態処理を準備 | 製品Runtimeへ検証UI/Activity/旧互換名が混在 | GPU状態処理は未接続。実Editor確認後のadapter接続、assembly/Android境界、GUID/JNI/scene互換検証後に移動 |
 | D07 | 未解決 | 同一Unity WindowでWebView直接IMEが出ない | 直接経路または条件付き代理接続の採用判断。必要な実機試験を別途限定 |
 | D08 | 観測改善・実機未解決 | IME後のレイ非表示の原因が混在 | nativeTrial等のgateと実入力復帰不良をログ・実観察で区別 |
-| D09 | 実EditModeで13/14成功・終了停滞は未確定 | Unity Editorでの継続compile/import検証がない | 実compile/実行を利用者ログで確認。EditMode lifecycleの前提を修正し、進捗/結果保存と終了待ち上限を追加。修正後EditMode/PlayMode/sampleとプロセス終了は確認待ち |
+| D09 | 実EditMode全成功・PlayMode環境を修正 | Unity Editorでの継続compile/import検証がない | 実EditMode 14/14と終了コード0を確認。旧PlayModeのXR/Null graphicsクラッシュへ、描画有効化とテスト限定XR抑止を追加。修正後PlayMode/sampleは確認待ち |
 | D10 | 共通化済み・実環境未確認 | probeごとのlauncherにADB/設定処理が重複 | 共通ADB解決/接続確認とlaunch-host/launch-activityへ統合。旧引数・Intent extrasを合成ADBで確認。実機実行は停止中 |
 | D11 | 未確定 | GLES/Vulkanを製品対応として扱う範囲 | 実機の描画・色・寿命・性能条件を確定。GLESの実装済みと動作確認済みを分ける |
 | D12 | 未着手 | 既存BrowserSessionと実backendが未接続 | backendの成立後に一本の寿命・要求経路へ接続 |

@@ -5,7 +5,7 @@ Unity 6000.4 / Meta Quest向けWebViewの再設計プロジェクトです。現
 入口は[現在の状態](Packages/com.t34400.vrwebview/Documentation~/CurrentStatus.md)です。
 
 - [証拠台帳](Packages/com.t34400.vrwebview/Documentation~/EvidenceLedger.md)：実機観察、提供ログ、仮説、未確認事項。
-- [Editor検証](Packages/com.t34400.vrwebview/Documentation~/EditorValidation.md)：batchmodeの起動・XML判定・終了待ち。実EditMode 13/14成功の証拠とテスト修正、終了停滞の限界。
+- [Editor検証](Packages/com.t34400.vrwebview/Documentation~/EditorValidation.md)：batchmodeの起動・XML判定・終了待ち。実EditMode 14/14成功と正常終了、PlayModeのXR起動クラッシュに対する起動環境修正。
 - [GPU寿命](Packages/com.t34400.vrwebview/Documentation~/GpuLifetime.md)：世代と退役条件の状態処理。実体への接続・実GPU確認は未実施。
 - [上位レイヤー](Packages/com.t34400.vrwebview/Documentation~/UpperLayers.md)：表示借用契約、tab/sample model、Sessionの所有thread。ブラウザーUIと製品Android backendは残る。
 - [Unity表示部品](Packages/com.t34400.vrwebview/Documentation~/UnityView.md)：dispatcher、Texture公開口、RawImage、pointer/scroll。Unity部品の実Editor確認とAndroid backend接続は残る。
