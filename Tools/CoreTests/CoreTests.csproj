@@ -8,6 +8,7 @@
     <Compile Include="../../Packages/com.t34400.vrwebview/Runtime/Core/*.cs" />
     <Compile Include="../../Packages/com.t34400.vrwebview/Editor/HostEntryManifest.cs" />
     <Compile Include="../../Packages/com.t34400.vrwebview/Runtime/VulkanProbe/ActivityProbeInputPolicy.cs" />
+    <Compile Include="../../Packages/com.t34400.vrwebview/Runtime/VulkanProbe/HostPointerObservation.cs" />
     <Compile Include="Program.cs" />
   </ItemGroup>
 </Project>

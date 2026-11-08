@@ -8,4 +8,4 @@ CoreはUnity/Metaから独立した基礎実装です。GPU/IME/XRプローブ�
 
 ログ取得はリポジトリの`Tools/probe.py`へ集約しました。Diagnostics.mdに旧captureコマンドの互換動作と取得失敗の扱いをまとめています。過去の検証ページは経緯を残す資料であり、現在の実行依頼ではありません。
 
-配布UPM内に検証実装が混在している点は負債として記録しています。この整理では既存のUnity参照・GUID・JNIとAndroid/nativeバイナリを保持し、ファイル移動やUnity/Android側の挙動変更は行っていません。
+配布UPM内に検証実装が混在している点は負債として記録しています。この整理では既存のUnity参照・GUID・JNIとAndroid/nativeバイナリを保持し、ファイル移動は行っていません。HC2の判定/観測をUnity依存のない値型へ切り出し、既存の抑止条件を維持しています。Editor検証の入口はEditorValidation.mdです。

@@ -55,7 +55,16 @@ def analyze(lines, expected='any'):
             if 'tick ' in line:
                 fields = dict(re.findall(r'\b(appFocus|paused|nativeTrial|pointerTracked|pointerBlocked)=(True|False|true|false)', line))
                 if fields:
-                    result['pointer_states'].append(dict(location, **{k: v.lower() == 'true' for k, v in fields.items()}))
+                    state = dict(location, **{k: v.lower() == 'true' for k, v in fields.items()})
+                    observation = re.search(r'pointerObservation=(Ready|Unavailable)', line)
+                    reasons = re.search(r'pointerBlockReasons=([A-Za-z|]+)', line)
+                    permitted = re.search(r'rayPolicyPermitted=(True|False|true|false)', line)
+                    suppression = re.search(r'raySuppressionReason=([A-Za-z]+)', line)
+                    state['observation_available'] = observation[1] == 'Ready' if observation else None
+                    state['block_reasons'] = ([] if reasons[1] == 'None' else reasons[1].split('|')) if reasons else None
+                    state['ray_policy_permitted'] = permitted[1].lower() == 'true' if permitted else None
+                    state['ray_suppression_reason'] = suppression[1] if suppression else None
+                    result['pointer_states'].append(state)
         transition = re.search(r'(?:OnSessionStateChange:\s*|sessionState=)(\d+)\s*(?:->|>)\s*(\d+)', line)
         if transition:
             result['xr_transitions'].append(dict(location, before=int(transition[1]), after=int(transition[2])))
@@ -183,8 +192,27 @@ def main():
     summary = commands.add_parser('summarize', help='Inspect an existing log offline; no device is needed')
     summary.add_argument('log', type=Path)
     summary.add_argument('--expect', choices=('any', 'host', 'activity'), default='any')
+    for name in ('editor-doctor', 'editor-check'):
+        editor = commands.add_parser(name, help='Check installed Unity or run package EditMode tests without HMD')
+        editor.add_argument('--editor', help='Unity executable; also VRWEBVIEW_UNITY_EDITOR')
+        if name == 'editor-check':
+            editor.add_argument('--log-dir')
+            editor.add_argument('--timeout', type=int, default=1200)
     args = parser.parse_args()
     try:
+        if args.command in ('editor-doctor', 'editor-check'):
+            import unity_validation
+            if args.command == 'editor-doctor':
+                report = unity_validation.doctor(ROOT, editor_version(), args.editor)
+                print(json.dumps(report, indent=2))
+                return 0 if report['ready'] else 2
+            try:
+                report = unity_validation.run(ROOT, editor_version(), args.editor,
+                    args.log_dir or os.environ.get('VRWEBVIEW_LOG_DIR') or default_log_dir(), args.timeout)
+            except unity_validation.UnityValidationError as error:
+                raise ProbeError(str(error)) from error
+            print(json.dumps(report, indent=2))
+            return 0
         if args.command == 'doctor':
             command = adb_command(args)
             check_device(command)

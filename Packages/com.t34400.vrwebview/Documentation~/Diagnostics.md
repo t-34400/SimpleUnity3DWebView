@@ -44,3 +44,10 @@ PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s Tools/ToolTests -v
 ```
 
 合成ADBのログ出力・エラーと一時ファイルで検証する。実機は使用しない。POSIX実行fixtureのテストはWindowsではskipし、純粋な解析テストは実行できる。これらの成功をWindows/WSL実環境やQuestでの採取成功とは言い換えない。
+
+
+## HC2の判定/観測とEditor検証
+
+新しいHC2コードは`pointerObservation=Ready`と、`pointerBlockReasons`、`rayPolicyPermitted`、`raySuppressionReason`を記録する。20秒trialによる抑止、Unity keyboardの状態、追跡元なしを分けて解析する。古いログではこれらを推測で埋めない。rayPolicyPermittedはHMD実表示の判定ではない。
+
+Editor用には`editor-doctor`と`editor-check`を追加した。同じTools/probe.pyから利用し、ADBやHMDを必要としない。詳細は[EditorValidation.md](EditorValidation.md)。これは今すぐの試行依頼ではない。

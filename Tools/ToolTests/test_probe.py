@@ -47,6 +47,26 @@ class AnalysisTests(unittest.TestCase):
         self.assertEqual(report['trials'][0]['case'], 'native-webinfo')
         self.assertEqual(report['trials'][0]['pid'], 123)
 
+    def test_trial_return_keeps_policy_permission_distinct_from_visibility(self):
+        line = HOST[4] + ' pointerObservation=Ready pointerBlockReasons=NativeTrial rayPolicyPermitted=False raySuppressionReason=InputSuppressed'
+        state = probe.analyze([line])['pointer_states'][0]
+        self.assertEqual(state['block_reasons'], ['NativeTrial'])
+        self.assertFalse(state['ray_policy_permitted'])
+        self.assertEqual(probe.analyze([line])['ray_visibility'], 'requires_user_observation')
+
+    def test_tracking_absence_is_not_input_suppression(self):
+        line = HOST[4].replace('nativeTrial=True', 'nativeTrial=False').replace('pointerBlocked=True', 'pointerBlocked=False')
+        line += ' pointerObservation=Ready pointerBlockReasons=None rayPolicyPermitted=False raySuppressionReason=NoInputSource'
+        state = probe.analyze([line])['pointer_states'][0]
+        self.assertEqual(state['block_reasons'], [])
+        self.assertFalse(state['ray_policy_permitted'])
+        self.assertEqual(state['ray_suppression_reason'], 'NoInputSource')
+
+    def test_old_logs_do_not_get_invented_suppression_causes(self):
+        state = probe.analyze(HOST)['pointer_states'][0]
+        self.assertIsNone(state['block_reasons'])
+        self.assertIsNone(state['observation_available'])
+
     def test_actual_boot_mismatch_is_reported(self):
         lines = [x.replace('observed=0 valid=true', 'observed=1 valid=false') for x in HOST]
         self.assertIn('boot_expectation_mismatch', probe.analyze(lines)['issues'])

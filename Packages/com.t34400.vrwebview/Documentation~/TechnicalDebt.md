@@ -9,10 +9,10 @@
 | D03 | 今回対応 | 空ファイルやADBエラーを採取完了と誤認 | 接続確認、raw log/summary/stderr保存、欠落・0バイトを非0終了で報告 |
 | D04 | 今回対応 | 観察・ログ・仮説・実装予定が混在 | EvidenceLedgerで区別。OpenXR focus/API値から実表示を推定しない |
 | D05 | main統合済み | WSL consumer CLIとmainの機能が分裂 | fc65deaをmainへ反映済み。全277件とmain上の互換40件を確認し、StandardWorkflowへ通常手順を集約 |
-| D06 | 未着手 | 製品Runtimeへ検証UI/Activity/旧互換名が混在 | assembly/Androidモジュール境界の移行案、GUID/JNI/scene互換検証後に移動 |
+| D06 | 判定/観測のみ分離済み | 製品Runtimeへ検証UI/Activity/旧互換名が混在 | assembly/Androidモジュール境界の移行案、GUID/JNI/scene互換検証後に移動 |
 | D07 | 未解決 | 同一Unity WindowでWebView直接IMEが出ない | 直接経路または条件付き代理接続の採用判断。必要な実機試験を別途限定 |
-| D08 | 未解決 | IME後のレイ非表示の原因が混在 | nativeTrial等のgateと実入力復帰不良をログ・実観察で区別 |
-| D09 | 未完了 | Unity Editorでの継続compile/import検証がない | 6000.4.5f1で再現可能なチェック。純C#成功をEditor成功と呼ばない |
+| D08 | 観測改善・実機未解決 | IME後のレイ非表示の原因が混在 | nativeTrial等のgateと実入力復帰不良をログ・実観察で区別 |
+| D09 | 起動基盤追加・実Editor未確認 | Unity Editorでの継続compile/import検証がない | EditorValidationの共通コマンドを追加。実Editorでのimport/compile・EditMode成功を確認してから完了とする |
 | D10 | 未着手 | probeごとのlauncherにADB/設定処理が重複 | capture統合を先に安定させ、launcher統合の互換条件を定める |
 | D11 | 未確定 | GLES/Vulkanを製品対応として扱う範囲 | 実機の描画・色・寿命・性能条件を確定。GLESの実装済みと動作確認済みを分ける |
 | D12 | 未着手 | 既存BrowserSessionと実backendが未接続 | backendの成立後に一本の寿命・要求経路へ接続 |
@@ -21,7 +21,7 @@
 
 取得器について、0バイト、対象タグ欠落、ADB接続不可、採取失敗、属性不一致、boot不一致、旧capture入口の両方、raw行の保全を検証する。端末操作は合成ADB fixtureに限定する。既存パッケージのGUID・JSON・配布物の整合性も確認する。
 
-Unity/C#/Android/nativeの挙動は変更しない。AAR/.soを再生成せず、既存のsource/provenanceとbinaryを保持する。今回のローカル検証からQuestやUnity Editorの成功を追加しない。
+HC2の判定と観測を切り出し、抑止・gaze・Cancel条件を維持する。Android/native、AAR/.soとprovenanceは保持する。ローカル検証からQuestやUnity Editorの成功を追加しない。
 
 ## 実機試験を再開する前の条件
 
@@ -34,3 +34,6 @@ Unity/C#/Android/nativeの挙動は変更しない。AAR/.soを再生成せず�
 
 
 D06以降の具体的な分離順序と資源所有権は[RuntimeSeparation.md](RuntimeSeparation.md)。main統合は完了したが、Unity/Androidの責務分離やIME/レイの問題まで解消した意味ではない。
+
+
+実Editorの検証起動と成功判定は[EditorValidation.md](EditorValidation.md)。合成実行ファイルのテスト成功と、実Unityのテスト成功を区別する。

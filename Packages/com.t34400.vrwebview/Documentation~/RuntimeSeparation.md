@@ -1,6 +1,6 @@
 # 実装を分離する順序と所有権
 
-2026-11-08 JST。現行ソースを読んで決めた分離計画。以下の仮称は新規APIとして実装済みではない。今回はクラス・namespace・assembly・GUID・JNI・シーンを変更しない。
+2026-11-08 JST。現行ソースを読んで決めた分離計画。以下の分離先の役割は目標。HC2の判定/観測だけをHostPointerObservationへ切り出した。既存MonoBehaviourの名前・namespace・assembly・GUID・JNI・シーンは保持する。
 
 ## 現在混在している責務
 
@@ -55,3 +55,14 @@ host生成・UI threadへの要求・閉じる通知を、試験シナリオのt
 純粋な状態処理はUnityなしで意味のある寿命・世代・取消の検証を行う。Unityオブジェクトを作る変更では6000.4.5f1でimport/compileを確認する手段を先に用意する。現在のクラウドにはUnity Editor実行環境がなく、Coreテスト成功で代用しない。
 
 変更のたびにIME方式まで変えず、構造変更と新方式の実験を別パッチ・別の判定対象にする。実機試験は停止中のまま。まずUnity compileを確認できる基盤を整え、利用者へ同じ手作業を繰り返し依頼しない。
+
+
+## 実装した最初の切り出し
+
+`HostComparisonProbe.UpdatePointer`は入力サンプル取得とray描画を保持し、抑止判定と同じ判定に使った観測値を、Unity依存のないinternal readonly struct `HostPointerObservation`へ委譲する。
+
+条件は従来のpause、Application focus、nativeTrial、TouchScreenKeyboard.visible、keyboard.activeのまま。gazeの許可条件とジェスチャCancel規則、20秒trial寿命は変えない。直接WebView IMEを解決した変更ではない。
+
+ログには`pointerBlockReasons`、`rayPolicyPermitted`、`raySuppressionReason`を追加した。NativeTrialが終わっていない場合と、抑止なしでも追跡元がない場合を分ける。rayPolicyPermittedはコード上の許可で、HMD内にrayが実表示された証拠ではない。
+
+関連する5つの時間順シナリオを純C#で検証した。Editor確認の入口は[EditorValidation.md](EditorValidation.md)。UI生成・GPU target・Android hostの切り出しはまだ行っていない。

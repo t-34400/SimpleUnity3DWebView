@@ -1,6 +1,6 @@
 # 現在の状態と整理フェーズ
 
-更新: 2026-11-08 JST。現在は情報整理・設計見直し・技術的負債の解消フェーズ。追加のQuest試験、HC2の再試行、AG3のレイ試験は停止している。この更新のためにUnityを再ビルドする必要はない。
+更新: 2026-11-08 JST。現在は情報整理・設計見直し・技術的負債の解消フェーズ。追加のQuest試験、HC2の再試行、AG3のレイ試験は停止している。今回の新しい観測項目が実機ログへ出るのは、将来APKを更新した後になる。今は実機試行・再ビルドを依頼しない。
 
 ## 現時点の判断
 
@@ -33,14 +33,15 @@
 
 `Runtime/Core`は状態・要求・座標等の基礎実装。`IBrowserBackend`の製品用Android実装はまだ存在せず、Coreと現在のGPU/IMEプローブは接続されていない。`Runtime/UnityUI`は入力アダプタの基礎。`Runtime/Android`、`Runtime/VulkanProbe`、`Android~`の各Probeは検証実装を含む。
 
-この境界を明示することが今回の整理であり、Unityの参照・GUID・既存シーンを壊すファイル移動はまだ行っていない。
+HC2の判定/観測はHostPointerObservationへ切り出した。Coreとプローブのbackend接続、UI/GPU/hostの分離はまだ完了していない。Unityの参照・GUID・既存シーンを壊すファイル移動は行っていない。
 
 ## このフェーズの成果と残作業
 
 - 現在情報の入口を本書へ一本化し、過去の「次の試験」指示を凍結する。
 - [設計の見直し](ArchitectureReview.md)で、実装済み・提案・保留を分ける。
 - [技術的負債台帳](TechnicalDebt.md)で完了条件を定める。
-- [実装分離の具体計画](RuntimeSeparation.md)で、現行メソッド・資源所有者・変更順序を対応付ける。
+- [実装分離](RuntimeSeparation.md)の最初の判定/観測を実装し、従来の抑止条件を保持する。
+- [Editor検証](EditorValidation.md)を共通ツールから起動できるようにした。本クラウドで実Editorは未検出で、実コンパイルは未確認。
 - ログ採取は共通の`Tools/probe.py`へ集約。従来の二つのcaptureシェルは互換入口として委譲する。[診断仕様](Diagnostics.md)を参照。
 - patch-exchangeのWSL修正はmainへ統合済み。[統合結果](FoundationIntegration.md)と[標準手順](StandardWorkflow.md)を参照。新しいmain版CLIで既存ジョブのresumeも確認した。
 

@@ -5,6 +5,7 @@ Unity 6000.4 / Meta Quest向けWebViewの再設計プロジェクトです。現
 入口は[現在の状態](Packages/com.t34400.vrwebview/Documentation~/CurrentStatus.md)です。
 
 - [証拠台帳](Packages/com.t34400.vrwebview/Documentation~/EvidenceLedger.md)：実機観察、提供ログ、仮説、未確認事項。
+- [Editor検証](Packages/com.t34400.vrwebview/Documentation~/EditorValidation.md)：batchmodeの起動・XML判定。実Editor実行は未確認。
 - [設計の見直し](Packages/com.t34400.vrwebview/Documentation~/ArchitectureReview.md)：残す境界と採用・保留の判断。
 - [技術的負債](Packages/com.t34400.vrwebview/Documentation~/TechnicalDebt.md)：今回の整理範囲と残る完了条件。
 - [共通診断仕様](Packages/com.t34400.vrwebview/Documentation~/Diagnostics.md)：一つのcollectorと旧コマンドの互換入口。
@@ -14,7 +15,7 @@ Unity 6000.4 / Meta Quest向けWebViewの再設計プロジェクトです。現
 
 埋め込みUPMは`Packages/com.t34400.vrwebview`、Androidソースは`Android~`。`Runtime/Core`は基礎実装で、現在のGPU/IMEプローブは製品backendへ未接続です。プローブは比較資料として保存し、過去の「次の試験」は実行指示として扱いません。
 
-unitypackageのexportは`python3 Tools/export_unitypackage.py --output <保存先>`。UPMと同時にimportして同じGUIDを重複させないでください。既存ソース・パッチの転送にはpatch-exchangeを使います。今回、UnityのGUID、namespace、assembly、JNI、シーン配置、AAR/.soは変更していません。
+unitypackageのexportは`python3 Tools/export_unitypackage.py --output <保存先>`。UPMと同時にimportして同じGUIDを重複させないでください。既存ソース・パッチの転送にはpatch-exchangeを使います。HC2の抑止判定と観測はHostPointerObservationへ切り出しました。既存UnityのGUID、namespace、assembly、JNI、シーン配置、AAR/.soは保持しています。
 
 ## ローカル検証
 

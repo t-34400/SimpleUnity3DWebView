@@ -34,6 +34,52 @@ internal static class Program
 
     public static async Task Main()
     {
+        await Test("host IME return separates trial suppression from missing tracking", () => Sync(() => {
+            var editing = new HostPointerObservation(false, false, true, false, false, true, false, true);
+            Check(editing.Blocked && !editing.RayPolicyPermitted, "Editing did not suppress input");
+            var focused = new HostPointerObservation(false, true, true, false, false, true, false, true);
+            Check(focused.BlockReasons == HostPointerBlockReason.NativeTrial, "Focus return was confused with trial completion");
+            var ended = new HostPointerObservation(false, true, false, false, false, false, false, true);
+            Check(!ended.Blocked && !ended.RayPolicyPermitted && ended.RaySuppressionReason == "NoInputSource", "Missing tracking blamed on a completed trial");
+            var tracked = new HostPointerObservation(false, true, false, false, false, true, false, true);
+            Check(tracked.CanReadTrackedPointer && tracked.RayPolicyPermitted, "Restored tracked input was denied");
+        }));
+        await Test("host focus interruption cancels a gesture without clicking on held reacquisition", () => Sync(() => {
+            var press = new PointerPressState();
+            var browsing = new HostPointerObservation(false, true, false, false, false, true, false, false);
+            press.Update(browsing.CanReadTrackedPointer, 1, false);
+            Check(press.Update(browsing.CanReadTrackedPointer, 1, true) == PointerPhase.Down, "Initial gesture missing");
+            var lost = new HostPointerObservation(false, false, true, false, false, true, false, true);
+            Check(press.Update(lost.CanReadTrackedPointer, 1, true) == PointerPhase.Cancel, "Suppression did not cancel held gesture");
+            Check(press.Update(browsing.CanReadTrackedPointer, 1, true) == null, "Focus recovery generated a phantom click");
+            press.Update(browsing.CanReadTrackedPointer, 1, false);
+            Check(press.Update(browsing.CanReadTrackedPointer, 1, true) == PointerPhase.Down, "Fresh gesture after release was rejected");
+        }));
+        await Test("host keyboard API states remain distinguishable after closing the instance", () => Sync(() => {
+            var active = new HostPointerObservation(false, true, false, false, true, true, false, false);
+            Check(active.BlockReasons == HostPointerBlockReason.UnityKeyboardActive, "Active instance was ignored");
+            var visible = new HostPointerObservation(false, true, false, true, false, true, false, false);
+            Check(visible.BlockReasons == HostPointerBlockReason.UnityKeyboardVisible, "Visible flag was confused with an active instance");
+            Check(!visible.RayPolicyPermitted, "A latched visibility flag no longer suppresses the existing gate");
+            var closed = new HostPointerObservation(false, true, false, false, false, true, false, false);
+            Check(closed.RayPolicyPermitted, "Closed keyboard retained suppression");
+        }));
+        await Test("host gaze remains suspended after a trial and never bypasses input suppression", () => Sync(() => {
+            var menu = new HostPointerObservation(false, true, false, false, false, false, true, false);
+            Check(menu.GazeAllowed && menu.RayPolicyPermitted, "Optional initial menu gaze missing");
+            var trial = new HostPointerObservation(false, true, true, false, false, false, true, false);
+            Check(trial.GazeAllowed && !trial.RayPolicyPermitted, "Gaze bypassed native trial suppression");
+            var returned = new HostPointerObservation(false, true, false, false, false, false, true, true);
+            Check(!returned.GazeAllowed && !returned.RayPolicyPermitted, "Trial return silently reenabled gaze");
+        }));
+        await Test("host diagnostic preserves simultaneous causes without claiming HMD visibility", () => Sync(() => {
+            var observation = new HostPointerObservation(true, false, true, true, true, true, false, true);
+            var all = HostPointerBlockReason.Paused | HostPointerBlockReason.ApplicationUnfocused | HostPointerBlockReason.NativeTrial
+                | HostPointerBlockReason.UnityKeyboardVisible | HostPointerBlockReason.UnityKeyboardActive;
+            Check(observation.BlockReasons == all, "Suppression causes were reduced to only the first one");
+            Check(observation.LogFields.Contains("Paused|ApplicationUnfocused|NativeTrial|UnityKeyboardVisible|UnityKeyboardActive"), "Diagnostic codes are not parseable");
+            Check(observation.LogFields.Contains("rayPolicyPermitted=False"), "Diagnostic reported policy permission");
+        }));
         const string manifest = "<manifest xmlns:android='http://schemas.android.com/apk/res/android'><uses-feature android:name='oculus.software.overlay_keyboard' android:required='false'/><application><activity android:name='com.unity3d.player.UnityPlayerGameActivity' android:exported='true'><intent-filter><action android:name='android.intent.action.MAIN'/><category android:name='android.intent.category.LAUNCHER'/><category android:name='com.oculus.intent.category.VR'/></intent-filter><meta-data android:name='com.oculus.vr.focusaware' android:value='true'/><meta-data android:name='android.app.lib_name' android:value='game'/></activity><activity android:name='test.Other'/><meta-data android:name='com.oculus.supportedDevices' android:value='quest3'/></application></manifest>";
         await Test("OpenXR session focus tracks focused state and clears on lifecycle reset", () => Sync(() => {
             var focus = new ProbeXrFocusState();

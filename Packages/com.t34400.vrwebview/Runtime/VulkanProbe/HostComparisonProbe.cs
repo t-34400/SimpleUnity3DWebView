@@ -31,6 +31,8 @@ namespace T34400.VRWebView
         private float startupAt, keyboardUntil, nextPulse, dwellSince;
         private bool placed, paused, nativeActive;
         private bool gazeSuspended, pointerTracked, pointerBlocked, gazeAllowed;
+        private HostPointerObservation pointerObservation;
+        private bool pointerObservationAvailable;
         private long renders;
         private int lastRenderedFrame = -1;
         private VulkanProbeButton dwellTarget, blockedDwell;
@@ -120,7 +122,8 @@ namespace T34400.VRWebView
             string hands = "R " + input.RightHandDetails + " L " + input.LeftHandDetails + " " + input.RootDetails();
             if (hands != lastHands) { Trace(hands); lastHands = hands; }
             Trace("tick renders=" + renders + " appFocus=" + Application.isFocused + " paused=" + paused + " xrRunning=" + running + " nativeTrial=" + nativeActive
-                + " pointerTracked=" + pointerTracked + " pointerBlocked=" + pointerBlocked + " gazeAllowed=" + gazeAllowed + " handResetSync=" + synchronizeHandReset);
+                + " pointerTracked=" + pointerTracked + " pointerBlocked=" + pointerBlocked + " gazeAllowed=" + gazeAllowed + " handResetSync=" + synchronizeHandReset
+                + " " + (pointerObservationAvailable ? pointerObservation.LogFields : "pointerObservation=Unavailable"));
             if (status != null) status.text = "HC2  Unity frames=" + Time.frameCount + "  XR running=" + running
                 + "\nappFocus=" + Application.isFocused + " paused=" + paused + " nativeTrial=" + nativeActive
                 + " handResetSync=" + synchronizeHandReset
@@ -145,14 +148,16 @@ namespace T34400.VRWebView
         }
         private void UpdatePointer()
         {
+            pointerObservationAvailable = false;
             if (ray == null || headCamera == null) return;
             bool tracked = input.TryRead(ProbePointerMode.Auto, press.ActiveSourceId, out var sample);
-            bool blocked = paused || !Application.isFocused || nativeActive || TouchScreenKeyboard.visible
-                || (keyboard != null && keyboard.active);
-            pointerTracked = tracked; pointerBlocked = blocked;
-            gazeAllowed = gazeFallback && !gazeSuspended;
-            var phase = press.Update(tracked && !blocked, (int)sample.Source, sample.Pressed);
-            if (blocked || (!tracked && !gazeAllowed)) { ray.enabled = false; dwellTarget = null; return; }
+            pointerObservation = new HostPointerObservation(paused, Application.isFocused, nativeActive,
+                TouchScreenKeyboard.visible, keyboard != null && keyboard.active, tracked, gazeFallback, gazeSuspended);
+            pointerObservationAvailable = true;
+            pointerTracked = tracked; pointerBlocked = pointerObservation.Blocked;
+            gazeAllowed = pointerObservation.GazeAllowed;
+            var phase = press.Update(pointerObservation.CanReadTrackedPointer, (int)sample.Source, sample.Pressed);
+            if (!pointerObservation.RayPolicyPermitted) { ray.enabled = false; dwellTarget = null; return; }
             Vector3 origin = headCamera.transform.position, direction = headCamera.transform.forward;
             if (tracked)
             {
