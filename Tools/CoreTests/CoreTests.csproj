@@ -16,6 +16,7 @@
     <Compile Include="GpuRetirementTests.cs" />
     <Compile Include="UpperLayerTests.cs" />
     <Compile Include="UnityBridgeTests.cs" />
+    <Compile Include="BrowserSampleTests.cs" />
     <Compile Include="Program.cs" />
   </ItemGroup>
 </Project>

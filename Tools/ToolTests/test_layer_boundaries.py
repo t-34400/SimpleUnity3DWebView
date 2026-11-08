@@ -37,6 +37,10 @@ class LayerTests(unittest.TestCase):
         self.write('T34400.VRWebView.Presentation', ['T34400.VRWebView.Browser.Sample'])
         with self.assertRaisesRegex(ValueError, 'Forbidden'): layers.check(self.root)
 
+    def test_browser_model_cannot_depend_on_its_unity_ui_sample(self):
+        self.write('T34400.VRWebView.Browser.Sample', ['T34400.VRWebView.Browser.UnityUI.Sample'])
+        with self.assertRaisesRegex(ValueError, 'Forbidden'): layers.check(self.root)
+
     def test_pure_assembly_cannot_enable_unity_engine_references(self):
         self.write('T34400.VRWebView.Core', engine=True)
         with self.assertRaisesRegex(ValueError, 'disable engine'): layers.check(self.root)

@@ -44,6 +44,7 @@ HC2の判定/観測はHostPointerObservation、自動開始とUnity keyboard tim
 - [GPU寿命](GpuLifetime.md)の世代/退役状態処理を実装・合成検証した。既存Probe/Pumpには未接続で、Texture破棄の動作は変更していない。
 - [上位レイヤー](UpperLayers.md)の表示借用契約とBrowserWorkspace/BrowserTabを実装した。サンプルモデルは既存BrowserSessionへ接続している。製品Android backendには未接続。
 - [Unity表示部品](UnityView.md)としてdispatcher、Texture公開口、RawImage view、pointer/scroll接続を実装した。Unityの型を使う部品はEditorでのcompile/test未確認。実Android backendからTexture/入力を供給する接続は未実装。
+- [Browser UI sample](BrowserUI.md)にタブ列・URL欄・Go/New/Closeとモデル/表示の接続を実装した。実EditorでのUI確認と製品factoryは未確認/未実装。未設定時にfakeページを表示しない。
 - [レイヤー設計](LayeredArchitecture.md)を記録し、新しい純C# assemblyの依存方向を静的検査する。package全体のXR依存除去は未完了。
 - [Editor検証](EditorValidation.md)を共通ツールから起動できるようにした。本クラウドで実Editorは未検出で、実コンパイルは未確認。
 - ログ採取と起動は共通の`Tools/probe.py`へ集約。従来のcapture/runシェルは互換入口として委譲する。全case/modeの引数と失敗経路を合成ADBで検証し、実機起動は未確認。[診断仕様](Diagnostics.md)を参照。

@@ -10,6 +10,7 @@ POLICY = {
 ENGINE_POLICY = {
     'T34400.VRWebView.Unity': {'T34400.VRWebView.Core', 'T34400.VRWebView.Presentation'},
     'T34400.VRWebView.UnityUI': {'T34400.VRWebView.Core', 'T34400.VRWebView.Presentation', 'T34400.VRWebView.Unity', 'UnityEngine.UI'},
+    'T34400.VRWebView.Browser.UnityUI.Sample': {'T34400.VRWebView.Core', 'T34400.VRWebView.Presentation', 'T34400.VRWebView.Unity', 'T34400.VRWebView.UnityUI', 'T34400.VRWebView.Browser.Sample', 'UnityEngine.UI'},
 }
 
 

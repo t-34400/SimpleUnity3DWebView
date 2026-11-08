@@ -1,6 +1,12 @@
-# Browser Model sample
+# Browser UI and Model sample
 
-Package ManagerのSamplesから任意にimportする、UI非依存のタブ/Session管理モデル。リッチなブラウザーのUIや完成したシーンを含むサンプルではない。Android backendの代わりになるfakeは同梱しない。
+Package ManagerのSamplesから任意にimportするタブ/SessionモデルとuGUI。UnityUI/BrowserPanelBuilderが既存Canvasの下にタブ列・URL欄・Go/New/Close・ページ枠を生成する。完成シーンや実Android factoryは含まず、未設定なら操作を無効にして表示する。既定のfakeページやbackendは同梱しない。
+
+詳細はpackageのDocumentation~/BrowserUI.mdを参照。Unity Editorでのcompile/import/実行、QuestのIMEや操作復帰は未確認。Tests/Editorのテスト用factoryはEditor専用fixtureで、Playerや通常のsample起動には使わない。
+
+Canvas/Camera/EventSystem/XR UI moduleは利用アプリが用意する。BrowserPanelBuilderのContext Menu「Build Browser UI」、またはPlay時のStartで生成し、BrowserPageFactory派生componentかBrowserPanel.Configureのdelegateで実実装を注入する。model単体は引き続きUnity非依存で、別assemblyにある。
+
+サンプルはimport時にAssets/Samplesへコピーされる。更新時は利用者の変更を保全して移行し、同名asmdefを持つ複数versionのコピーを同時にcompileしない。自動で古いコピーを削除・上書きする処理は追加していない。
 
 `BrowserWorkspace`へ、呼出しごとに新しく所有権を渡す`IBrowserBackend`のfactoryと、所有threadへ直列配送するdispatcherを注入する。既存のBrowserSessionを使って初期化・ナビゲーション・終了する。現在、製品用Android factoryは未実装。
 
@@ -32,4 +38,4 @@ workspace.Dispose();
 - Disposeは各Sessionの終了を一度ずつ試す。一つの失敗で他tabを放置せず、最後にAggregateExceptionを返す。
 - observer例外はLastNotificationErrorへ記録し、他listenerと所有権処理を継続する。
 
-戻る/進む・reload・確定URL・タイトル・履歴・ブックマーク・実際のUIはまだ実装していない。これらを実装するときも、SessionやGPU資源の寿命をUIへコピーしない。
+戻る/進む・reload・確定URL・タイトル・履歴・ブックマークはまだ実装していない。これらを実装するときも、SessionやGPU資源の寿命をUIへコピーしない。

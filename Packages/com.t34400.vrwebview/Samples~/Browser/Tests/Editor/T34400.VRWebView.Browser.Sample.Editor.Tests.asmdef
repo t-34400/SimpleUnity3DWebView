@@ -1,0 +1,7 @@
+{
+  "name": "T34400.VRWebView.Browser.Sample.Editor.Tests",
+  "references": ["T34400.VRWebView.Core", "T34400.VRWebView.Presentation", "T34400.VRWebView.Unity", "T34400.VRWebView.UnityUI", "T34400.VRWebView.Browser.Sample", "T34400.VRWebView.Browser.UnityUI.Sample", "UnityEngine.UI"],
+  "includePlatforms": ["Editor"],
+  "optionalUnityReferences": ["TestAssemblies"],
+  "defineConstraints": ["UNITY_INCLUDE_TESTS"]
+}
