@@ -80,16 +80,17 @@ def run(project, version, editor, output_dir, timeout):
     xml = output / 'editmode-results.xml'
     log = output / 'Editor.log'
     executable = setup['editor']
-    command = [executable, '-batchmode', '-nographics', '-runTests',
-               '-projectPath', unity_path(project, executable), '-buildTarget', 'Android',
-               '-testPlatform', 'EditMode', '-assemblyNames', TEST_ASSEMBLY,
-               '-testFilter', TEST_FILTER, '-testResults', unity_path(xml, executable),
-               '-logFile', unity_path(log, executable)]
-    report = dict(setup, started_at=started.isoformat(), status='failed', command=command,
+    report = dict(setup, started_at=started.isoformat(), status='failed', command=None,
                   test_results=xml.name, editor_log=log.name, exit_code=None)
     error = None
     print('Running Editor package tests. Reports:', output, flush=True)
     try:
+        command = [executable, '-batchmode', '-nographics', '-runTests',
+                   '-projectPath', unity_path(project, executable), '-buildTarget', 'Android',
+                   '-testPlatform', 'EditMode', '-assemblyNames', TEST_ASSEMBLY,
+                   '-testFilter', TEST_FILTER, '-testResults', unity_path(xml, executable),
+                   '-logFile', unity_path(log, executable)]
+        report['command'] = command
         completed = subprocess.run(command, timeout=timeout)
         report['exit_code'] = completed.returncode
         if completed.returncode:

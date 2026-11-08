@@ -23,6 +23,11 @@ class ResultTests(unittest.TestCase):
             path.write_text('<test-run result="Passed" total="0"/>')
             with self.assertRaises(unity.UnityValidationError): unity.read_results(path)
 
+    def test_namespace_filter_matches_the_existing_unity_test_class(self):
+        import re
+        self.assertIsNotNone(re.search(unity.TEST_FILTER, 'T34400.VRWebView.Tests.PointerTests.ForeignPointerDoesNotReleaseOwner'))
+        self.assertIsNone(re.search(unity.TEST_FILTER, 'Other.T34400.VRWebView.Tests.PointerTests.Sample'))
+
     def test_wsl_translates_file_arguments_with_spaces(self):
         with mock.patch.object(unity.sys, 'platform', 'linux'), mock.patch.object(unity.subprocess, 'check_output', return_value='C:\\My Project\\results.xml\n') as translate:
             actual = unity.unity_path(Path('/mnt/c/My Project/results.xml'), '/mnt/c/Unity/Editor/Unity.exe')
@@ -120,6 +125,13 @@ if mode=='exit-error': sys.exit(17)
     def test_timeout_is_failure_and_retains_summary(self):
         self.assertEqual(self.run_check('timeout', timeout=1).returncode, 2)
         self.assertEqual(self.summary()['status'], 'failed')
+
+    def test_path_translation_failure_still_writes_a_failure_summary(self):
+        with mock.patch.object(unity, 'unity_path', side_effect=unity.UnityValidationError('synthetic path conversion failure')):
+            with self.assertRaises(unity.UnityValidationError):
+                unity.run(TOOLS.parent, '6000.4.5f1', str(self.editor), self.output, 5)
+        self.assertEqual(self.summary()['status'], 'failed')
+        self.assertIn('path conversion failure', self.summary()['error'])
 
     def test_missing_editor_is_not_ready(self):
         result = subprocess.run([sys.executable, str(TOOLS / 'probe.py'), 'editor-doctor', '--editor', str(self.root / 'missing')],
