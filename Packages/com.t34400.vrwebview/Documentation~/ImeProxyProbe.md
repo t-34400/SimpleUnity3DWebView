@@ -32,10 +32,11 @@ WSLで採取を先に開始する。
 
 ```bash
 cd /mnt/c/source/Unity/SimpleUnity3DWebView
-python3 Tools/probe.py capture --expect proxy --label IP1
+vrwebview_logs="/mnt/c/Users/tmiyoshi/Downloads/VRWebView-IP1-$(date +%Y%m%d-%H%M%S)"
+python3 Tools/probe.py capture --expect proxy --label IP1 --log-dir "$vrwebview_logs"
 ```
 
-既定の保存先はC:\Users\tmiyoshi\Downloads。保存先は開始時に表示する。`--log-dir`でも指定できる。採取中は別ターミナルやUnityを使える。logcatは消去しない。
+この指定でC:\Users\tmiyoshi\Downloads内の新しいVRWebView-IP1-日時フォルダーへ、log/summary/ADB stderrの3ファイルをまとめる。保存先は開始時にも表示する。採取中は別ターミナルやUnityを使える。logcatは消去しない。
 
 そのままUnityでBuild And Runを一度行う。HMDでは次だけを確認する。
 
