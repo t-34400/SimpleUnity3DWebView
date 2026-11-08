@@ -27,8 +27,21 @@ second line</textarea></label>
 'use strict';
 const video = document.getElementById('video');
 let lastVideoEvent = 'waiting', decodedFrames = 0, videoFrameApi = false;
-for (const name of ['loadedmetadata','playing','pause','seeking','seeked','waiting','ended','error'])
-  video.addEventListener(name, () => { lastVideoEvent = name; });
+const videoEvents = {};
+for (const name of ['loadstart','loadedmetadata','progress','suspend','stalled','playing','pause','seeking','seeked','waiting','ended','error']) {
+  videoEvents[name] = 0;
+  video.addEventListener(name, () => { lastVideoEvent = name; videoEvents[name]++; });
+}
+// Synthetic media state only: no URLs, page text, field values, or exception messages.
+window.vrwebviewVideoMetadata = () => {
+  const ranges = value => Array.from({length: Math.min(8, value.length)}, (_, i) => [value.start(i), value.end(i)]);
+  const quality = video.getVideoPlaybackQuality?.();
+  return {time:video.currentTime, duration:Number.isFinite(video.duration)?video.duration:null,
+    paused:video.paused, seeking:video.seeking, ended:video.ended, hidden:document.hidden,
+    ready:video.readyState, network:video.networkState, errorCode:video.error?.code ?? 0,
+    frames:quality?.totalVideoFrames ?? decodedFrames, dropped:quality?.droppedVideoFrames ?? null,
+    pageMs:performance.now(), buffered:ranges(video.buffered), seekable:ranges(video.seekable), events:{...videoEvents}};
+};
 document.getElementById('play').onclick = async () => {
   if (!video.paused) { video.pause(); return; }
   try { await video.play(); } catch (error) { lastVideoEvent = 'play rejected: ' + error.name; }

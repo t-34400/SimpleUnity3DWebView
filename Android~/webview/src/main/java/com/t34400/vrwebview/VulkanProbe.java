@@ -119,7 +119,7 @@ public final class VulkanProbe {
         });
     }
     public static void reload(long id) {
-        UI.post(() -> { Host host = HOSTS.get(id); if (host != null && host.web != null) { if (host.proxy != null) host.proxy.cancel("reload"); host.web.reload(); } });
+        UI.post(() -> { Host host = HOSTS.get(id); if (host != null && host.web != null) { if (host.proxy != null) host.proxy.cancel("reload"); host.videoTelemetry.reset(); host.trace("video=bundled event=reload"); host.web.reload(); } });
     }
     /** Normalized viewport coordinates, y down; never add DOM scroll offsets. */
     public static void pointer(long id, int action, float x, float y) {
@@ -157,6 +157,7 @@ public final class VulkanProbe {
     private static final class Host {
         final Activity owner; final long id; final int width, height; final boolean proxyTrial;
         ImeProxyProbe proxy;
+        final ProbeVideoTelemetry videoTelemetry = new ProbeVideoTelemetry(this::trace);
         ProbeWebView web; FrameLayout panel; Surface surface; View previousFocus;
         boolean closed, touching, imeAccepted;
         long downTime;
@@ -237,6 +238,7 @@ public final class VulkanProbe {
         void updateStatus() {
             if (web == null) return;
             if (proxy != null) proxy.pollMetadata();
+            videoTelemetry.poll(web);
             InputMethodManager imm = (InputMethodManager) owner.getSystemService(Context.INPUT_METHOD_SERVICE);
             boolean active = imm != null && imm.isActive(web);
             String state = "viewFocus=" + web.hasFocus() + " windowFocus=" + web.hasWindowFocus()
@@ -356,6 +358,7 @@ public final class VulkanProbe {
             trace("hostClosed");
             focusRecovery.release();
             closed = true; UI.removeCallbacks(draw); UI.removeCallbacks(delayedFocusReturn);
+            videoTelemetry.close();
             if (focusObserver != null && focusObserver.isAlive()) focusObserver.removeOnGlobalFocusChangeListener(focusListener);
             if (web != null) { web.metadataListener = null; web.windowFocusListener = null; }
             cancelTouch(); hideIme();

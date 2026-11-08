@@ -90,3 +90,29 @@ python3 Tools/probe.py capture --expect proxy --label IP1 --log-dir "$vrwebview_
 今後はinitializingの段階、host_start_failedのstage/例外class/上位8stack frame、host_started、Startボタン由来のstart_requestedとhost不在のime_request_rejectedを記録する。Throwable messageやcause messageは出さない。失敗したhostは登録から外し、closeで失敗理由を上書きしない。
 
 同じIP1シーンを使用し、まずページ表示とhost_startedを確認してから従来の一往復を行う。scene再生成、EditorテストやサンプルUIテストは追加しない。今回の修正後のAndroid widget構築・Quest表示は実機での確認待ち。
+
+## preview.30 — 再生がbuffered末尾で止まる問題の記録
+
+preview.29の実機ログではhost初期化と代理接続生成は成功したが、利用者はキーボードが表示されない（一瞬見えて閉じる場合がある）と報告した。WebView内の日本語編集は未成立であり、IP1を製品backendへ接続する条件は満たしていない。
+
+動画については、読み込み済み範囲の末尾で実際に再生も止まり、reloadごとに範囲が少し伸びると報告された。焼き込み番号185前後は概数で、固定境界ではない。待機中の`preload=metadata`による部分読み込みだけで説明せず、再生不具合として扱う。元MP4は8秒/240フレームで、クラウドでは全体のデコードとRangeごとのバイト一致を確認したが、Quest/WebViewの消費を保証するものではない。
+
+同じIP1シーン・同じcaptureコマンドを使える。今回追加した観測は次のとおり。
+
+- `video=bundled request=N event=response`: 固定の同梱動画に対するHTTP status、開始offset、応答長、全体長、Range有無。URLや生headerは記録しない。
+- `first_read/read_progress/data_exhausted/eof/close`: WebViewへ返すInputStreamの読み取り量、skip量、残量、reset回数。close時に残量があっても、metadata preloadの取消なら単独では不具合と断定しない。readBytesはWebView側へのストリーム読み取り量であり、デコード/GPU到達の証明ではない。
+- `event=sample`: 約1秒ごとのcurrentTime、duration、buffered/seekableの範囲、readyState/networkState、paused/seeking/ended、ページの経過時間/hidden、メディアイベント累積、フレーム数/errorCode。フォームの文字は取得しない。reload/host close後の古いcallbackは破棄する。
+
+この更新は原因を特定するための観測追加であり、再生やIMEを修正済みとはしない。preload、ループ、映像内容、HTTP Range応答の意味、フォーカス処理は維持する。
+
+次の採取ではページのPlay/Pauseで再生し、止まってから5秒ほど待つ。その後Reloadを一度だけ行い、再びPlay/Pauseで再生する。追加のscene作成、Editor/Sampleテスト、graphics API切替は不要。入力欄やIP1 Startを押す必要はなく、今回は動画だけを調べられる。画面の番号や診断文字の転記は不要。
+
+`--expect proxy`はIP1 Start/armedを要求するので、動画だけの採取では既存の通常captureを使う。
+
+```bash
+cd /mnt/c/source/Unity/SimpleUnity3DWebView
+vrwebview_logs="/mnt/c/Users/tmiyoshi/Downloads/VRWebView-Video-$(date +%Y%m%d-%H%M%S)"
+python3 Tools/probe.py capture --label Video --log-dir "$vrwebview_logs"
+```
+
+動画の要求/読み取りが途切れるのか、全データを消費してもbufferedが伸びないのか、ページの時間そのものが止まるのかを同じログで区別する。`suspend`だけ、closeだけ、frameCallbacksの数だけで原因を決めない。

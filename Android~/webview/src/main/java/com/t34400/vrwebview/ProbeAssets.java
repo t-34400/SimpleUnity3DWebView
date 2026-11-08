@@ -6,6 +6,7 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.util.Log;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -15,6 +16,7 @@ import java.util.Map;
 
 /** Fixed, same-origin test resources. Range responses make video seeking testable. */
 final class ProbeAssets extends WebViewClient {
+    private static final java.util.concurrent.atomic.AtomicLong REQUESTS = new java.util.concurrent.atomic.AtomicLong();
     static final String PAGE = "https://vrwebview.invalid/probe/index.html";
     private final byte[] html, video;
 
@@ -51,8 +53,18 @@ final class ProbeAssets extends WebViewClient {
             headers.put("Content-Range", "bytes " + range.start + "-" + (range.start + range.length - 1) + "/" + data.length);
         if (range.status == 416) headers.put("Content-Range", "bytes */" + data.length);
         String reason = range.status == 200 ? "OK" : range.status == 206 ? "Partial Content" : "Range Not Satisfiable";
+        InputStream stream = new ByteArrayInputStream(data, (int) range.start, (int) range.length);
+        if (isVideo) {
+            long id = REQUESTS.incrementAndGet();
+            // Never log URLs or raw request headers. IDs distinguish cancelled preloads/reloads.
+            String prefix = "[VRWebViewFocus] video=bundled request=" + id + " ";
+            Log.i("VRWebView", prefix + "event=response status=" + range.status + " start=" + range.start
+                    + " responseBytes=" + range.length + " totalBytes=" + data.length + " rangePresent=" + (header != null));
+            stream = new ProbeMediaStream(data, (int) range.start, (int) range.length,
+                    event -> Log.i("VRWebView", prefix + event));
+        }
         return new WebResourceResponse(isVideo ? "video/mp4" : "text/html", isVideo ? null : "UTF-8",
-                range.status, reason, headers, new ByteArrayInputStream(data, (int) range.start, (int) range.length));
+                range.status, reason, headers, stream);
     }
 
     @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
