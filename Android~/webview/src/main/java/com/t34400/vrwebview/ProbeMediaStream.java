@@ -7,6 +7,15 @@ import java.util.function.Consumer;
 
 /** Byte-preserving diagnostic stream for bundled media, not a network transport. */
 final class ProbeMediaStream extends InputStream {
+    /** WebView's AndroidStreamReaderURLLoader applies the request's offset itself.
+     * Supply a zero-based prefix through the requested end, not an already sliced body.
+     * The prefix end also bounds readers which continue until EOF for a closed range.
+     */
+    static ProbeMediaStream intercepted(byte[] data, ProbeRange range, Consumer<String> trace) {
+        int prefixLength = range.status == 416 ? 0 : Math.toIntExact(range.start + range.length);
+        if (prefixLength < 0 || prefixLength > data.length) throw new IllegalArgumentException("Invalid resource range");
+        return new ProbeMediaStream(data, 0, prefixLength, trace);
+    }
     private final ByteArrayInputStream source;
     private final Consumer<String> trace;
     private final int length;
@@ -49,7 +58,7 @@ final class ProbeMediaStream extends InputStream {
     private void emit(String event) {
         try {
             trace.accept("event=" + event + " readBytes=" + readBytes + " skippedBytes=" + skippedBytes
-                    + " remaining=" + source.available() + " responseBytes=" + length + " resets=" + resets);
+                    + " remaining=" + source.available() + " streamBytes=" + length + " resets=" + resets);
         } catch (RuntimeException ignored) { /* Diagnostic failure must not interrupt delivery. */ }
     }
 }

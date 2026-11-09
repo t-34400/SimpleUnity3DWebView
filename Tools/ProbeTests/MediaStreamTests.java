@@ -43,6 +43,23 @@ public final class MediaStreamTests {
         partial.reset(); check(partial.read() == (video[1] & 255));
         ProbeMediaStream brokenLogger = new ProbeMediaStream(video, 0, video.length, e -> { throw new IllegalStateException(); });
         check(Arrays.equals(video, brokenLogger.readAllBytes())); brokenLogger.close();
+        // Model the documented WebView consumer contract: it verifies available(),
+        // computes the request range on that zero-based stream, then skips before reading.
+        // This is a stream-contract regression, not an Android/WebView emulator.
+        for (String header : new String[]{null, "bytes=0-", "bytes=1048576-", "bytes=1024000-", "bytes=-65536", "bytes=40-49", "bytes=0-0", "bytes=" + (video.length - 1) + "-"}) {
+            ProbeRange declared = ProbeRange.parse(header, video.length);
+            ProbeMediaStream resource = ProbeMediaStream.intercepted(video, declared, ignored -> {});
+            ProbeRange consumed = ProbeRange.parse(header, resource.available());
+            check(consumed.status == declared.status && consumed.start == declared.start && consumed.length == declared.length);
+            check(resource.skip(consumed.start) == consumed.start);
+            check(Arrays.equals(Arrays.copyOfRange(video, (int)declared.start, (int)(declared.start + declared.length)), resource.readAllBytes()));
+            resource.close();
+        }
+        // The old pre-sliced stream fails verification at the exact continuation offset in IP2.
+        ProbeRange continuation = ProbeRange.parse("bytes=1048576-", video.length);
+        ProbeMediaStream oldBody = new ProbeMediaStream(video, (int)continuation.start, (int)continuation.length, ignored -> {});
+        check(ProbeRange.parse("bytes=1048576-", oldBody.available()).status == 416);
+        oldBody.close();
         System.out.println("PASS " + checks + " media stream checks (real MP4 byte equality, ranges, EOF/cancellation and diagnostic isolation)");
     }
 }

@@ -1,6 +1,8 @@
 # IP2 — 同一Unity ActivityでIME接続を分離する検証
 
-preview.31。主目的は、UnityのVR画面に表示するWebViewで日本語を編集し、入力終了後にUnity操作へ戻れる方式の採否を決めること。動画停止の観測も同じログで採る。製品Android backendへの接続はまだ行わない。
+**preview.32時点: IP2の実機調査は終了し、現在の接続借用方式は不採用。以下のIP2手順を繰り返す必要はない。**
+
+preview.31での主目的は、UnityのVR画面に表示するWebViewで日本語を編集し、入力終了後にUnity操作へ戻れる方式の採否を決めること。動画停止の観測も同じログで採る。製品Android backendへの接続はまだ行わない。
 
 ## 現時点の証拠と変更理由
 
@@ -62,3 +64,24 @@ python3 Tools/probe.py capture --expect ime-video --label IP2 --log-dir "$vrwebv
 | 動画だけが止まる | 同じログの応答消費/再取得/メディア状態で調べる。IMEの方式判断を動画だけの再試行で止めない |
 
 Android AAR compile/lint、純Javaの借用・世代・stream・診断の非干渉、ツール判定、R8 JNI保存をクラウドで検証する。UnityはC#構文検査までで、新しいC#の実Editor型解決/APK build、Android widgetの動作、QuestのIME/日本語編集/復帰・動画の実表示は実機確認待ち。
+
+
+## 2026-11-09 03:03 JST — IP2結果と方式判断
+
+Quest 3 / Android SDK34 / provider com.android.webview 154.0.0.55.15.1096209767。利用者は借用でキーボードの表示が維持されるが、キーを押してもキーボード欄もWebViewも変わらず、候補だけ出ると報告した。Native IMEでは入力でき、WebViewが変わらないのは独立対照としての想定どおり。
+
+ログではborrowedのsetComposingTextが15回、commitTextが4回、いずれもtrue。DOMのinput/compositionstart/update/endは0のまま。Native側は7回の文字変更があり、composing=trueからfalseへの変化とDoneを確認した。IMM.showの成否やInputConnectionのtrueを編集完了と混同しない。参照ChromiumのThreadedInputConnectionはUI threadへpostした時点でtrueを返すため、レンダラーでの編集完了を保証しない。
+
+実機のproxy-query stackには、providerのImeAdapterImpl.onWindowFocusChangedからisActive/restartInput、およびupdateSelection/updateExtractedTextへの呼び出しがある。隔離によりこれらはserved sourceとして許可されない。キーボード維持とWebViewの編集・IME状態更新を同時に成立させる契約が、現在の借用方式にはない。現在のIP1/IP2を製品backendへ採用せず、show再試行や代理関係のON/OFFだけを増やす調査は打ち切る。実機providerのnative内部の全状態を特定できたという意味ではない。
+
+次の設計は、レンダラーの編集focus、AndroidのIME用View、selection/extracted-text更新を正式なAPIで結ぶ必要がある。[設計の見直し](ArchitectureReview.md)に、ネイティブ編集画面への一時切替と、公開埋め込みIME APIを持つエンジンの候補を記載した。まだエンジン変更や新方式の動作成功は主張しない。
+
+## preview.32 — 同梱動画のRange処理を一回にする修正
+
+初回の動画はtime=6.169913付近でwaiting、後にMediaError code=2。応答1は1,314,957 bytesを全read/EOFまで返したが、後続31要求はstart=1,048,576/length=266,381の206応答を0 read/0 skipで閉じた。後半の再読込ではbufferedが全8秒になり、ページの再生時間は7秒/8秒まで進んでループした。これはページ状態の記録で、HMD上の全frame到達を証明しない。
+
+参照Chromium128のAndroidStreamReaderURLLoaderは、shouldInterceptRequestから渡されたInputStreamに対して元要求のRangeを解析し、InputStreamReaderがavailable()で範囲検査し、その開始offsetまでskipする。旧ProbeAssetsは既にstart offsetで切ったストリームを渡しており、後続応答はavailable=266,381に対してstart=1,048,576となって検査で失敗する。旧クラウドテストは切り出した配列の一致しか調べず、このconsumer契約を確認できていなかった。
+
+修正版はbyte0から要求終端までのprefixを渡し、開始offsetの適用はWebViewに一度だけ任せる。終端を限定したprefixにより、EOFまで読む実装でも閉じたRangeを越えて返さない。HTTPの206/Content-Range/Content-Lengthは要求した区間を示す。ログのstreamBytesはJavaストリームの長さ、responseBytesはHTTP応答区間長で、skip/readの量を分けて記録する。MP4やGPU描画経路は変更しない。
+
+元MP4を使い、consumer側が範囲検査/skipしてから読む契約テストと、旧二重適用で1MiB後続が拒否される回帰ケースを追加した。Android/実機のネットワーク挙動を模倣したテストではなく、参照ソースから得たストリーム契約の検証。修正後Questでの再生は未確認。この修正のためにIP2の日本語入力試験を繰り返す必要はなく、次の主タスクの実機ビルドへ同梱できる。

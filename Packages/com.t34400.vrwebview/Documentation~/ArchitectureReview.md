@@ -71,3 +71,28 @@ UPMは`Packages/com.t34400.vrwebview`、Androidソースは同一リポジトリ
 メソッド単位の責務とTexture/native/Javaの所有者は[RuntimeSeparation.md](RuntimeSeparation.md)に整理した。新しいbackendを実装した扱いにはせず、純粋な判定・検証UI・GPU資源・host・配布境界の順で移す。
 
 Git UPM/Samplesのレイヤー構造は[LayeredArchitecture.md](LayeredArchitecture.md)。実機待ちと独立して実装した表示借用契約・Browser sample model・Sessionの所有thread修正は[UpperLayers.md](UpperLayers.md)。サンプルモデルはCoreへ接続したが、製品Android backendや実Textureへ接続した成果ではない。
+
+
+## 2026-11-09 — IP2結果に基づくIME境界の見直し
+
+**決定: 現在のAndroid WebView InputConnection借用方式を製品の入力backendに採用しない。** IP2の隔離でキーボードは維持できたが、composition/commit要求がtrueでもDOMは編集されず、Native EditTextの対照だけが入力できた。キーボード表示要求を通すことと、ブラウザーの編集sessionを維持することは別の契約である。hideの抑制、focus通知の偽装、代理関係の切替、全文DOM同期を汎用IMEの解決として追加しない。
+
+必要な境界は、(1)レンダラーのactive/focus、(2)IME接続を提供する実View、(3)selection/extracted text/compositionの双方向更新、(4)入力終了時のUnity操作復帰である。Core/Presentation/UnityのAPIへAndroid WebView内部の偶然の挙動を埋め込まない。renderer/IME契約が成立してから製品Android factoryへ接続する。
+
+| 候補 | 根拠と未確認点 |
+|---|---|
+| Android WebViewをnative画面で直接編集し、入力中だけ切り替える | 別ActivityでのWebView日本語編集・Unity同時表示は実機で成立済み。ただし既存実装はnative WindowがUnity入力を遮断する。一時編集方式を採るならWebView/sessionの保持、再parent/context寿命、閉じた後の同一ページへの復帰を新たに確認する必要がある。恒常的な前面Activityを通常ブラウザーとして採用する意味ではない |
+| GeckoViewなど、公開の埋め込みIME契約を持つエンジン | GeckoViewのSessionTextInput.setView(View)/onCreateInputConnection、GeckoSession.setFocused/setActive、TextInputDelegateのrestart/show/hide/updateSelection/updateExtractedTextが公開されている。編集sessionの入力先を自分の実Viewへ正式に接続できるため、失効したWebView接続を借用する方式とは異なる。Questキーボード/日本語編集は未確認。エンジン依存と配布サイズが増え、描画producer・ABI・ライセンス同梱・更新/配布方法の具体化が必要 |
+| Native EditTextとJSの文字同期 | 固定フォームなど限定用途の別APIなら検討可能。任意サイトのtrusted編集、contenteditable、selection/composition、ページ側変更を汎用的に再現できるとはしない。現在のコアの汎用IME実装へ置き換えない |
+
+利用者確認済み: Unity内の同じWeb表示を維持し、まずAndroid WebViewで成立する方法を検討する。その条件を満たすのが難しくなった場合はGeckoViewへの移行も許容する。現段階では別のnative画面への切替やエンジン差替えを実施しない。
+
+GeckoViewを採る場合の最小境界案:
+
+- browser sessionはページ状態/renderer focusを所有し、IME接続用の実EditTextまたは専用ViewをSessionTextInput.setViewで登録する。AndroidのView/Window focus通知を偽装せず、renderer focusは公開session APIで管理する。
+- onCreateInputConnection/getHandler/key処理を正式なSessionTextInputへ委譲し、TextInputDelegateのselection/extracted text/cursor anchor更新を同じIME Viewへ戻す。新しいsession/欄のrestart時には旧接続を使い回さない。
+- 実UIのactive/pause/focusとrendererの可視/編集状態を区別したownerで制御し、Done/Back後に実IME終了とUnity入力復帰を確認する。OS overlay中のXR input focus喪失自体は異常扱いしない。
+- GPUのSurface producerは自律的にframeを生成する可能性がある。現WebView Canvas向けnativeReserve/33ms drawをそのまま適用せず、producerとAHardwareBuffer consumerの寿命/queue/fenceを分けて検証する。既存Vulkan/GLES consumerが無変更で使えるとは主張しない。
+- 最初の実機gateはページ内の日本語変換/確定とDone後のUnity操作復帰。動画/Surface経路も同じ最小APKで並行確認し、任意のrich Browser UI sampleの前提にはしない。
+
+参照APIはMozilla gecko-devのSessionTextInput.java/GeckoSession.javaで確認した。これは公開APIの調査であり、安定版artifact選定、Unityへの組込み、Quest動作を検証済みという意味ではない。

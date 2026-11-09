@@ -53,16 +53,17 @@ final class ProbeAssets extends WebViewClient {
             headers.put("Content-Range", "bytes " + range.start + "-" + (range.start + range.length - 1) + "/" + data.length);
         if (range.status == 416) headers.put("Content-Range", "bytes */" + data.length);
         String reason = range.status == 200 ? "OK" : range.status == 206 ? "Partial Content" : "Range Not Satisfiable";
-        InputStream stream = new ByteArrayInputStream(data, (int) range.start, (int) range.length);
+        InputStream stream;
         if (isVideo) {
             long id = REQUESTS.incrementAndGet();
             // Never log URLs or raw request headers. IDs distinguish cancelled preloads/reloads.
             String prefix = "[VRWebViewFocus] video=bundled request=" + id + " ";
             Log.i("VRWebViewFocus", prefix + "event=response status=" + range.status + " start=" + range.start
-                    + " responseBytes=" + range.length + " totalBytes=" + data.length + " rangePresent=" + (header != null));
-            stream = new ProbeMediaStream(data, (int) range.start, (int) range.length,
+                    + " responseBytes=" + range.length + " totalBytes=" + data.length + " rangePresent=" + (header != null)
+                    + " streamStartsAt=0 rangeOwner=webview");
+            stream = ProbeMediaStream.intercepted(data, range,
                     event -> Log.i("VRWebViewFocus", prefix + event));
-        }
+        } else stream = ProbeMediaStream.intercepted(data, range, ignored -> {});
         return new WebResourceResponse(isVideo ? "video/mp4" : "text/html", isVideo ? null : "UTF-8",
                 range.status, reason, headers, stream);
     }
