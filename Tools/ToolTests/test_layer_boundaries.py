@@ -72,3 +72,9 @@ class LayerTests(unittest.TestCase):
     def test_bootstrap_accepts_an_explicit_surface_contract_reference(self):
         result = layers.check(self.root)
         self.assertIn('T34400.VRWebView.Bootstrap', result['required_direct_reference_scope'])
+
+    def test_editor_scene_composition_needs_its_own_ugui_reference(self):
+        references = layers.ENGINE_POLICY['T34400.VRWebView.Editor'] - {'UnityEngine.UI'}
+        self.write('T34400.VRWebView.Editor', references, engine=True)
+        with self.assertRaisesRegex(ValueError, 'Missing direct assembly reference.*UnityEngine.UI'):
+            layers.check(self.root)
