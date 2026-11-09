@@ -9,6 +9,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 TOOLS = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location('probe', TOOLS / 'probe.py')
@@ -77,6 +78,67 @@ class AnalysisTests(unittest.TestCase):
         self.assertEqual(report['runtime_targets_retired'], 1)
         self.assertEqual(report['keyboard_visibility'], 'requires_user_observation')
 
+
+    def test_u2_snapshot_keeps_history_and_does_not_clear_or_relaunch(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'input-method.txt'
+            with mock.patch.object(probe.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0, b'SoftInputShowHideHistory\n', b'')) as run:
+                status = probe.input_method_snapshot(['adb', '-s', 'device'], path)
+            self.assertTrue(status['valid'])
+            self.assertIn('SoftInputShowHideHistory', path.read_text())
+            self.assertEqual(run.call_args.args[0], ['adb', '-s', 'device', 'shell', 'dumpsys', 'input_method'])
+            self.assertEqual(run.call_args.kwargs['timeout'], 15)
+
+    def test_u2_snapshot_failure_keeps_a_nonempty_diagnostic(self):
+        with tempfile.TemporaryDirectory() as folder:
+            for name, reply in [('empty', subprocess.CompletedProcess([], 0, b'', b'')),
+                                ('denied', subprocess.CompletedProcess([], 1, b'', b'permission denied'))]:
+                path = Path(folder) / (name + '.txt')
+                with mock.patch.object(probe.subprocess, 'run', return_value=reply):
+                    status = probe.input_method_snapshot(['adb'], path)
+                self.assertFalse(status['valid'])
+                self.assertGreater(path.stat().st_size, 0)
+            path = Path(folder) / 'timeout.txt'
+            with mock.patch.object(probe.subprocess, 'run', side_effect=subprocess.TimeoutExpired(['adb'], 15)):
+                status = probe.input_method_snapshot(['adb'], path)
+            self.assertFalse(status['valid'])
+            self.assertIn('TimeoutExpired', path.read_text())
+
+    def test_unity_order_requires_the_stock_field_and_a_real_extra_show(self):
+        lines = ['Unity: [VRWebViewUnityInput] U1 event=ready stock=True webview=False',
+            'Unity: [VRWebViewUnityInput] U2 event=ready attempt=0 stock=True webview=False maxExtraShows=1',
+            'Unity: [VRWebViewUnityInput] U2 event=armed attempt=1 ',
+            'Unity: [VRWebViewUnityInput] U2 event=observation attempt=1 localInputType=0x80001 localImeOptions=0x2000006 ready=True',
+            'Unity: [VRWebViewUnityInput] U2 event=show_dispatch attempt=1 ',
+            'Unity: [VRWebViewUnityInput] U2 event=show_result attempt=1 issued=True accepted=True reason=show_returned']
+        report = probe.analyze(lines, 'unity-input-order')
+        self.assertEqual(report['issues'], [])
+        baseline = probe.analyze(['Unity: Timeout while waiting for keyboard to become visible'] + lines, 'unity-input-order')
+        self.assertNotIn('unity_keyboard_visibility_timeout', baseline['issues'])
+        self.assertEqual(baseline['unity_keyboard_timeouts'], 1)
+        self.assertTrue(baseline['unity_order_notes'])
+        self.assertEqual(report['unity_order_dispatches'], 1)
+        self.assertEqual(report['unity_order_observations'][0]['localInputType'], '0x80001')
+        self.assertEqual(report['keyboard_visibility'], 'requires_user_observation')
+        report = probe.analyze(lines[:-1], 'unity-input-order')
+        self.assertIn('expected_unity_order_show_missing', report['issues'])
+        report = probe.analyze(lines[:-1] + ['Unity: [VRWebViewUnityInput] U2 event=show_result attempt=1 issued=False accepted=False reason=cancelled'], 'unity-input-order')
+        self.assertIn('expected_unity_order_show_missing', report['issues'])
+        report = probe.analyze(lines[:1], 'unity-input-order')
+        self.assertIn('expected_unity_order_probe_missing', report['issues'])
+
+    def test_unity_order_records_readiness_timeout_and_rejection_without_asserting_visibility(self):
+        lines = ['Unity: [VRWebViewUnityInput] U1 event=ready stock=True webview=False',
+            'Unity: [VRWebViewUnityInput] U2 event=ready attempt=0 stock=True maxExtraShows=1',
+            'Unity: [VRWebViewUnityInput] U2 event=armed attempt=1 ',
+            'Unity: [VRWebViewUnityInput] U2 event=show_result attempt=1 issued=True accepted=False reason=show_returned',
+            'Unity: [VRWebViewUnityInput] U2 event=ready_timeout attempt=1 ',
+            'Unity: [VRWebViewUnityInput] U2 event=cancelled attempt=1 reason=focus_lost']
+        report = probe.analyze(lines, 'unity-input-order')
+        self.assertIn('unity_order_show_rejected', report['issues'])
+        self.assertIn('unity_order_readiness_timeout', report['issues'])
+        self.assertEqual(report['unity_order_cancellations'][0]['reason'], 'focus_lost')
+        self.assertEqual(report['keyboard_visibility'], 'requires_user_observation')
 
     def test_stock_unity_input_control_has_no_browser_host_requirement(self):
         report = probe.analyze(['Unity: [VRWebViewUnityInput] U1 event=ready stock=True webview=False',

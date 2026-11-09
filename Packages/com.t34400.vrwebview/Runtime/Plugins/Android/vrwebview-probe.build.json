@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "aarSha256": "c71d6e3b314ef8455a9208248b2b3eb79ee318e9d56406718561dab986ea9fd2",
+  "aarSha256": "a61f423c0c39907bbccebcaf0203a090a874ce45b91301bc6652f807c1564305",
   "sources": {
     "Android~/build.gradle.kts": "30319db7ac75762e50cc423c2245d8bc704df111839e5be6fd9393f906db67af",
     "Android~/gradle/wrapper/gradle-wrapper.jar": "498495120a03b9a6ab5d155f5de3c8f0d986a449153702fb80fc80e134484f17",
@@ -17,7 +17,7 @@
     "Android~/runtime/src/main/java/com/t34400/vrwebview/ImeWindowFocusGuard.java": "9a690bd62919190e314a37a05ef40b45deaba84e8d641dd5c79c4b07aee4ec58",
     "Android~/settings.gradle.kts": "7716531e91ee73a7f86b26e3d38de9a4d5a91f53b4aee144eabf844d804d1716",
     "Android~/webview/build.gradle.kts": "a7ef10ca9ab3b9dbc3b0eed6df96bfa492728ee72303e49afb3eb46cd6494402",
-    "Android~/webview/consumer-rules.pro": "e3de22e82498c0e8002e7801dc5b755e31340748f94348ebbbc067c19c59ce23",
+    "Android~/webview/consumer-rules.pro": "32806ffa7e5574d9f6dae30619eb2ea8653d92e7a3af325e5072813556e01fc0",
     "Android~/webview/src/main/AndroidManifest.xml": "543ecb4e0982a4b692097bf86dd403d6dabecbfe56bc332b248a90313b75418e",
     "Android~/webview/src/main/assets/vrwebview-gpu-probe.html": "0fdd3770c42a19b4c911c9c5abe7f02e2d6d3f640c393c6de4228f08c671b1e8",
     "Android~/webview/src/main/assets/vrwebview-ime-probe.html": "a20bcaf42287cdb058adaf2f7cd20fc4ee9bd014b648f83cb8183f1d1bb52d5b",

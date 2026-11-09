@@ -1,5 +1,7 @@
 # Unity URL入力の調査 — 2026-11-10 JST
 
+追記（preview.45）: U1の失敗後、履歴からTYPE_NULLでの表示要求が文字入力属性の更新に先行する順序を確認した。次の手順は[U2対照](UnityInputOrderProbe.md)。以下はU1調査の記録として残す。
+
 ## 判断
 
 URL入力にはUnity標準InputField / TouchScreenKeyboardを維持する。今回の失敗だけを理由にUnity入力を不採用にしない。Native EditText、代理InputConnection、DOM全文同期への置換は追加しない。preview.44はIME修正済みの版ではなく、U1という独立した対照を追加した版。

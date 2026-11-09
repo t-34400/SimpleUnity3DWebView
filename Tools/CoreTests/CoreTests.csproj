@@ -13,6 +13,8 @@
     <Compile Include="../../Packages/com.t34400.vrwebview/Runtime/VulkanProbe/HostPointerObservation.cs" />
     <Compile Include="../../Packages/com.t34400.vrwebview/Runtime/VulkanProbe/HostTrialTiming.cs" />
     <Compile Include="../../Packages/com.t34400.vrwebview/Runtime/VulkanProbe/GpuRetirementLedger.cs" />
+    <Compile Include="../../Packages/com.t34400.vrwebview/Runtime/VulkanProbe/UnityImeShowGate.cs" />
+    <Compile Include="UnityImeShowGateTests.cs" />
     <Compile Include="GpuRetirementTests.cs" />
     <Compile Include="UpperLayerTests.cs" />
     <Compile Include="UnityBridgeTests.cs" />

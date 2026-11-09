@@ -5,6 +5,9 @@
 
 2026-11-10追記: preview.43のhit修正を利用者が確認（E21）。URL IMEは実boot1でもUnity GameActivityのshowで失敗し未解決。標準InputFieldを維持し、preview.44にWebViewなしの[U1対照](UnityAddressInputInvestigation.md)を追加した。角の拡大と[姿勢変更](SpatialWindowInteraction.md)も実装し、実Quest効果は未確認。
 
+
+preview.45: U1の標準InputFieldでも同じIME表示拒否を確認。BS1/U1の6回でTYPE_NULLのshowが文字入力type更新に先行した。原因確定とはせず、[U2](UnityInputOrderProbe.md)に同じ入力接続への単発追加show対照を実装した。標準入力を維持し、製品への回避策は追加していない。実Quest結果は未確認。
+
 ## 現時点の判断
 
 製品用Android backendを実装し、Core/Unity/UIへ接続した。WF1はE15のログと報告、RT1基本動作はE16の利用者報告で確認。hoverはE17で利用者が確認。version条件の変更は実機観察と分けて扱う。

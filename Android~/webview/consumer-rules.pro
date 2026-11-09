@@ -9,3 +9,8 @@
 }
 
 -keep class com.t34400.vrwebview.RuntimeProbeContent { public *; }
+
+# U2 reads this public GameActivity API through Unity AndroidJavaObject.
+-keepclassmembers class com.google.androidgamesdk.GameActivity {
+    public android.view.inputmethod.EditorInfo getImeEditorInfo();
+}

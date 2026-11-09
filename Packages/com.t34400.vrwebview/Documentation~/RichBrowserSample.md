@@ -1,6 +1,6 @@
 # Rich Browser sample — preview.44
 
-利用者がpreview.43のヒット修正を確認した。preview.44は角の判定拡大と配置時の姿勢変更を追加する。URL IMEは未解決で、標準Unity入力を維持して[独立対照U1](UnityAddressInputInvestigation.md)を追加した。今回はBS1で失敗済みのURL操作を繰り返す前にU1を一度比較する。
+利用者がpreview.43のヒット修正を確認した。preview.44は角の判定拡大と配置時の姿勢変更を追加する。URL IMEは未解決で、標準Unity入力を維持して[独立対照U1](UnityAddressInputInvestigation.md)を追加した。U1でも失敗したため、次は[U2の順序対照](UnityInputOrderProbe.md)へ進む。BS1のURL操作を何度も繰り返す段階ではない。
 
 ## 更新
 

@@ -45,13 +45,18 @@ namespace T34400.VRWebView.Editor
         }
 
         [MenuItem("VRWebView/Create Unity Input Field Control Scene")]
-        public static void CreateUnityInputFieldControl()
+        public static void CreateUnityInputFieldControl() { CreateStockInputField(false); }
+
+        [MenuItem("VRWebView/Create Unity Input Field Order Probe Scene")]
+        public static void CreateUnityInputFieldOrderProbe() { CreateStockInputField(true); }
+
+        private static void CreateStockInputField(bool orderProbe)
         {
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
             KeyboardBootProbeSetup.On();
             var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
             var camera = Camera.main; if (camera != null) camera.transform.position = Vector3.zero;
-            var root = new GameObject("U1 stock InputField control", typeof(RectTransform), typeof(Canvas), typeof(GraphicRaycaster), typeof(UnityInputFieldProbe));
+            var root = new GameObject(orderProbe ? "U2 stock InputField order probe" : "U1 stock InputField control", typeof(RectTransform), typeof(Canvas), typeof(GraphicRaycaster), typeof(UnityInputFieldProbe));
             var canvas = root.GetComponent<Canvas>(); canvas.renderMode = RenderMode.WorldSpace; canvas.worldCamera = camera;
             root.GetComponent<RectTransform>().sizeDelta = new Vector2(1000, 420);
             root.transform.position = new Vector3(0, 1.45f, 1.6f); root.transform.localScale = Vector3.one * .0012f;
@@ -62,7 +67,7 @@ namespace T34400.VRWebView.Editor
                 text.text = value; text.alignment = TextAnchor.MiddleLeft; text.raycastTarget = false;
                 text.rectTransform.sizeDelta = size; text.rectTransform.anchoredPosition = center; return text;
             }
-            Label("Title", "U1: Unity InputField / no WebView", new Vector2(0, 100), new Vector2(960, 80), root.transform);
+            Label("Title", orderProbe ? "U2: InputField / one prepared show" : "U1: Unity InputField / no WebView", new Vector2(0, 100), new Vector2(960, 80), root.transform);
             var node = new GameObject("Stock Unity InputField", typeof(RectTransform), typeof(Image), typeof(InputField)); node.transform.SetParent(root.transform, false);
             node.GetComponent<RectTransform>().sizeDelta = new Vector2(960, 88);
             node.GetComponent<Image>().color = new Color(.1f, .15f, .22f);
@@ -72,13 +77,14 @@ namespace T34400.VRWebView.Editor
             field.contentType = InputField.ContentType.Standard; field.keyboardType = TouchScreenKeyboardType.Default;
             field.shouldHideMobileInput = false;
             root.GetComponent<UnityInputFieldProbe>().field = field;
+            if (orderProbe) root.AddComponent<UnityImeOrderProbe>().field = field;
             Label("Instructions", "Use the system keyboard, then Done or Back.\nThis scene does not request or restore browser focus.", new Vector2(0, -120), new Vector2(960, 110), root.transform);
-            var input = new GameObject("U1 EventSystem", typeof(EventSystem), typeof(ProbeCanvasInputModule)).GetComponent<ProbeCanvasInputModule>();
+            var input = new GameObject(orderProbe ? "U2 EventSystem" : "U1 EventSystem", typeof(EventSystem), typeof(ProbeCanvasInputModule)).GetComponent<ProbeCanvasInputModule>();
             input.targetCanvas = canvas; input.headCamera = camera;
             if (!AssetDatabase.IsValidFolder("Assets/VRWebViewPlayground")) AssetDatabase.CreateFolder("Assets", "VRWebViewPlayground");
-            string path = AssetDatabase.GenerateUniqueAssetPath("Assets/VRWebViewPlayground/UnityInputFieldControl.unity");
+            string path = AssetDatabase.GenerateUniqueAssetPath(orderProbe ? "Assets/VRWebViewPlayground/UnityInputFieldOrderProbe.unity" : "Assets/VRWebViewPlayground/UnityInputFieldControl.unity");
             EditorSceneManager.SaveScene(scene, path); EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(path, true) };
-            Debug.Log("Created U1 stock uGUI InputField control with no browser, custom field, editing handoff, native editor or visibility timeout. See UnityAddressInputInvestigation.md.");
+            Debug.Log(orderProbe ? "Created U2 order probe: stock InputField, one additional show after local readiness. See UnityInputOrderProbe.md." : "Created U1 stock uGUI InputField control with no browser, custom field, editing handoff, native editor or visibility timeout. See UnityAddressInputInvestigation.md.");
         }
 
         [MenuItem("VRWebView/Create Runtime Browser Scene")]
