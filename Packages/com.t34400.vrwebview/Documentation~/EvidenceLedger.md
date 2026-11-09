@@ -135,3 +135,12 @@ hover追加後、利用者が実機で「ちゃんと動いているようです
 2windowと複数tabのsnapshot、表示中targetのコピーと非表示target0のstats21行も記録。UI改善の報告と整合するが、全drag/IME/media/負荷を確認済みにはしない。最新raw459263bytes/4142rows、SHA256f960401825115a18d0d76cd680edf4134a19767438774caf9b3783bf35a1ca19。前の2captureは現在のruntime marker/hostを欠くので、新方式の失敗根拠へ混ぜない。
 
 preview.42は明示選択・main-threadの編集終了待ち・中断理由を追加。対策の実機効果はまだ未確認。
+
+
+## E20 — BS1 preview.42: 移動は可能、ray表示とURL clickが未成立
+
+利用者は移動可能と報告し、画面の手前のrayが見えず奥側は見える、判定が不明でURL入力も開けないと報告。最新raw574360bytes/4839rows、SHA256274fa8338a90aa07b3e16882ccd208b0aa5c0ae4548feecac28e277a1128dfea。ui_ready version42、実boot1/overlayDeclaredtrue、addressDown2/Up1、prepare/request/abort/timeoutすべて0。
+
+addressDownの2回はUpでnone/pageへ移り、addressUpの1回はDownがother。URLのclick成立を示す組がないため、今回をIME側のshow拒否や編集終了待ち失敗としない。ray描画は従来Rendererのorder0、window Canvasはorder1以上で、UIに隠れる可能性がある設定だった。視覚的な根因の断定ではなく、preview43で描画契約とヒットcueを明示して修正する。
+
+preview43は高いorder/Overlay shader/同一world hitのmarker、Graphic geometryに対するphysical ray判定、URLのDownでの編集開始を実装。新しい実Unity/shader/Quest結果は未確認。

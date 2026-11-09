@@ -19,12 +19,13 @@ namespace T34400.VRWebView
         public ProbePointerMode pointerMode = ProbePointerMode.Auto;
         private readonly ProbeRayInput rayInput = new ProbeRayInput();
         private readonly PointerPressState press = new PointerPressState();
-        private readonly List<RaycastResult> hits = new List<RaycastResult>();
+        private readonly List<GraphicRaycaster> raycasters = new List<GraphicRaycaster>();
         private BrowserRayPointerEventData pointer;
         private Plane capturePlane;
         private Vector3 pressRayOrigin;
-        private LineRenderer line;
-        private Material lineMaterial;
+        private ProbePointerVisual visual;
+        private Color feedback;
+        private float feedbackUntil;
         private Vector3 previousWorldPoint, currentWorldPoint, pressWorldPoint;
         private int previousSource;
         private bool haveSource, havePosition, placed;
@@ -40,13 +41,12 @@ namespace T34400.VRWebView
         {
             InputSystem.onDeviceChange -= DeviceChanged;
             CancelPointer();
-            if (line != null) line.enabled = false;
+            visual?.Hide();
             base.OnDisable();
         }
         protected override void OnDestroy()
         {
-            if (line != null) Destroy(line.gameObject);
-            if (lineMaterial != null) Destroy(lineMaterial);
+            visual?.Dispose(); visual = null;
             base.OnDestroy();
         }
         public override void DeactivateModule() { CancelPointer(); base.DeactivateModule(); }
@@ -54,7 +54,7 @@ namespace T34400.VRWebView
         private void OnApplicationFocus(bool focused)
         {
             Debug.Log("[VRWebViewSample] BS1 event=focus active=" + focused, this);
-            if (!focused) { CancelPointer(); if (line != null) line.enabled = false; }
+            if (!focused) { CancelPointer(); visual?.Hide(); }
         }
         private void DeviceChanged(UnityEngine.InputSystem.InputDevice device, UnityEngine.InputSystem.InputDeviceChange change)
         {
@@ -66,7 +66,7 @@ namespace T34400.VRWebView
         public override void Process()
         {
             if (headCamera == null || targetCanvas == null) return;
-            UpdateHead(); EnsureLine();
+            UpdateHead();
             // Selected InputField keeps polling its native keyboard while the overlay
             // owns input. Losing XR focus cancels the ray, not the field selection.
             if (eventSystem.currentSelectedGameObject != null)
@@ -80,16 +80,15 @@ namespace T34400.VRWebView
             }
             var ray = new Ray(origin, rotation * Vector3.forward);
             ProcessRay(tracked, ray, sample.Pressed, (int)sample.Source, sample.Scroll);
-            line.enabled = tracked;
-            if (tracked) {
-                line.SetPosition(0, origin);
-                var hit = pointer != null ? pointer.pointerCurrentRaycast : default;
-                line.SetPosition(1, hit.gameObject != null ? hit.worldPosition : ray.GetPoint(3));
-            }
+            if (visual == null) visual = new ProbePointerVisual();
+            var currentHit = pointer != null ? pointer.pointerCurrentRaycast : default;
+            visual.Show(tracked && pointer != null && pointer.HasWorldRay, ray, currentHit, headCamera,
+                press.ActiveSourceId.HasValue, Time.unscaledTime < feedbackUntil ? (Color?)feedback : null);
             if (Time.unscaledTime >= nextTick) {
                 nextTick = Time.unscaledTime + 1;
                 Debug.Log("[VRWebViewSample] BS1 event=ray tracked=" + tracked + " pressed=" + sample.Pressed
-                    + " source=" + sample.Source + " appFocus=" + Application.isFocused + " frames=" + Time.frameCount, this);
+                    + " source=" + sample.Source + " appFocus=" + Application.isFocused + " frames=" + Time.frameCount
+                    + " hit=" + Kind(currentHit.gameObject) + " distance=" + currentHit.distance.ToString("F3", System.Globalization.CultureInfo.InvariantCulture), this);
             }
         }
         /// <summary>Explicit ray entry for rig tests/alternate diagnostic sources. Call
@@ -108,22 +107,12 @@ namespace T34400.VRWebView
             // Intersect each window at its own depth using the hand/controller ray.
             // Project only that plane's hit for uGUI's graphic/mask tests. A single
             // projection onto the root plane misidentifies targets at another depth.
-            foreach (var raycaster in targetCanvas.GetComponentsInChildren<GraphicRaycaster>()) {
-                if (!raycaster.isActiveAndEnabled) continue;
-                var canvas = raycaster.GetComponent<Canvas>();
-                if (canvas == null) continue;
-                var plane = new Plane(canvas.transform.forward, canvas.transform.position);
-                if (!plane.Raycast(ray, out float distance) || distance < 0) continue;
-                var world = ray.GetPoint(distance); var screen = headCamera.WorldToScreenPoint(world);
-                if (screen.z <= 0) continue;
-                pointer.position = new Vector2(screen.x, screen.y); hits.Clear(); raycaster.Raycast(pointer, hits);
-                foreach (var hit in hits) {
-                    if (hit.gameObject == null) continue;
-                    if (distance > nearest + .0001f || (Mathf.Abs(distance - nearest) <= .0001f && canvas.sortingOrder < sorting)) break;
-                    if (Mathf.Abs(distance - nearest) <= .0001f && canvas.sortingOrder == sorting && chosen.gameObject != null) break;
-                    chosen = hit; chosen.worldPosition = world; chosen.distance = distance; chosen.screenPosition = pointer.position;
-                    chosenPoint = world; chosenScreen = pointer.position; nearest = distance; sorting = canvas.sortingOrder; break;
-                }
+            targetCanvas.GetComponentsInChildren(false, raycasters);
+            foreach (var raycaster in raycasters) {
+                if (!BrowserWorldRaycast.TryRaycast(raycaster, ray, headCamera, out var hit)) continue;
+                if (hit.distance > nearest + .0001f || (Mathf.Abs(hit.distance - nearest) <= .0001f && hit.sortingOrder < sorting)) continue;
+                if (Mathf.Abs(hit.distance - nearest) <= .0001f && hit.sortingOrder == sorting && chosen.gameObject != null) continue;
+                chosen = hit; chosenPoint = hit.worldPosition; chosenScreen = hit.screenPosition; nearest = hit.distance; sorting = hit.sortingOrder;
             }
             if (chosen.gameObject == null) {
                 var plane = press.ActiveSourceId.HasValue ? capturePlane : new Plane(targetCanvas.transform.forward, targetCanvas.transform.position);
@@ -193,10 +182,13 @@ namespace T34400.VRWebView
             var over = pointer.pointerCurrentRaycast.gameObject;
             ExecuteEvents.Execute(pointer.pointerPress, pointer, ExecuteEvents.pointerUpHandler);
             var click = ExecuteEvents.GetEventHandler<IPointerClickHandler>(over);
-            if (pointer.pointerPress != null && pointer.pointerPress == click && pointer.eligibleForClick)
-                ExecuteEvents.Execute(pointer.pointerPress, pointer, ExecuteEvents.pointerClickHandler);
-            else if (pointer.pointerDrag != null && pointer.dragging)
-                ExecuteEvents.ExecuteHierarchy(over, pointer, ExecuteEvents.dropHandler);
+            bool delivered = pointer.pointerPress != null && pointer.pointerPress == click && pointer.eligibleForClick;
+            bool dragging = pointer.pointerDrag != null && pointer.dragging;
+            Debug.Log("[VRWebViewSample] BS1 event=activation press=" + Kind(pointer.pointerPress) + " release=" + Kind(over)
+                + " click=" + delivered + " drag=" + dragging, this);
+            if (delivered) ExecuteEvents.Execute(pointer.pointerPress, pointer, ExecuteEvents.pointerClickHandler);
+            else if (dragging) ExecuteEvents.ExecuteHierarchy(over, pointer, ExecuteEvents.dropHandler);
+            feedback = delivered || dragging ? Color.green : new Color(1, .4f, .15f); feedbackUntil = Time.unscaledTime + .18f;
             EndPress(); TracePointer("Up", over);
         }
         private void EndPress()
@@ -207,7 +199,7 @@ namespace T34400.VRWebView
         }
         public void CancelPointer()
         {
-            press.Reset(); haveSource = false; havePosition = false;
+            press.Reset(); haveSource = false; havePosition = false; visual?.Hide();
             if (pointer == null) return;
             pointer.HasWorldRay = false;
             var pressed = pointer.pointerPress; var dragged = pointer.pointerDrag;
@@ -231,20 +223,14 @@ namespace T34400.VRWebView
                 targetCanvas.transform.rotation = yaw; placed = true;
             }
         }
-        private void EnsureLine()
-        {
-            if (line != null) return;
-            line = new GameObject("BS1 uGUI ray", typeof(LineRenderer)).GetComponent<LineRenderer>();
-            line.positionCount = 2; line.startWidth = line.endWidth = .003f; line.useWorldSpace = true;
-            var shader = Shader.Find("Sprites/Default") ?? Shader.Find("UI/Default");
-            if (shader != null) { lineMaterial = new Material(shader); line.material = lineMaterial; }
-            line.startColor = line.endColor = Color.cyan;
+        private static string Kind(GameObject target) {
+            return target == null ? "none" : target.GetComponentInParent<BrowserPointerSource>() != null ? "page"
+                : target.GetComponentInParent<InputField>() != null ? "address" : target.GetComponentInParent<Button>() != null ? "button"
+                : target.GetComponentInParent<Scrollbar>() != null ? "scrollbar"
+                : ExecuteEvents.GetEventHandler<IBrowserSpatialDragHandler>(target) != null ? "spatial" : "other";
         }
-        private void TracePointer(string phase, GameObject target)
-        {
-            string kind = target == null ? "none" : target.GetComponentInParent<BrowserPointerSource>() != null ? "page"
-                : target.GetComponentInParent<InputField>() != null ? "address" : target.GetComponentInParent<Button>() != null ? "button" : "other";
-            Debug.Log("[VRWebViewSample] BS1 event=pointer phase=" + phase + " target=" + kind, this);
+        private void TracePointer(string phase, GameObject target) {
+            Debug.Log("[VRWebViewSample] BS1 event=pointer phase=" + phase + " target=" + Kind(target), this);
         }
         private static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
     }

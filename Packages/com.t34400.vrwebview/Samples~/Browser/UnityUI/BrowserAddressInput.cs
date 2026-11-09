@@ -16,7 +16,15 @@ namespace T34400.VRWebView.Samples.Browser
         private float checkAt;
         private bool watching, preparing;
         protected override void Awake() { base.Awake(); shouldActivateOnSelect = false; shouldHideMobileInput = false; }
-        public override void OnPointerClick(PointerEventData data) { if (data.button == PointerEventData.InputButton.Left) BeginEditing(); }
+        public override void OnPointerDown(PointerEventData data) {
+            base.OnPointerDown(data);
+            // Text editing begins on press, like a normal InputField. Pinch release
+            // need not hit the exact same graphic again to start editing.
+            if (data.button == PointerEventData.InputButton.Left && !isFocused && !preparing && !watching) BeginEditing();
+        }
+        public override void OnPointerClick(PointerEventData data) {
+            if (data.button == PointerEventData.InputButton.Left && !isFocused && !preparing && !watching) BeginEditing();
+        }
         public void BeginEditing() {
             if (!IsActive() || !IsInteractable()) return;
             var system = EventSystem.current;

@@ -22,7 +22,7 @@ class ProbeError(Exception):
 
 def analyze(lines, expected='any'):
     """Summarize recorded metadata; do not infer HMD visibility or trial names from order."""
-    result = dict(address_edit_prepares=0, address_keyboard_requests=0, address_edit_aborts=0, address_keyboard_failures=0, unity_keyboard_timeouts=0, keyboard_configurations=[], rows=0, browser_ui_rows=0, browser_ui_ready=False, browser_ui_pid=None, browser_ui_android_ready=False, browser_ui_snapshots=[], runtime_rows=0, runtime_ready=False, runtime_connections=0, runtime_targets_retired=0, runtime_hover_enter=0, runtime_hover_exit=0, runtime_failures=0, runtime_window_events=[], host_rows=0, activity_rows=0, focus_rows=0, legacy_rows=0, trials=[],
+    result = dict(pointer_visual_failures=0, pointer_activations=[], address_edit_prepares=0, address_keyboard_requests=0, address_edit_aborts=0, address_keyboard_failures=0, unity_keyboard_timeouts=0, keyboard_configurations=[], rows=0, browser_ui_rows=0, browser_ui_ready=False, browser_ui_pid=None, browser_ui_android_ready=False, browser_ui_snapshots=[], runtime_rows=0, runtime_ready=False, runtime_connections=0, runtime_targets_retired=0, runtime_hover_enter=0, runtime_hover_exit=0, runtime_failures=0, runtime_window_events=[], host_rows=0, activity_rows=0, focus_rows=0, legacy_rows=0, trials=[],
                   setup_boot_values=[], boot_checks=[], editor_flags=[], xr_transitions=[],
                   pointer_states=[], proxy_rows=0, proxy_events=[], issues=[], keyboard_visibility='requires_user_observation',
                   ray_visibility='requires_user_observation', video_responses=0, video_samples=0,
@@ -36,6 +36,10 @@ def analyze(lines, expected='any'):
         if not line.strip():
             continue
         result['rows'] += 1
+        if 'event=pointer_visual_failed' in line:
+            result['pointer_visual_failures'] += 1
+        if 'event=activation' in line and 'VRWebViewSample' in line:
+            result['pointer_activations'].append(dict(re.findall(r'(press|release|click|drag)=(\S+)', line)))
         if 'event=address_edit phase=prepare' in line:
             result['address_edit_prepares'] += 1
         if 'event=address_keyboard_request' in line:
@@ -143,6 +147,8 @@ def analyze(lines, expected='any'):
         result['issues'].append('empty_log')
     if not (result['browser_ui_rows'] or result['runtime_rows'] or result['host_rows'] or result['activity_rows'] or result['focus_rows'] or result['legacy_rows']):
         result['issues'].append('no_probe_rows')
+    if result['pointer_visual_failures']:
+        result['issues'].append('browser_pointer_visual_failed')
     if result['address_keyboard_failures']:
         result['issues'].append('browser_address_keyboard_failed')
     if result['unity_keyboard_timeouts']:

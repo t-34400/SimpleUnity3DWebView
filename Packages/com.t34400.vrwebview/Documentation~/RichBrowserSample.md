@@ -1,6 +1,6 @@
-# Rich Browser sample — preview.42
+# Rich Browser sample — preview.43
 
-preview.41はUI改善を利用者が確認したが、URL欄のキーボードは起動しなかった。実APKのbootKeyboard=1/overlayDeclared=trueで、表示要求まで到達していない。preview.42はURL欄の明示選択とmain-threadの編集終了待ちへ変更し、Windows風のheader/corner操作を追加した。Unity型コンパイル・新しいuGUIテスト・APK/Quest統合はクラウドでは未実施。IME表示の実機成功を先に主張しない。
+preview.42で利用者は移動を確認したが、画面手前のrayが見えず、判定位置が分からないと報告した。URLへの2回のDownはUp時にnone/pageへ移り、prepare/requestは0だった。preview.43はrayの描画順・専用stereo shader・hit markerを追加し、physical rayでUIを直接判定する。URL編集は通常のInputFieldと同じくDownで開始する。新しいUnity C#/shaderコンパイルとQuest効果はクラウドでは未確認。
 
 ## 更新
 
@@ -14,7 +14,7 @@ git fetch origin refs/heads/jobs/vrwebview/h1-scroll-001:refs/remotes/origin/job
 通常のmain版patch-exchange CLIからjobs/vrwebview/h1-scroll-001の追加パッチを適用する。applyはdirtyな対象を拒否するため、作業中の変更は通常のGit運用で保全する。過去のstashを勝手にpop/dropしない。
 
 1. Package ManagerでVRWebViewの **Browser UI and Model** を今回版へImportする。旧版をimport済みなら、編集内容と.metaを含む旧BrowserコピーだけをDownloads等のAssets外へ退避し、同名asmdefを重複させない。
-2. preview.41のRichBrowserシーンはそのまま使える。今回版sampleのスクリプトでUIが実行時に再構築される。preview.40以前の旧Builderシーンだけは **VRWebView > Create Rich Browser Sample Scene** で更新する。
+2. preview.41/42のRichBrowserシーンはそのまま使える。今回版sampleのスクリプトでUIが実行時に再構築される。preview.40以前の旧Builderシーンだけは **VRWebView > Create Rich Browser Sample Scene** で更新する。
 3. シーンを新しく生成した場合は、Unity 6のアクティブBuild ProfileのScene Listも今回のRichBrowserになっていることを確認する。
 4. Vulkan/ARM64/GameActivity/OpenXR/ハンド設定とRequires System Keyboardは従来の成功設定を維持する。生成メニューはUnity URL入力用のkeyboard bootを明示的にON(1)にする。旧診断OFFを残してビルドすると停止する。
 
@@ -32,8 +32,8 @@ python3 Tools/probe.py capture --expect browser-ui --label BS1 --log-dir "$vrweb
 
 今回のRichBrowserをBuild And Runする。外部ページにはインターネット接続が必要。
 
-1. タブ/操作行が細く、ページが画面の大部分を使うことを確認する。
-2. URL欄を選び、`example.com`と入力してキーボードの確定またはGoで移動する。キーボードが出なければ、ここで停止する。設定の総当たりはせずログを回収する。
+1. rayがウィンドウの手前でも見え、ヒット位置にcyanのリングが出ることを確認する。ray終点とリングは同じ判定位置。UIに当たらないrayは灰色、押下中は黄色、クリック/drag完了は短く緑になる。
+2. リングをURL欄へ合わせてpinchする。押した時点で編集開始し、離す位置が多少変わっても開始要求を失わない。キーボードが開いたら`example.com`と入力してキーボードの確定またはGoで移動する。キーボードが出なければ、ここで停止する。設定の総当たりはせずログを回収する。
 3. 表示できたらWikipedia等へ移動し、ページ内の日本語変換・確定、キーボード終了後のレイ復帰を確認する。ページ内リンクからの戻る/進む、再読み込みも確認する。
 4. ＋で別tabを作る。tabを列内でdragして並べ替える。外へdragし、Release to create a windowの表示で離して分離する。別windowのtab列へdragし、挿入マーカーで離して結合する。
 5. 2windowを同時に表示して各選択tabを操作する。上部の空白（右側には常設の空白あり）をpinch dragし、左右上下と奥行きへ移動する。四隅にレイを当て、L字がcyanに強調されることを確認してdragでresizeする。対角の角が固定され、ページ比率・入力位置・もう一方の表示が保たれるか確認する。tabが多いときは下の横scrollbarでスライドする。操作中に追跡を失った場合は移動確定せず元へ戻ることが期待値。
@@ -47,9 +47,12 @@ python3 -m zipfile -c "${vrwebview_logs}.zip" "$vrwebview_logs"
 
 ## 実装と診断
 
-- URL入力はUnityのTouchScreenKeyboard Default、ページ入力はWebViewの元のInputConnection。URLクリック時にEventSystemの選択を明示し、Android UI threadでのページ編集終了をmain-thread coroutineで待つ。旧要求はfieldの世代で無効化し、後から別のUIを選んだ場合は再選択しない。proxy借用やDOM全文同期は使わない。
+- URL入力はUnityのTouchScreenKeyboard Default、ページ入力はWebViewの元のInputConnection。URL押下時にEventSystemの選択を明示し、Android UI threadでのページ編集終了をmain-thread coroutineで待つ。旧要求はfieldの世代で無効化し、後から別のUIを選んだ場合は再選択しない。proxy借用やDOM全文同期は使わない。
 - APK内の実boot値とmanifestのoverlay宣言はevent=keyboard_configurationで記録する。Unity keyboard timeoutを採取summaryの問題に含める。event=address_editでprepare/aborted、event=address_keyboard_requestで表示要求、失敗時はreasonを記録する。入力文字・URL・titleはログへ出さない。
 - tab/sessionはBrowserDesktopPanelが共有所有し、各windowは所属・順序・選択と表示bindingを持つ。Move/Detachで同じWebViewを保ち、UI破棄だけでは移動したpageを閉じない。
+- 専用Resources shaderはOverlay queue/高いsorting order/ZTest Alwaysとstereo macrosを持つ。これはUI用の診断rayであり、UIでrayを隠さず、当たった位置で線を止める。rayとmarkerは入力と同じworld hitを使う。一般シーンのPhysics occlusionはこのsampleの判定対象に含めない。
+- world hitはGraphicRegistryの描画中Graphicと実RectTransform平面を使う。マウスのdisplay routingは経由しない。Graphic.RaycastでuGUIのMask/CanvasGroup等を維持する。通常のscreen-based入力もBrowserPointerSourceで引き続き使える。
+- event=activationはpress/release/click/dragを区別し、ray snapshotにhit種別と距離を記録する。Upのhover先だけでクリック成功を推測しない。event=pointer_visual_failedはsummaryへ問題として集計する。
 - tab dragはpreview後のreleaseで確定する。tracking/focus取消では元の所属を保持。tab列端では自動scrollする。windowは上部の空白から3D移動し、四隅で対角を固定してresizeする。試験レイはwindowごとの平面へ実際のhand/controller rayを当て、異なる奥行きを区別する。アプリ本体のXR UI moduleには任意のBrowserRayPointerEventData/IBrowserSpatialDragHandlerを提供する。通常のPointerEventDataでは平面上のdragへfallbackする。
 - 表示中tabだけにproducer Surface/AImageReader/Unity textureを割り当てる。非表示tabに出力queueを常設しない。入力focusを失っても、表示中なら転送は継続する。
 - 切替/resizeは新しい出力世代を作り、古いproducerの停止確認後にGPU完了まで回収する。出力textureをタブ間で直接上書きして使い回さない。定常時は表示tab数に応じた出力数、切替中は退役待ちの旧世代が一時的に残る。世代単位のpool再利用は未実装。

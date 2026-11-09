@@ -70,3 +70,10 @@ Public navigation observations/commands are added; JavaScript execution API, pro
 Added persistent blank header grab area plus unused tab-strip space, physical-ray 3D translation, four hover-highlighted opposite-corner resize handles, in-tab close layout, trailing new-tab button and an overflow scrollbar. Per-window world-ray plane tests replace root-plane projection; spatial drag captures preserve cancellation. Window rotation is unchanged. New Core-free UnityUI event data can carry rays from other XR input modules.
 
 E19 confirms boot1 and UI improvement in preview41, but address keyboard Open was never reached in the recording. preview42 explicitly selects the clicked field and waits its native editing handoff on a main-thread coroutine with generation checks, cancellation reasons and timeout reporting. Native WebView IME policy and Android libraries are byte-identical to preview41; new Quest effects remain unverified.
+
+
+## preview.43 implementation
+
+E20 confirmed two address presses released on different targets before any editing request. Changed address initiation to pointer down, retaining explicit selection and awaited native handoff, and avoiding duplicate preparation on ordinary release. Added activation decision metadata.
+
+Separated diagnostic pointer rendering into ProbePointerVisual with a Resources-included stereo-aware overlay shader, explicit sorting and a hit ring. Input and visualization share the same physical hit. BrowserWorldRaycast uses GraphicRegistry/per-graphic plane tests plus uGUI graphic filters, bypassing mouse display routing. BrowserPointerSource uses world-ray coordinates when supplied and retains screen-event fallback. These changes are not a Quest pass or a shader compilation claim; Android binaries are unchanged. Physics blockers and custom Graphic raycast-padding behavior are outside this sample helper's current contract.

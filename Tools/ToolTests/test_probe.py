@@ -32,6 +32,17 @@ class AnalysisTests(unittest.TestCase):
         self.assertIn('unity_keyboard_visibility_timeout', report['issues'])
         self.assertEqual(report['keyboard_visibility'], 'requires_user_observation')
 
+    def test_pointer_visual_failure_is_not_a_successful_interaction(self):
+        report = probe.analyze([PREFIX + 'Unity: [VRWebViewSample] BS1 event=pointer_visual_failed reason=shader_missing'])
+        self.assertIn('browser_pointer_visual_failed', report['issues'])
+        self.assertEqual(report['pointer_visual_failures'], 1)
+
+    def test_release_target_is_not_misreported_as_a_click(self):
+        report = probe.analyze([PREFIX + 'Unity: [VRWebViewSample] BS1 event=activation press=address release=page click=False drag=False'])
+        self.assertEqual(report['pointer_activations'][0]['click'], 'False')
+        self.assertEqual(report['pointer_activations'][0]['press'], 'address')
+        self.assertEqual(report['keyboard_visibility'], 'requires_user_observation')
+
     def test_address_handoff_abort_is_observed_without_claiming_keyboard_visibility(self):
         report = probe.analyze([PREFIX + 'Unity: [VRWebViewSample] BS1 event=address_edit phase=prepare request=1 selected=True',
                                 PREFIX + 'Unity: [VRWebViewSample] BS1 event=address_edit phase=aborted reason=deselected'])

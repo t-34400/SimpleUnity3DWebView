@@ -69,6 +69,26 @@ namespace T34400.VRWebView.Tests
             module.ProcessRay(true, ray, false, 1, Vector2.zero); module.ProcessRay(true, ray, true, 1, Vector2.zero); module.ProcessRay(true, ray, false, 1, Vector2.zero);
             Assert.AreEqual(1, nearClicks); Assert.AreEqual(0, farClicks);
         }
+        [UnityTest] public IEnumerator PhysicalPickingUsesGraphicDepthAndHonorsCanvasGroupBlocking() {
+            var target = Target(typeof(Image), typeof(Button)); target.transform.localPosition = new Vector3(0, 0, -50);
+            var group = target.AddComponent<CanvasGroup>();
+            Canvas.ForceUpdateCanvases(); yield return null;
+            var raycaster = canvas.GetComponent<GraphicRaycaster>(); var ray = new Ray(Vector3.zero, Vector3.forward);
+            Assert.IsTrue(BrowserWorldRaycast.TryRaycast(raycaster, ray, camera.GetComponent<Camera>(), out var hit));
+            Assert.AreSame(target, hit.gameObject); Assert.AreEqual(1.5f, hit.worldPosition.z, .001f); Assert.AreEqual(1.5f, hit.distance, .001f);
+            group.blocksRaycasts = false;
+            Assert.IsFalse(BrowserWorldRaycast.TryRaycast(raycaster, ray, camera.GetComponent<Camera>(), out _));
+        }
+        [UnityTest] public IEnumerator WebPointerCoordinatesUseThePhysicalWorldRay() {
+            var source = Target(typeof(RawImage), typeof(BrowserPointerSource)).GetComponent<BrowserPointerSource>();
+            var touches = new List<BrowserPointerEvent>(); source.Capture.Received += value => touches.Add(value);
+            Canvas.ForceUpdateCanvases(); yield return null;
+            var data = new BrowserRayPointerEventData(EventSystem.current) { pointerId = 1, HasWorldRay = true,
+                WorldRay = new Ray(Vector3.zero, Vector3.forward), position = new Vector2(-9999, -9999) };
+            source.OnPointerDown(data);
+            Assert.AreEqual(1, touches.Count); Assert.AreEqual(.5f, touches[0].X, .001f); Assert.AreEqual(.5f, touches[0].Y, .001f);
+            source.OnCancel(data);
+        }
         [UnityTest] public IEnumerator RayViewGetsHoverAndCancelInsteadOfAnUpOnFocusLoss()
         {
             var source = Target(typeof(RawImage), typeof(BrowserPointerSource)).GetComponent<BrowserPointerSource>();

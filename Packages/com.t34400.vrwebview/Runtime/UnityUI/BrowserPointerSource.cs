@@ -54,9 +54,12 @@ namespace T34400.VRWebView
         {
             x = y = 0;
             if (target == null) target = (RectTransform)transform;
-            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(target, data.position,
-                hover ? data.enterEventCamera : data.pressEventCamera, out var local))
-                return false;
+            Vector2 local;
+            if (data is BrowserRayPointerEventData ray && ray.HasWorldRay) {
+                if (!new Plane(target.forward, target.position).Raycast(ray.WorldRay, out float distance) || distance < 0) return false;
+                Vector3 point = target.InverseTransformPoint(ray.WorldRay.GetPoint(distance)); local = new Vector2(point.x, point.y);
+            } else if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(target, data.position,
+                hover ? data.enterEventCamera : data.pressEventCamera, out local)) return false;
             Rect rect = target.rect;
             return BrowserCoordinates.TryNormalize(local.x, local.y, rect.xMin, rect.yMin,
                 rect.width, rect.height, out x, out y);

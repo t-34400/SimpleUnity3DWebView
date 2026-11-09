@@ -72,3 +72,8 @@ preview.40 BS1 failed Unity address-keyboard display (5 native show failures/~0.
 ## preview.42 — spatial chrome and address-input handoff
 
 E19: preview41 UI improved on Quest, but URL keyboard request was not reached despite packaged boot1/overlayDeclaredtrue. Implemented explicit field selection/main-thread handoff diagnostics, blank-header 3D dragging, four hover corner resize handles, integrated tab close/trailing plus/overflow scrollbar and world-ray depth picking. preview41 generated RichBrowser scene can be reused after current sample import. New Unity type/geometry tests and Quest operation remain pending; do not claim the IME issue is resolved.
+
+
+## preview.43 — visible hit cue and address editing on press
+
+E20: preview42 movement was reported working, but ray visibility prevented confident tapping. Two addressDown events ended at none/page; no edit preparation/request occurred. Added dedicated overlay ray/marker rendering, physical per-graphic hit tests and web-pointer coordinates, activation logs and address editing on Down. Android libraries are byte-identical to preview41/42. Actual Unity C#/shader compilation and Quest interaction remain pending. Reuse the current scene, update the sample, then check the ring and URL keyboard first.

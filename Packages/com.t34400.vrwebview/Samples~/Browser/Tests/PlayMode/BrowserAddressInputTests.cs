@@ -27,6 +27,14 @@ namespace T34400.VRWebView.Samples.Browser.Tests
         [TearDown] public void Cleanup() {
             Object.DestroyImmediate(canvas); Object.DestroyImmediate(events); if (previous != null) previous.enabled = true;
         }
+        [UnityTest] public IEnumerator XRPressBeginsOneHandoffWithoutWaitingForAReleaseOnTheField() {
+            int calls = 0; field.PrepareEditing = () => { calls++; return handoff.Task; };
+            var data = new PointerEventData(EventSystem.current) { button = PointerEventData.InputButton.Left };
+            field.OnPointerDown(data);
+            Assert.AreEqual(1, calls); Assert.AreSame(field.gameObject, EventSystem.current.currentSelectedGameObject);
+            field.OnPointerClick(data); Assert.AreEqual(1, calls); // No duplicate request on release.
+            yield return null; Assert.IsFalse(field.isFocused); // Still waiting for native completion.
+        }
         [UnityTest] public IEnumerator XRClickExplicitlySelectsBeforeWaitingForNativeEditing() {
             field.OnPointerClick(new PointerEventData(EventSystem.current) { button = PointerEventData.InputButton.Left });
             Assert.AreSame(field.gameObject, EventSystem.current.currentSelectedGameObject);

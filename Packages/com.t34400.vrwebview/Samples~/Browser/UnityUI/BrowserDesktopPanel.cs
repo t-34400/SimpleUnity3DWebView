@@ -43,7 +43,7 @@ namespace T34400.VRWebView.Samples.Browser
             desktop = new BrowserDesktop(() => { pending = factory.CreatePage(owner); return pending.Backend; }, owner.Scheduler);
             desktop.Changed += Refresh;
             CreateWindow();
-            if (diagnostics) Debug.Log("[VRWebViewSample] BS1 event=ui_ready version=42 multiWindow=true");
+            if (diagnostics) Debug.Log("[VRWebViewSample] BS1 event=ui_ready version=43 multiWindow=true");
         }
         public void CreateWindow() {
             if (closed || desktop == null) return;
