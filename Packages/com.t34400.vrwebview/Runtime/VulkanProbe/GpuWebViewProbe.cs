@@ -117,6 +117,8 @@ namespace T34400.VRWebView
         public void RequestNativeIme()
         {
             if (!testInputConnectionProxy || id == 0 || bridge == null) return;
+            // Native is a separate control after the direct route; synchronize both UI and Java mode.
+            if (!proxyEnabled) ToggleImeProxy();
             TraceFocus("proxy=IP1 event=native_requested host=" + id);
             bridge.CallStatic("requestNativeIme", (long)id);
         }

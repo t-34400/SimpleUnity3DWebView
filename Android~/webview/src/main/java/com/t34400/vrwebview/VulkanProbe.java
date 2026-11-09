@@ -164,6 +164,7 @@ public final class VulkanProbe {
     private static final class Host {
         final Activity owner; final long id; final int width, height; final boolean proxyTrial;
         ImeProxyProbe proxy;
+        final FocusCallTrace focusCalls = new FocusCallTrace(this::trace);
         final ProbeVideoTelemetry videoTelemetry = new ProbeVideoTelemetry(this::trace);
         ProbeWebView web; FrameLayout panel; Surface surface; View previousFocus;
         boolean closed, touching, imeAccepted;
@@ -220,6 +221,7 @@ public final class VulkanProbe {
             startStage = "focus_observer";
             focusObserver = owner.getWindow().getDecorView().getViewTreeObserver();
             focusObserver.addOnGlobalFocusChangeListener(focusListener);
+            trace("probe=FO1 event=focus_trace_installed");
             trace("hostOpened previous=" + viewName(previousFocus));
             traceCapabilities();
             startStage = "page_load";
@@ -269,6 +271,19 @@ public final class VulkanProbe {
         // Deliberately avoid getText(), hint/editor contents, URLs, and connection retention.
         void trace(String event) {
             Log.i(TAG, "[VRWebViewFocus] host=" + id + " " + event);
+            // All metadata here comes from our own focus callbacks/actions, never field text.
+            String kind = event.startsWith("globalFocus ") ? "view_change"
+                    : event.startsWith("webFocusEnter=") ? "web_entry"
+                    : event.startsWith("webFocus=") ? "web_exit"
+                    : event.startsWith("windowFocusEnter=") ? "window_entry"
+                    : event.startsWith("windowFocus=") ? "window_exit"
+                    : event.startsWith("returnFocus ") ? "app_return"
+                    : event.startsWith("proxy=IP1 event=proxy_focus_changed ") ? "native_view"
+                    : null;
+            if (kind != null) {
+                String metadata = kind.equals("native_view") ? event.substring("proxy=IP1 event=proxy_focus_changed ".length()) : event;
+                focusCalls.record(kind, metadata + " current=" + viewName(owner.getCurrentFocus()), new Throwable().getStackTrace());
+            }
         }
         void returnFocus(String reason) {
             focusRecovery.release();

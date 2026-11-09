@@ -96,3 +96,10 @@ GeckoViewを採る場合の最小境界案:
 - 最初の実機gateはページ内の日本語変換/確定とDone後のUnity操作復帰。動画/Surface経路も同じ最小APKで並行確認し、任意のrich Browser UI sampleの前提にはしない。
 
 参照APIはMozilla gecko-devのSessionTextInput.java/GeckoSession.javaで確認した。これは公開APIの調査であり、安定版artifact選定、Unityへの組込み、Quest動作を検証済みという意味ではない。
+
+
+## 2026-11-09 — 次の実装より直接経路のfocus原因調査を優先
+
+利用者との整理により、直接WebViewからGameActivitySurfaceViewへ移った要求元が未特定のまま、復旧/借用の試験を先行していたことを確認した。次の優先事項をFO1のcaller調査へ変更する。Windowへの一時移管とGeckoViewは候補設計として保留し、現段階で製品方式を変更しない。
+
+Native EditTextの最新区間ではWindow focus喪失後も入力し、Done時の明示的returnFocusでUnityへ戻った。Window focus喪失と不本意なView focus移動を同一視しない。FO1は既存callbackのstackとenter/exitを記録するだけで、focus通知を抑制せず、再focus/showループも追加しない。同期的callerか、非同期の実行先まで追えるかをログで判断する。

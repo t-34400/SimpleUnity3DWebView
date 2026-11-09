@@ -148,6 +148,11 @@ final class ImeProxyProbe {
         UI.post(() -> show(ticket));
     }
     private void sourceCreated(InputConnection connection, EditorInfo info) {
+        // Allow the existing direct-WebView route (Proxy OFF) to calibrate the native control.
+        // Only routing flags are retained; no connection, text or surrounding context is borrowed.
+        if (connection != null && (info.inputType & 0xf) == 1) {
+            controlFlags = new int[]{info.inputType, info.imeOptions}; controlPrivateOptions = info.privateImeOptions;
+        }
         if (!isEnabled()) return;
         event("source_connection", "connected=" + (connection != null) + " sourceFocus=" + web.hasFocus()
                 + " sourceWindow=" + web.hasWindowFocus() + " type=0x" + Integer.toHexString(info.inputType));

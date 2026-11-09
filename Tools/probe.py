@@ -26,6 +26,7 @@ def analyze(lines, expected='any'):
                   pointer_states=[], proxy_rows=0, proxy_events=[], issues=[], keyboard_visibility='requires_user_observation',
                   ray_visibility='requires_user_observation', video_responses=0, video_samples=0,
                   isolated_ime_variant=False,
+                  focus_trace_installed=False, focus_calls=0, focus_frames=0, direct_mode_seen=False,
                   video_playback='requires_runtime_analysis_and_user_observation')
     for number, line in enumerate(lines, 1):
         if not line.strip():
@@ -38,6 +39,10 @@ def analyze(lines, expected='any'):
         result['legacy_rows'] += int('VRWebViewProbe' in line or 'VRWebViewGpuProbe' in line)
         pid = re.match(r'\d\d-\d\d\s+[\d:.]+\s+(\d+)\s+\d+\s', line)
         location = dict(line=number, pid=int(pid[1]) if pid else None)
+        if 'probe=FO1 ' in line:
+            result['focus_trace_installed'] |= 'event=focus_trace_installed' in line
+            result['focus_calls'] += int('event=focus_call ' in line)
+            result['focus_frames'] += int('event=focus_frame ' in line)
         if 'VRWebViewFocus' in line and 'video=bundled ' in line:
             result['video_responses'] += int('event=response ' in line)
             result['video_samples'] += int('event=sample ' in line)
@@ -49,6 +54,8 @@ def analyze(lines, expected='any'):
                 result['proxy_events'].append(dict(location, event=event[1], **fields))
                 if event[1] == 'mode' and fields.get('variant') == 'isolated':
                     result['isolated_ime_variant'] = True
+                if event[1] == 'mode' and fields.get('enabled') == 'false':
+                    result['direct_mode_seen'] = True
         if host:
             trial = re.search(r'(?:startupCase=|run case=)([a-z-]+)', line)
             if trial:
@@ -109,6 +116,13 @@ def analyze(lines, expected='any'):
         if not any(event['event'] == 'ime_request' and event.get('editor') == 'borrowed'
                    and event.get('variant') == 'isolated' for event in result['proxy_events']):
             result['issues'].append('expected_borrowed_ime_request_missing')
+    if expected == 'focus':
+        if not result['focus_trace_installed']:
+            result['issues'].append('expected_focus_trace_missing')
+        if not result['direct_mode_seen']:
+            result['issues'].append('expected_direct_mode_missing')
+        if not result['focus_calls'] or not result['focus_frames']:
+            result['issues'].append('expected_focus_call_stack_missing')
     if any(not row['valid'] for row in result['boot_checks']):
         result['issues'].append('boot_expectation_mismatch')
     if any(row['profile_match'] == 'false' for row in result['editor_flags']):
@@ -221,10 +235,10 @@ def main():
     cap = commands.add_parser('capture', help='Capture all probe families with the same tag list')
     cap.add_argument('--label', default='probe')
     cap.add_argument('--log-dir')
-    cap.add_argument('--expect', choices=('any', 'host', 'activity', 'proxy', 'video', 'ime-video'), default='any')
+    cap.add_argument('--expect', choices=('any', 'host', 'activity', 'proxy', 'video', 'ime-video', 'focus'), default='any')
     summary = commands.add_parser('summarize', help='Inspect an existing log offline; no device is needed')
     summary.add_argument('log', type=Path)
-    summary.add_argument('--expect', choices=('any', 'host', 'activity', 'proxy', 'video', 'ime-video'), default='any')
+    summary.add_argument('--expect', choices=('any', 'host', 'activity', 'proxy', 'video', 'ime-video', 'focus'), default='any')
     import probe_launch
     host = commands.add_parser('launch-host', help='Launch an installed HC2 probe; no build/install/capture')
     host.add_argument('case', nargs='?', choices=probe_launch.HOST_CASES, default='menu')

@@ -85,3 +85,36 @@ Quest 3 / Android SDK34 / provider com.android.webview 154.0.0.55.15.1096209767�
 修正版はbyte0から要求終端までのprefixを渡し、開始offsetの適用はWebViewに一度だけ任せる。終端を限定したprefixにより、EOFまで読む実装でも閉じたRangeを越えて返さない。HTTPの206/Content-Range/Content-Lengthは要求した区間を示す。ログのstreamBytesはJavaストリームの長さ、responseBytesはHTTP応答区間長で、skip/readの量を分けて記録する。MP4やGPU描画経路は変更しない。
 
 元MP4を使い、consumer側が範囲検査/skipしてから読む契約テストと、旧二重適用で1MiB後続が拒否される回帰ケースを追加した。Android/実機のネットワーク挙動を模倣したテストではなく、参照ソースから得たストリーム契約の検証。修正後Questでの再生は未確認。この修正のためにIP2の日本語入力試験を繰り返す必要はなく、次の主タスクの実機ビルドへ同梱できる。
+
+
+## preview.33 — FO1: WebViewからUnityへfocusが移った要求元を調べる
+
+主タスクの順序を、まず既存の直接WebView経路のfocus移動の原因調査へ戻す。Window移管案/GeckoView案の実装は進めず、IP1/IP2の借用も再試行しない。
+
+既存のNative対照ログ（2026-11-09 03:04:17–24 JST）では、ProxyEditorは入力中にfocusを維持した。03:04:17.751にWindow focusを失っても文字変更/compositionが続き、03:04:24.086のnative_done→明示的returnFocusで初めてUnityへ戻った。したがって、この区間に直接WebViewの「入力中の不本意なView focus移動」は再現していない。Window focus喪失自体は両方で起こり得る。stateログのviewFocusはWebViewの値なので、Native EditTextのfocusと混同しない。
+
+FO1は既存のOnGlobalFocusChangeListenerとWebViewのfocus callbackに、class/method/lineのstackを追加する。各hostで最大64イベント、各48frames。Window/View callbackのenter/exitと現在の入力先Viewを記録し、独自returnFocusも区別する。Window.Callbackの置換、focus要求の追加、IME showの再試行、元のcallbackの省略/偽装は行わない。入力本文、例外message、stackのファイル名/パスは記録しない。FO1のevent/frame記録は難読化後のclass/method名でもそのまま保存し、特定のUnityクラス名に依存して切り捨てない。
+
+同期的なrequestFocus/clearFocusなら、その呼び出し経路がfocus_change時のstackに残る。非同期なら実行されたRunnable/native境界までしか分からない可能性がある。その場合はイベント順と該当Unity Java処理を追加で調べる。一回でOS側の要求元まで必ず特定できるとはしない。
+
+現在のIP2シーンをそのまま使う。新シーン生成やEditor/Sampleテスト、graphics API/boot設定変更は不要。
+
+```bash
+cd /mnt/c/source/Unity/SimpleUnity3DWebView
+vrwebview_logs="/mnt/c/Users/tmiyoshi/Downloads/VRWebView-FO1-$(date +%Y%m%d-%H%M%S)"
+python3 Tools/probe.py capture --expect focus --label FO1 --log-dir "$vrwebview_logs"
+```
+
+採取を先に起動し、一度Build And Runする。既存のIP2見出し/ボタン名は維持するので、**IP2 Startは押さない。**
+
+1. **Proxy ONを一度押してProxy OFFにする。** 以後のページtapは元の直接WebView経路となる。
+2. 動画も同時に見る場合はPlay/Pauseを一度押す。その後、ページのText入力欄を一度選び、キーボードが表示/維持されるか5秒ほど観察する。
+3. 入力できた場合は架空の短い文字を入力して通常の操作で閉じる。できない場合は同じ欄やIMEボタンを連打しない。
+4. Unityを操作できる場合に限り **Native IME** を一度選ぶ。このボタンは必要なcontrollerを自動的にONへ戻す。直接経路で得たWebViewのinputType/imeOptions/privateImeOptionsを対照に使い、周辺文字や接続本体は借用しない。通常の文字入力後Doneで閉じる。
+5. Unityを操作できなければ追加試行は止める。Ctrl+Cで採取を終え、今回のDownloadsフォルダーをZIPで送る。
+
+直接経路で有効なsource flagsを取得できなければNative対照はsource_flags_unavailableとして拒否する。既にNative成功の証拠はあるため、そこで対照を成立させる追加操作は求めない。
+
+--expect focusはFO1のinstall、Proxy OFF、focusイベント/stackを必要とする。旧APK、proxy-query stackだけでは新診断の採取成立にしない。一方、WebView→Unityへの不本意な移動やIME失敗そのものを採取成功の条件にはしない。再現しない結果も保存する。summaryは原因を自動判定せず、APIの値からHMD表示も推定しない。
+
+旧直接経路の原因は依然未特定であり、FO1は観測追加。元の問題を修正した、新しいIME方式が成立した、という更新ではない。

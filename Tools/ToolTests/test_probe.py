@@ -26,6 +26,32 @@ HOST = [
 
 
 class AnalysisTests(unittest.TestCase):
+    def test_focus_trace_requires_direct_mode_and_observed_stack_without_inferring_cause(self):
+        report = probe.analyze([
+            'VRWebViewFocus probe=FO1 event=focus_trace_installed',
+            'VRWebViewFocus proxy=IP1 event=mode enabled=false variant=isolated',
+            'VRWebViewFocus probe=FO1 event=focus_call seq=1 kind=view_change current=Surface',
+            'VRWebViewFocus probe=FO1 event=focus_frame seq=1 index=0 class=android.view.View method=requestFocus line=1'], 'focus')
+        self.assertEqual(report['issues'], [])
+        self.assertEqual(report['focus_calls'], 1)
+        self.assertEqual(report['focus_frames'], 1)
+        self.assertEqual(report['keyboard_visibility'], 'requires_user_observation')
+        self.assertNotIn('focus_cause', report)
+
+    def test_old_direct_logs_do_not_establish_new_focus_caller_evidence(self):
+        report = probe.analyze([
+            'VRWebViewFocus proxy=IP1 event=mode enabled=false',
+            'VRWebViewFocus globalFocus WebView>Surface'], 'focus')
+        self.assertIn('expected_focus_trace_missing', report['issues'])
+        self.assertIn('expected_focus_call_stack_missing', report['issues'])
+
+    def test_focus_stacks_without_direct_route_cannot_establish_direct_webview_trial(self):
+        report = probe.analyze([
+            'VRWebViewFocus probe=FO1 event=focus_trace_installed',
+            'VRWebViewFocus probe=FO1 event=focus_call seq=1 kind=view_change',
+            'VRWebViewFocus probe=FO1 event=focus_frame seq=1 index=0 class=Example method=run'], 'focus')
+        self.assertIn('expected_direct_mode_missing', report['issues'])
+
     def test_combined_capture_requires_new_ime_trial_and_media_evidence_without_claiming_success(self):
         report = probe.analyze([
             'VRWebViewFocus proxy=IP1 event=mode enabled=true variant=isolated sourceProxy=false',

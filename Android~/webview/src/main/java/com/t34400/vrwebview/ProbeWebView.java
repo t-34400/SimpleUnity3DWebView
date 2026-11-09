@@ -47,11 +47,13 @@ final class ProbeWebView extends WebView {
     }
 
     @Override protected void onFocusChanged(boolean focused, int direction, Rect previous) {
+        metadata("webFocusEnter=" + focused);
         super.onFocusChanged(focused, direction, previous);
         metadata("webFocus=" + focused);
     }
 
     @Override public void onWindowFocusChanged(boolean focused) {
+        metadata("windowFocusEnter=" + focused);
         windowFocusChanges++; super.onWindowFocusChanged(focused);
         metadata("windowFocus=" + focused);
         if (windowFocusListener != null) windowFocusListener.onChanged(focused);
