@@ -18,6 +18,7 @@ namespace T34400.VRWebView
     {
         private int? owner;
         private float lastX, lastY;
+        public bool IsCaptured => owner.HasValue;
         public event Action<BrowserPointerEvent> Received;
         public bool Send(int id, PointerPhase phase, float x, float y)
         {

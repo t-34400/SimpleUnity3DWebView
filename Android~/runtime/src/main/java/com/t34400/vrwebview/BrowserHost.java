@@ -90,7 +90,7 @@ public final class BrowserHost {
         UI.post(() -> {
             Host h = HOSTS.get(id); if (h == null || h.paused || h.closed) return;
             if (action == MotionEvent.ACTION_DOWN) {
-                h.cancelTouch();
+                h.cancelTouch(); h.exitHover();
                 Host before = EDITORS.get(h.owner);
                 if (before != null && before != h) before.endEditing(false);
                 EDITORS.put(h.owner, h);
@@ -101,6 +101,21 @@ public final class BrowserHost {
             try { h.web.dispatchTouchEvent(event); } finally { event.recycle(); }
             if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) h.touching = false;
             if (action == MotionEvent.ACTION_CANCEL) h.web.cancelArming();
+        });
+    }
+    /** Unpressed mouse/VR-ray hover. Never request View/IME focus or arm the IME guard. */
+    public static void hover(long id, int action, float x, float y) {
+        if (!Float.isFinite(x) || !Float.isFinite(y) ||
+                (action != MotionEvent.ACTION_HOVER_ENTER && action != MotionEvent.ACTION_HOVER_MOVE && action != MotionEvent.ACTION_HOVER_EXIT)) return;
+        UI.post(() -> {
+            Host h = HOSTS.get(id); if (h == null || h.closed || h.paused || h.touching) return;
+            if (action == MotionEvent.ACTION_HOVER_ENTER) {
+                if (h.hovering) return;
+                h.hovering = true;
+            } else if (!h.hovering) return;
+            h.hoverX = x; h.hoverY = y;
+            if (action == MotionEvent.ACTION_HOVER_EXIT) h.hovering = false;
+            h.dispatchHover(action, x, y);
         });
     }
     public static void scroll(long id, float x, float y, float deltaX, float deltaY) {
@@ -122,7 +137,8 @@ public final class BrowserHost {
     private static final class Host implements Application.ActivityLifecycleCallbacks {
         final Activity owner; final long id; final int width, height; final Callback callback; final boolean diagnostics;
         FrameLayout panel; BrowserWebView web; Surface surface; View previousFocus;
-        boolean closed, paused, touching, registered;
+        boolean closed, paused, touching, hovering, registered;
+        float hoverX, hoverY;
         long downTime;
         String endEditingScript;
         Host(Activity owner, long id, int width, int height, boolean diagnostics, Callback callback) {
@@ -168,6 +184,7 @@ public final class BrowserHost {
             UI.post(draw);
         }
         void clearCompletedEditor() {
+            exitHover();
             if (closed || web == null || web.hasFocus() || !web.hasWindowFocus()) return;
             web.evaluateJavascript(endEditingScript, result -> { if (!closed) trace("event=editing_end cleared=" + "true".equals(result)); });
         }
@@ -185,6 +202,23 @@ public final class BrowserHost {
                 UI.postDelayed(this, 33);
             }
         };
+        void dispatchHover(int action, float x, float y) {
+            MotionEvent.PointerProperties properties = new MotionEvent.PointerProperties();
+            properties.id = 0; properties.toolType = MotionEvent.TOOL_TYPE_MOUSE;
+            MotionEvent.PointerCoords coords = new MotionEvent.PointerCoords(); coords.x = x * width; coords.y = y * height;
+            long now = SystemClock.uptimeMillis();
+            MotionEvent event = MotionEvent.obtain(now, now, action, 1,
+                    new MotionEvent.PointerProperties[]{properties}, new MotionEvent.PointerCoords[]{coords},
+                    0, 0, 1, 1, 0, 0, InputDevice.SOURCE_MOUSE, 0);
+            try { web.dispatchGenericMotionEvent(event); } finally { event.recycle(); }
+            // Enter/exit only: do not flood logcat every frame or log coordinates/content.
+            if (action != MotionEvent.ACTION_HOVER_MOVE) trace("event=hover action=" + action);
+        }
+        void exitHover() {
+            if (!hovering || web == null) return;
+            hovering = false;
+            dispatchHover(MotionEvent.ACTION_HOVER_EXIT, hoverX, hoverY);
+        }
         void cancelTouch() {
             if (!touching || web == null) return;
             MotionEvent event = MotionEvent.obtain(downTime, SystemClock.uptimeMillis(), MotionEvent.ACTION_CANCEL, 0, 0, 0);
@@ -194,7 +228,7 @@ public final class BrowserHost {
         void endEditing(boolean restoreUnity) {
             if (web == null) return;
             boolean owns = EDITORS.get(owner) == this || web.hasFocus();
-            web.releaseGuard(); cancelTouch();
+            web.releaseGuard(); cancelTouch(); exitHover();
             InputMethodManager imm = (InputMethodManager) owner.getSystemService(Context.INPUT_METHOD_SERVICE);
             if (imm != null && imm.isActive(web)) imm.hideSoftInputFromWindow(web.getWindowToken(), 0);
             web.clearFocus(); clearCompletedEditor();

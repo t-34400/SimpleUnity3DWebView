@@ -71,13 +71,13 @@ def main():
             "public static void close(long);", "public static void navigate(long, long, java.lang.String);",
             "public static void loadHtml(long, long, java.lang.String, java.lang.String);",
             "public static void endEditing(long);", "public static void setPaused(long, boolean);",
-            "public static void pointer(long, int, float, float);", "public static void scroll(long, float, float, float, float);",
+            "public static void pointer(long, int, float, float);", "public static void hover(long, int, float, float);", "public static void scroll(long, float, float, float, float);",
             "public abstract void ready();", "public abstract void completed(long, boolean, java.lang.String);", "public abstract void failed(java.lang.String);",
             "public static native android.view.Surface nativeSurface(long);", "public static native boolean nativeReserve(long);",
             "public static native void nativeCancelReserve(long);", "public static native void nativeStop(long);"
         ):
             if signature not in runtime_signatures: raise AssertionError("Runtime ABI removed: " + signature)
-    print("PASS 15 production JNI/callback signatures and R8 shrinking/obfuscation retains 9 host and 5 GPU IME JNI signatures using packaged consumer rules")
+    print("PASS 16 production JNI/callback signatures and R8 shrinking/obfuscation retains 9 host and 5 GPU IME JNI signatures using packaged consumer rules")
     print("NOT RUN: Unity APK minification/build, Android execution, Quest IME")
 
 

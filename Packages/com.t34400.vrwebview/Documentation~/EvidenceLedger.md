@@ -114,3 +114,7 @@ E10の試行順を再度疑わない。報告どおりのnative-webinfo成功は
 利用者がIMEと動画再生の成功を確認。3回の編集でinput25/compositionend6、Window保留/解放、editing_end cleared=trueを記録した。endedEditors=3、blurredEditors=0なので、効果は実View喪失後の編集終了処理を含めて説明する。入力終了後の動画操作でIMEが再表示されず、再編集と動画再生も併存。動画buffer0:8、frame1036、error0。
 
 ログSHA-256: `211913fb4b73f55e6e4f2e055c6a900774b38d2d568743b9d36f6a936bb16c3b`。この構成の基本ループは確認済み。任意サイト・GLES・全lifecycleや、preview.36の製品経路を確認した証拠にはしない。
+
+## E16 — RT1基本動作とhover不足
+
+利用者はCreate Runtime Browser SceneのRT1について「動作に問題はなさそう」、pointer overは動いていなさそうと報告した。これは製品経路の基本動作に関する利用者の実機観察。今回添付されたZIPはE15のWF1ログと同じSHA256なので、新しいRT1のログ証拠としては使わない。preview.38のhover追加はその後の変更で、まだ実機未確認。

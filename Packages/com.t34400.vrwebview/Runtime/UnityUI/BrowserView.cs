@@ -86,6 +86,7 @@ namespace T34400.VRWebView
             if (!listening) {
                 pointer.Capture.Received += PointerReceived;
                 pointer.ScrollReceived += ScrollReceived;
+                pointer.Hover.Received += HoverReceived;
                 listening = true;
             }
         }
@@ -162,6 +163,7 @@ namespace T34400.VRWebView
             if (pointer != null && listening) {
                 pointer.Capture.Received -= PointerReceived;
                 pointer.ScrollReceived -= ScrollReceived;
+                pointer.Hover.Received -= HoverReceived;
             }
             listening = false;
         }
@@ -178,10 +180,20 @@ namespace T34400.VRWebView
 
         private void PointerReceived(BrowserPointerEvent value)
         {
+            if (value.Phase == PointerPhase.Down) pointer.Hover.Exit();
             if (value.Phase == PointerPhase.Cancel) router.Cancel();
             else if (Map(value.X, value.Y, out float x, out float y)) {
                 if (!router.Send(new BrowserPointerEvent(value.Id, value.Phase, x, y))) pointer.Capture.Cancel(value.Id);
             } else { router.Cancel(); pointer.Capture.Cancel(value.Id); }
+            ReportInputError();
+        }
+
+        private void HoverReceived(BrowserHoverEvent value)
+        {
+            if (value.Phase == HoverPhase.Exit) router.ClearHover(value.Id);
+            else if (Map(value.X, value.Y, out float x, out float y)) {
+                if (!router.SendHover(new BrowserHoverEvent(value.Id, value.Phase, x, y))) pointer.Hover.Exit(value.Id);
+            } else { router.ClearHover(value.Id); pointer.Hover.Exit(value.Id); }
             ReportInputError();
         }
 

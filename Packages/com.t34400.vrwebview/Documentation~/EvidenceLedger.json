@@ -223,6 +223,21 @@
         "任意サイト・iframe・全provider・GLES・sleep/menu/resumeの成功へ一般化しない",
         "preview.36の製品用hostと一般DOM終了処理は別の実装で実機未確認"
       ]
+    },
+    {
+      "id": "E16",
+      "configuration": "RT1 production BrowserController/BrowserView/Android backend through preview.37",
+      "source_kind": "user_report",
+      "source_log_sha256": null,
+      "observed": [
+        "利用者がRT1（Create Runtime Browser Scene）での基本動作に問題なさそうと確認",
+        "pointer overは動いていなさそうとの指摘。ソースでも未押下hoverの送信経路がないことを確認"
+      ],
+      "limits": [
+        "今回の添付はE15のWF1ログと同一SHA256であり、新しいRT1実行ログではない",
+        "任意サイト・全lifecycle・GLES・複数ページへの成功一般化はしない",
+        "preview.38のhover追加はこの報告後の変更で、Quest未確認"
+      ]
     }
   ]
 }

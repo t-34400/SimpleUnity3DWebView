@@ -1,6 +1,6 @@
-# Android backend — preview.37 / RT1
+# Android backend — preview.38 / RT1
 
-WF1 preview.35の実機成功を基に、製品用hostと公開レイヤーを接続した。新しい製品経路のUnity Editor型コンパイル・APK・Quest確認は未実施。旧WF1の基本試験を未確認へ戻さず、次はこの統合経路を確認する。
+WF1 preview.35の実機成功を基に、製品用hostと公開レイヤーを接続した。preview.37までのRT1基本動作について利用者の実機確認あり（E16）。preview.38のhover追加後のUnity/Quest確認は未実施。旧WF1の基本試験を未確認へ戻さず、次はこの統合経路を確認する。
 
 preview.37はBootstrapのPresentation直接参照漏れ（BrowserControllerのCS0012）を修正する。依存境界checkerにこの直接参照を必須として追加した。checkerはC#の型コンパイル全体の代替ではない。RT1のscene・操作手順は同じ。
 
@@ -69,3 +69,15 @@ python3 Tools/probe.py capture --expect runtime --label RT1 --log-dir "$vrwebvie
 RT1のページには旧probe専用のpointer blur処理や編集終了関数を入れない。製品hostの標準DOM処理を通す。動画は診断AARの8秒fixtureをdata URLで渡し、ネットワーク/Rangeとは独立に再生を確認する。一般URLの読込、cross-origin iframe編集、GLES、sleep/resume、長時間・複数ページ・最小Git consumerへの導入は別の残作業。
 
 `--expect runtime`はhost/Readyの証拠とfatal failureを検査する。InputConnectionやHOLD_LOSSのログだけでIMEの実表示・日本語編集成功とは判定しない。診断はRT1でopt-inにし、本文/周辺文字/選択/URLを出さない。
+
+## preview.38: 未押下hover
+
+CoreにBrowserHoverEvent/HoverCapture/IBrowserHoverSinkを追加した。押下streamと分け、BrowserPointerSourceがEventSystemのEnter/Move/Exitを受け、BrowserViewが同じUV/origin変換でbrowser座標へ写す。BrowserPointerRouterとAndroid backendはhover所有者を一つに限定し、別レイからのMove/Exitを拒否する。既存のtouch-only backendはこの任意capabilityを実装しなくても動作する。
+
+AndroidはSOURCE_MOUSE/TOOL_TYPE_MOUSEのACTION_HOVER_ENTER/MOVE/EXITをdispatchGenericMotionEventへ渡す。hoverのためにView focusを要求せず、guardをarmせず、IMEをshowしない。DOMのpointerover/mouseoverやCSS :hoverはWebViewの通常処理に任せ、JavaScriptで合成しない。押下前にhoverを終了し、ドラッグ中はhoverを送らず、解放後に再開する。これはray hoverと従来touch pressを組み合わせる方式であり、click/dragがmouse pointerTypeへ変更されたわけではない。mouse button/dragやhoverを保持したままのdesktop専用menuの操作互換性は、この追加で対応済みにはしない。
+
+レイがページを外れたとき、追跡/source変更、focus喪失、disable/unbind、pause/終了ではExitを送る。同一座標の連続Moveは省く。RT1のhand reset同期とIMEの実入力経路は保持する。hoverだけを理由にediting focusや文字列を書き換えない。
+
+更新後は同じRT1 sceneをBuild And Runし、**Hover here without pinching**へレイを重ねる。ピンチせず灰色から緑系へ変わり、レイを外すと戻るか確認する。pointerover/move/outのmouseカウンターもページ内に表示する。画面数値の転記は不要で、変色と復帰が分かればよい。採取は従来の`--expect runtime --label RT1`を使う。nativeのEnter/Exitだけをログに記録し、座標・本文・毎frame Moveは記録しない。summaryのruntime_hover_enter/exitはnative送信数で、DOM成功を意味しない。
+
+Coreの所有権・再入・取消/cleanup、Android compile/Lint/R8、RT1 HTMLの実Chromium mouseによるpointerover/out/CSS変化をローカル検証する。Androidの実MotionEvent配信、Unity EventSystem/手のray、Quest WebView上のhoverは実機で判断する。

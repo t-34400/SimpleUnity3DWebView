@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "aarSha256": "a3524b4235d87450678fddc829dfb5ee85a66098533aebe82a8cd409bbdb26a4",
+  "aarSha256": "da3ba0fec680f900d62a3aa9561d52a5f7ca6f3e86adba15c02b3ecb7817d9c5",
   "sources": {
     "Android~/build.gradle.kts": "30319db7ac75762e50cc423c2245d8bc704df111839e5be6fd9393f906db67af",
     "Android~/gradle/wrapper/gradle-wrapper.jar": "498495120a03b9a6ab5d155f5de3c8f0d986a449153702fb80fc80e134484f17",
@@ -11,7 +11,7 @@
     "Android~/runtime/consumer-rules.pro": "7d9905b09ba5b7d3315eb71aad8b6fcb29e27cf97d6b7063a189806dd3d7da66",
     "Android~/runtime/src/main/AndroidManifest.xml": "678647a824ef7ab16066708585790ab265135d32fdf84bcd918a4b050f8891b9",
     "Android~/runtime/src/main/assets/vrwebview-end-editing.js": "f3338013cb9f4f615d2b4409f9c095af331d8cae4442072480780404503d528f",
-    "Android~/runtime/src/main/java/com/t34400/vrwebview/BrowserHost.java": "b5085e6ce76bc531b75540ecb43d91ca5764f9492a68f495534e1590ccbd6c95",
+    "Android~/runtime/src/main/java/com/t34400/vrwebview/BrowserHost.java": "a30a7931e876c686f1c79320cf362d4c5b4494be4756c2607a6cedd62dd79e26",
     "Android~/runtime/src/main/java/com/t34400/vrwebview/BrowserWebView.java": "badf984145cf324bfb13bf7b17651643b21f9e6d4f78c03d1d04335c3f050d04",
     "Android~/runtime/src/main/java/com/t34400/vrwebview/GpuBridge.java": "7234ae5f178ecf37897c187703ad2424e9c94759671be0450e10fc6c7a3fca71",
     "Android~/runtime/src/main/java/com/t34400/vrwebview/ImeWindowFocusGuard.java": "c542ca093ed0008c46fa182fb2dffc901cf6a752f1c53c6ff0bcbc3ac4d5fe31",
@@ -65,14 +65,14 @@
     "Android~/webview/src/main/java/com/t34400/vrwebview/ProbeVideoTelemetry.java": "8e7d1376937a0075fc959a1632a990419a692a7a9c82ec77d8c3955b90ae6d94",
     "Android~/webview/src/main/java/com/t34400/vrwebview/ProbeWebView.java": "2974922c474b44725939e0f48e27a45e6bbad07a882aabc3f64129316804c22b",
     "Android~/webview/src/main/java/com/t34400/vrwebview/ProxyTrialState.java": "9c1c682a3829c6e7c29444cc0a4a5f3a727c6975f94448583a33d754f887fcfb",
-    "Android~/webview/src/main/java/com/t34400/vrwebview/RuntimeProbeContent.java": "191a09341a43edb8ed4c69ec96773a2e2e55d78319a627037d125da423d35698",
+    "Android~/webview/src/main/java/com/t34400/vrwebview/RuntimeProbeContent.java": "b2a883e7fe08df367713120acb78c0761416aeaea350bda458d5df6c14e7cd9b",
     "Android~/webview/src/main/java/com/t34400/vrwebview/TransparentHostActivity.java": "524fbe2818d9f64c8858faba88c9e1f799da82e327e7a3de6e93f58c9c33be3b",
     "Android~/webview/src/main/java/com/t34400/vrwebview/VulkanProbe.java": "4788a1dc9d8d0cf0fa6983743ab3cecaea22cd65f45cc532d1cc91adfea7761e",
     "Android~/webview/src/main/res/values/styles.xml": "ec53148930a2916882538c06c4d6aee6725223d6228dabb4be3d81b9d989b836"
   },
   "nativeLibrary": {
     "path": "Packages/com.t34400.vrwebview/Runtime/Plugins/Android/arm64-v8a/libGfxPluginVRWebView.so",
-    "sha256": "ecbbae88f0f3649a7896c0e14ca1ce90ab48cb5967fb94549a6da9665a0e52fe",
+    "sha256": "0a355a24c418c1b3a4d6871e4984155dc5f37837281dd5528834d91d44f9bd97",
     "abi": "arm64-v8a",
     "ndk": "27.2.12479018"
   },

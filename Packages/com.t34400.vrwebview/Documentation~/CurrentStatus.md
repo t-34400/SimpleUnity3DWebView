@@ -1,10 +1,10 @@
 # 現在の状態と整理フェーズ
 
-更新: 2026-11-09 JST。preview.35のWF1で、利用者がIME入力と入力終了後の動画操作の成功を確認した（E15）。この構成の基本ループは確認済み。preview.36では同じ方式を使う製品用Android backend、共有render pump、BrowserController/BrowserView、Browser sample factoryを接続した。新しい製品経路の実Editor/APK/Quest確認は未実施。[Android backend](AndroidBackend.md)を次の入口とし、古い比較試験の総当たりへ戻らない。
+更新: 2026-11-09 JST。preview.35のWF1で、利用者がIME入力と入力終了後の動画操作の成功を確認した（E15）。この構成の基本ループは確認済み。preview.36では同じ方式を使う製品用Android backend、共有render pump、BrowserController/BrowserView、Browser sample factoryを接続した。preview.37までのRT1基本動作は利用者が確認した（E16）。hover送信は未実装だったためpreview.38で追加したが、追加後の実機確認は未実施。[Android backend](AndroidBackend.md)を次の入口とし、古い比較試験の総当たりへ戻らない。
 
 ## 現時点の判断
 
-製品用Android backendを実装し、Core/Unity/UIへ接続した。WF1検証経路の実機成功と、切り出した製品経路の実機成功は区別する。
+製品用Android backendを実装し、Core/Unity/UIへ接続した。WF1はE15のログと報告、RT1基本動作はE16の利用者報告で確認。最新hover追加後の結果は別に確認する。
 
 - 通常閲覧はUnityが操作主体となる。IME表示中はシステムへ入力を渡し、終了後にUnity操作へ戻ることを要求する。
 - 別Activityを常時前面に置く方式は、現在の製品主候補から外す。描画・IMEの比較資料として残す。
@@ -43,7 +43,7 @@ FO1と実機providerのDEX解析で、Window喪失→WebView内部reset/hide→n
 
 IP2はキーボードを維持できたがDOM編集は成立せず、Native EditText対照だけは編集できた。動画のRange修正はFO1で後続streamのskip/read成功とページ側の旧停止位置超えを確認した。動画の全HMDピクセル確認とは区別する。
 
-WF1のsystem記録で、IME表示中の入力先がQuestのFocusPlaceholderActivityへ移ることを確認した。Meta内部のポリシー実装は未特定。preview.35で入力中の回避と終了後の動画操作が成立した。製品backendへの接続を実装し、任意ページの編集終了は一般DOM操作へ置き換えた。新経路の確認はRT1で行う。
+WF1のsystem記録で、IME表示中の入力先がQuestのFocusPlaceholderActivityへ移ることを確認した。Meta内部のポリシー実装は未特定。preview.35で入力中の回避と終了後の動画操作が成立した。製品backendへの接続を実装し、任意ページの編集終了は一般DOM操作へ置き換えた。RT1基本動作はE16で確認し、最新hover追加は同じRT1で確認する。
 
 ## このフェーズの成果と残作業
 
@@ -52,12 +52,12 @@ WF1のsystem記録で、IME表示中の入力先がQuestのFocusPlaceholderActiv
 - [技術的負債台帳](TechnicalDebt.md)で完了条件を定める。
 - [実装分離](RuntimeSeparation.md)の最初の判定/観測を実装し、従来の抑止条件を保持する。
 - [GPU寿命](GpuLifetime.md)の世代/退役状態処理を実装・合成検証した。既存Probe/Pumpには未接続で、Texture破棄の動作は変更していない。
-- [上位レイヤー](UpperLayers.md)の表示借用契約とBrowserWorkspace/BrowserTabを実装した。サンプルモデルは既存BrowserSessionへ接続している。製品Android backendとsample factoryへ接続済み（新経路は実機未確認）。
-- [Unity表示部品](UnityView.md)としてdispatcher、Texture公開口、RawImage view、pointer/scroll接続を実装した。実Unity 6000.4.5f1でEditMode 14/14、修正後PlayMode 3/3と終了コード0を確認した。WF1旧版の実APK動作は利用者ログあり。preview.35の実APK/Quest結果はE15。preview.36ではAndroidからTexture/入力を供給する接続を実装したが、その実Editor/APK/Quest確認は未実施。
+- [上位レイヤー](UpperLayers.md)の表示借用契約とBrowserWorkspace/BrowserTabを実装した。サンプルモデルは既存BrowserSessionへ接続している。製品Android backendとsample factoryへ接続済み。RT1基本動作はE16、Browser sample factoryの実UI確認は保留。
+- [Unity表示部品](UnityView.md)としてdispatcher、Texture公開口、RawImage view、pointer/scroll接続を実装した。実Unity 6000.4.5f1でEditMode 14/14、修正後PlayMode 3/3と終了コード0を確認した。WF1旧版の実APK動作は利用者ログあり。preview.35の実APK/Quest結果はE15。preview.36でAndroidからTexture/入力を供給する接続を実装し、preview.37のRT1基本動作はE16で利用者が確認。最新hover追加後の確認は未実施。
 - [Browser UI sample](BrowserUI.md)にタブ列・URL欄・Go/New/Closeとモデル/表示の接続を実装した。実EditorでのUI確認は未実施。AndroidBrowserPageFactoryを追加した。未設定時にfakeページを表示しない。
 - [レイヤー設計](LayeredArchitecture.md)を記録し、新しい純C# assemblyの依存方向を静的検査する。package全体のXR依存除去は未完了。
 - [Editor検証](EditorValidation.md)を共通ツールから起動できるようにした。利用者ログでEditMode全14件、PlayMode全3件とプロセス正常終了を確認した。importしたsampleは保留。前回の終了停滞の根本原因は未確定。
 - ログ採取と起動は共通の`Tools/probe.py`へ集約。従来のcapture/runシェルは互換入口として委譲する。全case/modeの引数と失敗経路を合成ADBで検証し、実機起動は未確認。[診断仕様](Diagnostics.md)を参照。
 - patch-exchangeのWSL修正はmainへ統合済み。[統合結果](FoundationIntegration.md)と[標準手順](StandardWorkflow.md)を参照。新しいmain版CLIで既存ジョブのresumeも確認した。
 
-実機試験の再開条件として、ログの取得・失敗検出、配布CLIの統一、一試験の判断と打ち切り条件を定めた。次はRT1の新しい製品経路を一回確認する。WF1の基本ループは確認済みとして扱い、HC2/AG3へ戻らない。任意サイト・GLES・全lifecycleへ成功を一般化しない。
+実機試験の再開条件として、ログの取得・失敗検出、配布CLIの統一、一試験の判断と打ち切り条件を定めた。次は同じRT1で未押下hoverのEnter/Move/Exitを一回確認する。WF1の基本ループは確認済みとして扱い、HC2/AG3へ戻らない。任意サイト・GLES・全lifecycleへ成功を一般化しない。

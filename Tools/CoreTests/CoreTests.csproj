@@ -18,6 +18,7 @@
     <Compile Include="UnityBridgeTests.cs" />
     <Compile Include="BrowserSampleTests.cs" />
     <Compile Include="BackendCapabilityTests.cs" />
+    <Compile Include="HoverTests.cs" />
     <Compile Include="Program.cs" />
   </ItemGroup>
 </Project>

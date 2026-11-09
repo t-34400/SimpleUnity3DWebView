@@ -26,6 +26,16 @@ HOST = [
 
 
 class AnalysisTests(unittest.TestCase):
+    def test_native_hover_counts_do_not_assert_dom_or_keyboard_success(self):
+        report = probe.analyze(['VRWebViewRuntime event=host_ready',
+            'VRWebViewRuntime event=hover action=9', 'VRWebViewRuntime event=hover action=10'], 'runtime')
+        self.assertEqual(report['runtime_hover_enter'], 1)
+        self.assertEqual(report['runtime_hover_exit'], 1)
+        self.assertEqual(report['issues'], [])
+        self.assertNotIn('pointerover_success', report)
+        self.assertEqual(report['keyboard_visibility'], 'requires_user_observation')
+
+
     def test_runtime_ready_is_not_a_keyboard_visibility_assertion(self):
         report = probe.analyze(['VRWebViewRuntime host=5 event=host_ready',
             'VRWebViewRuntime host=5 event=connection connected=true inputType=1',

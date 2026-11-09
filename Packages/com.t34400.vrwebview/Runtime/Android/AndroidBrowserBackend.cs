@@ -12,7 +12,7 @@ namespace T34400.VRWebView
     /// <summary>One Android WebView, direct native IME and a borrowed GPU surface.
     /// Public operations/Dispose run on the supplied Unity dispatcher owner thread.</summary>
     public sealed class AndroidBrowserBackend : IBrowserBackend, IBrowserHtmlBackend,
-        IBrowserPointerSink, IBrowserScrollSink, IBrowserEditingSink, IBrowserFailureSource
+        IBrowserPointerSink, IBrowserScrollSink, IBrowserHoverSink, IBrowserEditingSink, IBrowserFailureSource
     {
         private readonly BrowserDispatcher owner;
         private readonly int width, height;
@@ -22,6 +22,7 @@ namespace T34400.VRWebView
         private readonly Dictionary<long, TaskCompletionSource<bool>> pending = new Dictionary<long, TaskCompletionSource<bool>>();
         private readonly TaskCompletionSource<bool> initialized = NewCompletion();
         private readonly PointerCapture capture = new PointerCapture();
+        private readonly HoverCapture hover = new HoverCapture();
         private BrowserGpuPump pump;
         private RenderTexture texture;
         private AndroidJavaClass bridge;
@@ -44,6 +45,7 @@ namespace T34400.VRWebView
             this.width = width; this.height = height; providerWorkaround = enableKnownProviderImeWorkaround; diagnostics = enableDiagnostics;
             Surface = new BrowserTextureSource(owner); registration = owner.Track(this);
             capture.Received += ForwardPointer;
+            hover.Received += ForwardHover;
         }
         private static TaskCompletionSource<bool> NewCompletion() => new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         public Task InitializeAsync(CancellationToken token)
@@ -146,12 +148,25 @@ namespace T34400.VRWebView
             // Its native capture was already cancelled by Dispose; repeated cancel is harmless.
             if (value.Phase == PointerPhase.Cancel && (disposed || !ready)) return;
             VerifyReady();
+            if (value.Phase == PointerPhase.Down) hover.Exit();
             capture.Send(value.Id, value.Phase, value.X, value.Y);
         }
         private void ForwardPointer(BrowserPointerEvent value)
         {
             int action = value.Phase == PointerPhase.Down ? 0 : value.Phase == PointerPhase.Up ? 1 : value.Phase == PointerPhase.Move ? 2 : 3;
             bridge?.CallStatic("pointer", (long)id, action, value.X, value.Y);
+        }
+        public void SendHover(BrowserHoverEvent value)
+        {
+            owner.VerifyAccess();
+            if (value.Phase == HoverPhase.Exit && (disposed || !ready)) return;
+            VerifyReady(); if (capture.IsCaptured || (!Application.isFocused && value.Phase != HoverPhase.Exit)) return;
+            hover.Send(value.Id, value.Phase, value.X, value.Y);
+        }
+        private void ForwardHover(BrowserHoverEvent value)
+        {
+            int action = value.Phase == HoverPhase.Enter ? 9 : value.Phase == HoverPhase.Move ? 7 : 10;
+            bridge?.CallStatic("hover", (long)id, action, value.X, value.Y);
         }
         public void SendScroll(BrowserScrollEvent value)
         {
@@ -160,12 +175,12 @@ namespace T34400.VRWebView
                 || float.IsNaN(value.DeltaX) || float.IsNaN(value.DeltaY) || float.IsInfinity(value.DeltaX) || float.IsInfinity(value.DeltaY)) return;
             bridge.CallStatic("scroll", (long)id, value.X, value.Y, value.DeltaX, value.DeltaY);
         }
-        public void EndEditing() { VerifyReady(); capture.Cancel(); bridge.CallStatic("endEditing", (long)id); }
-        private void FocusChanged(bool focused) { if (!focused && !disposed) capture.Cancel(); }
+        public void EndEditing() { VerifyReady(); capture.Cancel(); hover.Exit(); bridge.CallStatic("endEditing", (long)id); }
+        private void FocusChanged(bool focused) { if (!focused && !disposed) { try { capture.Cancel(); } finally { hover.Exit(); } } }
         private void PauseChanged(bool paused)
         {
             if (disposed || bridge == null) return;
-            if (paused) capture.Cancel();
+            if (paused) { try { capture.Cancel(); } finally { hover.Exit(); } }
             bridge.CallStatic("setPaused", (long)id, paused);
         }
         private void Verify() { owner.VerifyAccess(); if (disposed) throw new ObjectDisposedException(nameof(AndroidBrowserBackend)); }
@@ -193,6 +208,8 @@ namespace T34400.VRWebView
             lock (pendingGate) { operations = new TaskCompletionSource<bool>[pending.Count]; pending.Values.CopyTo(operations, 0); pending.Clear(); }
             foreach (var operation in operations) operation.TrySetCanceled();
             try { capture.Cancel(); }
+            catch (Exception error) { Debug.LogException(error); }
+            try { hover.Exit(); }
             catch (Exception error) { Debug.LogException(error); }
             // Withdraw synchronously before target retirement so bound views stop sampling it.
             Surface.Dispose();

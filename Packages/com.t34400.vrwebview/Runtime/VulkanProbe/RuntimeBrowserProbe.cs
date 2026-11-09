@@ -49,7 +49,7 @@ namespace T34400.VRWebView
             }
         }
         private void OnApplicationFocus(bool focused) { if (!focused) ResetPointer(); }
-        private void ResetPointer() { pointer?.Capture.Cancel(); press.Reset(); if (ray != null) ray.enabled = false; }
+        private void ResetPointer() { pointer?.Capture.Cancel(); pointer?.Hover.Exit(); press.Reset(); if (ray != null) ray.enabled = false; }
         private void OnDisable() {
             InputSystem.onDeviceChange -= DeviceChanged; ResetPointer();
             if (composition != null) composition.SetActive(false);
@@ -70,10 +70,12 @@ namespace T34400.VRWebView
                 Quaternion yaw = Quaternion.Euler(0, headCamera.transform.eulerAngles.y, 0);
                 panel.position = headCamera.transform.position + yaw * Vector3.forward * 1.6f; panel.rotation = yaw; placed = true;
             }
-            bool available = input.TryRead(ProbePointerMode.Auto, press.ActiveSourceId, out var sample);
+            ProbeRaySample sample = default;
+            bool available = Application.isFocused && input.TryRead(ProbePointerMode.Auto, press.ActiveSourceId, out sample);
             var phase = press.Update(available, (int)sample.Source, sample.Pressed);
             if (phase == PointerPhase.Cancel) pointer.Capture.Cancel();
             ray.enabled = available;
+            if (!available) pointer.Hover.Exit();
             if (available) {
                 Vector3 origin = sample.Position; Quaternion aim = sample.Rotation;
                 if (headCamera.transform.parent != null) { origin = headCamera.transform.parent.TransformPoint(origin); aim = headCamera.transform.parent.rotation * aim; }
@@ -86,6 +88,10 @@ namespace T34400.VRWebView
                     overPage = BrowserCoordinates.TryNormalize(local.x, local.y, rect.xMin, rect.yMin, rect.width, rect.height, out float x, out float y);
                     if (overPage) lastPoint = new Vector2(x, y); // Top-left view coordinates; BrowserView maps UV/origin.
                 }
+                if (pointer.Hover.ActiveSourceId != (int)sample.Source) pointer.Hover.Exit();
+                if (overPage && pointer.InputEnabled && !sample.Pressed && !pointer.Capture.IsCaptured)
+                    pointer.Hover.Send((int)sample.Source, pointer.Hover.IsHovering ? HoverPhase.Move : HoverPhase.Enter, lastPoint.x, lastPoint.y);
+                else pointer.Hover.Exit();
                 if (phase == PointerPhase.Down && hit && !overPage) result.collider.GetComponent<VulkanProbeButton>()?.Press();
                 if (phase.HasValue) {
                     if (overPage && pointer.InputEnabled) pointer.Capture.Send((int)sample.Source, phase.Value, lastPoint.x, lastPoint.y);

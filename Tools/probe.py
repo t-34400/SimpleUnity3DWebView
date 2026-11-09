@@ -22,7 +22,7 @@ class ProbeError(Exception):
 
 def analyze(lines, expected='any'):
     """Summarize recorded metadata; do not infer HMD visibility or trial names from order."""
-    result = dict(rows=0, runtime_rows=0, runtime_ready=False, runtime_connections=0, runtime_failures=0, runtime_window_events=[], host_rows=0, activity_rows=0, focus_rows=0, legacy_rows=0, trials=[],
+    result = dict(rows=0, runtime_rows=0, runtime_ready=False, runtime_connections=0, runtime_hover_enter=0, runtime_hover_exit=0, runtime_failures=0, runtime_window_events=[], host_rows=0, activity_rows=0, focus_rows=0, legacy_rows=0, trials=[],
                   setup_boot_values=[], boot_checks=[], editor_flags=[], xr_transitions=[],
                   pointer_states=[], proxy_rows=0, proxy_events=[], issues=[], keyboard_visibility='requires_user_observation',
                   ray_visibility='requires_user_observation', video_responses=0, video_samples=0,
@@ -39,6 +39,8 @@ def analyze(lines, expected='any'):
         if 'VRWebViewRuntime' in line:
             result['runtime_rows'] += 1
             result['runtime_failures'] += int('event=failed' in line)
+            result['runtime_hover_enter'] += int('event=hover action=9' in line)
+            result['runtime_hover_exit'] += int('event=hover action=10' in line)
             result['runtime_ready'] |= 'event=host_ready' in line or 'RT1 state=Ready' in line
             result['runtime_connections'] += int('event=connection connected=true' in line)
             window = re.search(r'event=window actual=(true|false) action=(FORWARD|HOLD_LOSS|KEEP_GAIN)', line)
