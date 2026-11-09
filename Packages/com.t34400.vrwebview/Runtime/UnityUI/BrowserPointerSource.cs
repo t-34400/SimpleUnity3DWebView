@@ -19,6 +19,7 @@ namespace T34400.VRWebView
         }
         private RectTransform target;
         private void Awake() { target = (RectTransform)transform; }
+        private void OnEnable() { focused = Application.isFocused; }
         public void OnInitializePotentialDrag(PointerEventData data) { data.useDragThreshold = false; }
         public void OnPointerDown(PointerEventData data) { Forward(data, PointerPhase.Down); }
         public void OnPointerUp(PointerEventData data) { Forward(data, PointerPhase.Up); UpdateHover(data); }
