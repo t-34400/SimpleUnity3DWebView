@@ -32,7 +32,8 @@ final class BrowserWebView extends WebView {
         guard = new ImeWindowFocusGuard(provider == null ? null : provider.packageName,
                 provider == null ? null : provider.versionName, hasWindowFocus());
         guard.setEnabled(enabled);
-        trace("event=guard supported=" + guard.isSupported() + " enabled=" + enabled);
+        trace("event=guard supported=" + guard.isSupported() + " enabled=" + enabled
+                + " providerVersion=" + guard.providerVersion());
     }
     void armGuard() { if (guard != null && guard.request(SystemClock.uptimeMillis())) trace("event=armed"); }
     void cancelArming() { if (guard != null) guard.cancelRequest(); }

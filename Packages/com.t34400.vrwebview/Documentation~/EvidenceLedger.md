@@ -118,3 +118,7 @@ E10の試行順を再度疑わない。報告どおりのnative-webinfo成功は
 ## E16 — RT1基本動作とhover不足
 
 利用者はCreate Runtime Browser SceneのRT1について「動作に問題はなさそう」、pointer overは動いていなさそうと報告した。これは製品経路の基本動作に関する利用者の実機観察。今回添付されたZIPはE15のWF1ログと同じSHA256なので、新しいRT1のログ証拠としては使わない。preview.38のhover追加はその後の変更で、まだ実機未確認。
+
+## E17 — RT1 preview.38 hover
+
+hover追加後、利用者が実機で「ちゃんと動いているようです」と確認した。RT1の基本動作（E16）に加えてhoverも利用者報告で確認済みとする。新しいログはなく、全サイト・desktop mouse button/hover menu・全lifecycleへ一般化しない。preview.39のversion条件変更とは別の観察。

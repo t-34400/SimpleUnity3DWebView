@@ -77,13 +77,26 @@ public final class ImeWindowFocusGuardTests {
         check(guard.request(950));
 
         for (String[] provider : new String[][] {
-                {null, null}, {"other.webview", "154.0.0.55.15.1096209767"},
-                {"com.android.webview", "154.0.0.55.15.1096209768"}}) {
+                {null, null}, {"other.webview", "154.0.0.55.15.1096209767"}}) {
             guard = new ImeWindowFocusGuard(provider[0], provider[1], false);
             guard.windowChanged(true, true, true, true, 0);
             check(!guard.isSupported() && !guard.request(100));
             check(loss(guard, 200) == ImeWindowFocusGuard.Action.FORWARD);
         }
-        System.out.println("PASS " + checks + " Window IME guard checks (provider restriction, request lifetime, balanced dispatch, View/lifecycle cleanup and mode changes)");
+        // Versions are retained for diagnosis; an update is not an opt-out.
+        for (String version : new String[] {"154.0.0.55.15.1096209767", "154.0.0.55.15.1096209768", "155.0", "200.0-future", "", null}) {
+            guard = new ImeWindowFocusGuard("com.android.webview", version, true);
+            check(guard.isSupported());
+            check(java.util.Objects.equals(guard.providerVersion(), version));
+            check(guard.request(100));
+            check(loss(guard, 200) == ImeWindowFocusGuard.Action.HOLD_LOSS);
+            check(guard.release());
+            check(!guard.release());
+            guard.windowChanged(true, true, true, true, 300);
+            guard.setEnabled(false);
+            check(!guard.request(400));
+            check(loss(guard, 500) == ImeWindowFocusGuard.Action.FORWARD);
+        }
+        System.out.println("PASS " + checks + " Window IME guard checks (version-independent provider policy, request lifetime, balanced dispatch, View/lifecycle cleanup and mode changes)");
     }
 }

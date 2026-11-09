@@ -1,6 +1,6 @@
 # WF1: 既知WebViewのWindowフォーカス喪失によるIME終了を回避する
 
-更新: 2026-11-09 JST / preview.35。これは実機providerの解析に基づく限定的な互換回避実装。Android libraryの実装とローカル検証を、Questでの修正成功と区別する。
+更新: 2026-11-09 JST / preview.39。これは実機providerの解析に基づく限定的な互換回避実装。Android libraryの実装とローカル検証を、Questでの修正成功と区別する。
 
 ## 根拠
 
@@ -16,7 +16,7 @@ FO1でWindow喪失callback中にclient hide → inputType0/null接続が発生�
 
 ProbeWebViewは次の条件が揃う一回のWindow喪失通知を、providerのsuper.onWindowFocusChangedへ渡すのを保留する。
 
-- 実機解析済みのprovider名・versionNameに完全一致。
+- 回避策が有効で、provider名が`com.android.webview`に一致。preview.39からversionNameの完全一致条件を外し、同じproviderの更新でも回避策を維持する。versionは診断情報としてのみ使う。
 - owner Activityがresumedで、Windowが直前までfocused。
 - 明示IME要求または実際のpointer downから2秒以内。
 - WebViewのViewフォーカスがあり、attach済み・非null編集接続・inputType!=0。
@@ -92,3 +92,9 @@ DOMのdocumentFocusedも数値以外のboolean診断として記録する。ブ�
 2026-11-09 16:05–16:07 JSTの利用者ログと報告でIME・動画操作が成功した（E15）。3回の編集終了後にediting_end cleared=true、endedEditors=3。blurredEditors=0なのでDOM pointer判定だけで直ったとはしない。入力終了後の動画操作ではIME再表示がなく、次の編集で再び表示され、動画も継続した。このWF1基本ループを再試験の前提に戻さない。
 
 preview.36はこの知見を製品hostへ接続する実装で、固定ページの関数呼び出しを標準DOMによる一般的な編集終了処理へ置き換える。新hostの実機確認は[RT1](AndroidBackend.md)で行う。
+
+## preview.39: 更新後も回避策を保持
+
+バージョン完全一致で回避策を無効にする方針を撤回した。回避策そのものは残し、同じproviderの更新・未知version・version情報欠落だけで無効化しない。provider名の適用範囲、明示的な有効/無効設定、直前の操作、有効な編集接続とIMM served判定、View/Window状態、通常lifecycleの解放は維持する。supportedは適用対象providerであることを示し、全versionの実機試験済みを意味しない。
+
+将来provider側の挙動が変わり、この互換処理が不要・不適切になった場合は設定で無効化できる。新しいversion番号を許可リストへ追加する運用にはしない。既に実機確認したprovider/versionでの条件は従来と同じ。純Javaテストで新旧version・version欠落時の保持、明示OFF、解放の一回性を検査する。

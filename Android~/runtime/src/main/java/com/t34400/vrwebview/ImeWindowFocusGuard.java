@@ -1,19 +1,24 @@
 package com.t34400.vrwebview;
 
-/** UI-thread policy for the verified provider's Window-loss IME regression. */
+/** UI-thread Window-loss IME compatibility policy. Provider version is diagnostic metadata only. */
 final class ImeWindowFocusGuard {
     enum Action { FORWARD, HOLD_LOSS, KEEP_GAIN }
     private static final long REQUEST_WINDOW_MS = 2000;
     private final boolean supported;
+    private final String providerVersion;
     private boolean enabled = true, resumed = true, providerFocused, held;
     private long requestedAt = -1;
 
     ImeWindowFocusGuard(String provider, String version, boolean initialWindowFocused) {
-        supported = "com.android.webview".equals(provider)
-                && "154.0.0.55.15.1096209767".equals(version);
+        // Retain the workaround across updates of this provider. The editing,
+        // lifecycle, served-connection and recent-interaction predicates below
+        // decide whether to hold a loss; version alone must never switch it off.
+        supported = "com.android.webview".equals(provider);
+        providerVersion = version;
         providerFocused = initialWindowFocused;
     }
     boolean isSupported() { return supported; }
+    String providerVersion() { return providerVersion; }
     boolean isEnabled() { return enabled; }
     boolean isHolding() { return held; }
 

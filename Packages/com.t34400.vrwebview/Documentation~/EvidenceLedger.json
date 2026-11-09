@@ -238,6 +238,20 @@
         "任意サイト・全lifecycle・GLES・複数ページへの成功一般化はしない",
         "preview.38のhover追加はこの報告後の変更で、Quest未確認"
       ]
+    },
+    {
+      "id": "E17",
+      "configuration": "RT1 preview.38 ray hover",
+      "source_kind": "user_report",
+      "source_log_sha256": null,
+      "observed": [
+        "preview.38のhover追加後、利用者が「ちゃんと動いているようです」と実機動作を確認"
+      ],
+      "limits": [
+        "新しい実行ログは添付されていない",
+        "全サイト・desktop mouse button/hover menu・全lifecycleの保証ではない",
+        "preview.39のバージョン条件変更はこの実機観察後の実装変更"
+      ]
     }
   ]
 }

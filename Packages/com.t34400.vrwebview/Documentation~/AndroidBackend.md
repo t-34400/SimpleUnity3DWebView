@@ -1,6 +1,6 @@
-# Android backend — preview.38 / RT1
+# Android backend — preview.39 / RT1
 
-WF1 preview.35の実機成功を基に、製品用hostと公開レイヤーを接続した。preview.37までのRT1基本動作について利用者の実機確認あり（E16）。preview.38のhover追加後のUnity/Quest確認は未実施。旧WF1の基本試験を未確認へ戻さず、次はこの統合経路を確認する。
+WF1 preview.35の実機成功を基に、製品用hostと公開レイヤーを接続した。preview.37までのRT1基本動作について利用者の実機確認あり（E16）。preview.38のhoverも利用者が実機で確認した（E17）。preview.39は回避策のversion完全一致条件を外す変更で、将来versionの実機確認とは区別する。WF1/RT1の基本動作とhoverの確認結果を保持し、同じ試験を未確認へ戻さない。
 
 preview.37はBootstrapのPresentation直接参照漏れ（BrowserControllerのCS0012）を修正する。依存境界checkerにこの直接参照を必須として追加した。checkerはC#の型コンパイル全体の代替ではない。RT1のscene・操作手順は同じ。
 
@@ -32,7 +32,7 @@ Textureの借用解除は同期、producerのcloseはAndroid UI threadで処理�
 
 ## IMEと一般ページの編集終了
 
-InputConnectionは元のWebViewのものをそのまま返す。文字列・選択・変換状態を別editorへコピーしない。Window喪失の互換回避はWF1と同じ`ImeWindowFocusGuard`を共有し、確認済みprovider/version、明示的なpointer操作直後、有効な編集接続/served状態だけに限定する。`enableKnownProviderImeWorkaround=false`で無効化できる。未知providerには適用しない。
+InputConnectionは元のWebViewのものをそのまま返す。文字列・選択・変換状態を別editorへコピーしない。Window喪失の互換回避はWF1と同じ`ImeWindowFocusGuard`を共有し、対象provider名（com.android.webview）、明示的なpointer操作直後、有効な編集接続/served状態だけに限定する。version番号の完全一致条件はpreview.39で外し、同じproviderの更新後も保持する。versionは診断情報として記録する。`enableKnownProviderImeWorkaround=false`で無効化できる。未知providerには適用しない。
 
 実Viewフォーカス喪失とfocused Windowの条件下で、標準DOM scriptを一度実行する。document.hasFocus()がfalseで編集可能なactiveElementが残る場合だけblurする。新しい入力に復帰していれば何もしない。本文・選択は読まず、input eventを合成しない。通常のblur/changeの意味は保つ。open shadow rootと同一origin frameは最大16段まで辿り、cross-origin iframeとclosed shadow rootは触らない。ページ独自のfocus管理に対する一般対応保証ではない。入力欄選択時にIMEを手動で再要求するループもない。
 
@@ -81,3 +81,11 @@ AndroidはSOURCE_MOUSE/TOOL_TYPE_MOUSEのACTION_HOVER_ENTER/MOVE/EXITをdispatch
 更新後は同じRT1 sceneをBuild And Runし、**Hover here without pinching**へレイを重ねる。ピンチせず灰色から緑系へ変わり、レイを外すと戻るか確認する。pointerover/move/outのmouseカウンターもページ内に表示する。画面数値の転記は不要で、変色と復帰が分かればよい。採取は従来の`--expect runtime --label RT1`を使う。nativeのEnter/Exitだけをログに記録し、座標・本文・毎frame Moveは記録しない。summaryのruntime_hover_enter/exitはnative送信数で、DOM成功を意味しない。
 
 Coreの所有権・再入・取消/cleanup、Android compile/Lint/R8、RT1 HTMLの実Chromium mouseによるpointerover/out/CSS変化をローカル検証する。Androidの実MotionEvent配信、Unity EventSystem/手のray、Quest WebView上のhoverは実機で判断する。
+
+## preview.39: IME回避策をバージョン更新で無効化しない
+
+`enableKnownProviderImeWorkaround`が有効な場合、同じcom.android.webview providerのversionが変わっても回避策を保持する。version名が空/不明の場合も、versionを理由に無効にはしない。provider名が別の場合や設定がOFFの場合は通常のフォーカス通知を使う。
+
+有効な編集接続・served状態・直前のpointer操作・View/Window状態による介入条件と、pause/非表示/View喪失/終了で保留を解放する処理は従来どおり。現在実機確認済みのversionでは判定を変えない。将来versionは動作未確認だが、更新だけで回避策が外れる仕様にはしない。生ログのevent=guardへproviderVersionを診断用に出す。
+
+この変更のために既存RT1の基本操作/hover試験を未確認へ戻さない。新しいproviderへの対応や将来versionの不具合は、その時の実挙動と診断を基に判断する。
