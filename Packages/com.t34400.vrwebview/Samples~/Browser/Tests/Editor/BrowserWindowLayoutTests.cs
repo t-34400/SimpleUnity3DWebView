@@ -52,6 +52,54 @@ namespace T34400.VRWebView.Samples.Browser.Tests
                 grip.OnCancel(null); Assert.AreEqual(2, window.transform.position.z, .0001f);
             } finally { Object.DestroyImmediate(window); owner.Close(); Object.DestroyImmediate(root); }
         }
+        [Test] public void CornerHitAreasGrowOutwardWithoutCoveringHeaderButtonCenters() {
+            var root = new GameObject("Application", typeof(RectTransform), typeof(Canvas), typeof(BrowserDispatcher), typeof(BrowserDesktopPanel));
+            var window = new GameObject("Window", typeof(RectTransform), typeof(Canvas), typeof(BrowserWindowView)); window.transform.SetParent(root.transform, false);
+            var owner = root.GetComponent<BrowserDispatcher>(); owner.InitializeOnOwnerThread();
+            try {
+                window.GetComponent<BrowserWindowView>().Build(root.GetComponent<BrowserDesktopPanel>(), 1, owner);
+                LayoutRebuilder.ForceRebuildLayoutImmediate(window.GetComponent<RectTransform>());
+                var corners = window.GetComponentsInChildren<RectTransform>().Where(r => r.name.StartsWith("Resize corner ")).ToArray();
+                foreach (var corner in corners) {
+                    Assert.AreEqual(new Vector2(96, 96), corner.sizeDelta);
+                    Assert.AreEqual(16, corner.rect.width * .5f - Mathf.Abs(corner.anchoredPosition.x), .001f);
+                    Assert.AreEqual(16, corner.rect.height * .5f - Mathf.Abs(corner.anchoredPosition.y), .001f);
+                    foreach (var button in window.GetComponentsInChildren<Button>()) {
+                        var center = ((RectTransform)button.transform).TransformPoint(((RectTransform)button.transform).rect.center);
+                        Assert.IsFalse(corner.rect.Contains(corner.InverseTransformPoint(center)), button.name);
+                    }
+                }
+            } finally { Object.DestroyImmediate(window); owner.Close(); Object.DestroyImmediate(root); }
+        }
+        [TestCase(BrowserWindowPlacementMode.FaceViewer)]
+        [TestCase(BrowserWindowPlacementMode.FollowHand)]
+        [TestCase(BrowserWindowPlacementMode.TranslateOnly)]
+        public void PlacementKeepsGrabPointAndCancelRestoresPose(BrowserWindowPlacementMode mode) {
+            var root = new GameObject("Application", typeof(RectTransform), typeof(Canvas), typeof(BrowserDispatcher), typeof(BrowserDesktopPanel));
+            var window = new GameObject("Window", typeof(RectTransform), typeof(Canvas), typeof(BrowserWindowView)); window.transform.SetParent(root.transform, false);
+            var camera = new GameObject("Viewer", typeof(Camera));
+            var owner = root.GetComponent<BrowserDispatcher>(); owner.InitializeOnOwnerThread();
+            try {
+                var app = root.GetComponent<BrowserDesktopPanel>(); app.worldCamera = camera.GetComponent<Camera>(); app.placementMode = mode;
+                var view = window.GetComponent<BrowserWindowView>(); view.Build(app, 1, owner);
+                var rect = window.GetComponent<RectTransform>(); rect.position = new Vector3(0, 0, 2); rect.localScale = Vector3.one * .0012f;
+                var original = rect.position; var originalRotation = rect.rotation;
+                var localGrab = new Vector3(200, 450, 0); var point = rect.TransformPoint(localGrab);
+                var grip = window.GetComponentsInChildren<BrowserWindowDrag>().Single(d => d.name == "Reserved title drag space");
+                var data = new BrowserRayPointerEventData(null) { HasWorldRay = true, HasWorldRotation = true, WorldRotation = Quaternion.identity,
+                    WorldRay = new Ray(point - Vector3.forward * 2, Vector3.forward) };
+                grip.OnBeginDrag(data); grip.OnDrag(data);
+                Assert.Less(Vector3.Distance(original, rect.position), .0001f); Assert.Less(Quaternion.Angle(originalRotation, rect.rotation), .001f);
+                data.WorldRay = new Ray(data.WorldRay.origin + new Vector3(.5f, .2f, .3f), Vector3.forward);
+                data.WorldRotation = Quaternion.Euler(10, 20, 30); grip.OnDrag(data);
+                Assert.Less(Vector3.Distance(data.WorldRay.GetPoint(2), rect.TransformPoint(localGrab)), .0001f);
+                if (mode == BrowserWindowPlacementMode.TranslateOnly) Assert.Less(Quaternion.Angle(originalRotation, rect.rotation), .001f);
+                else Assert.Greater(Quaternion.Angle(originalRotation, rect.rotation), 1);
+                if (mode == BrowserWindowPlacementMode.FollowHand) Assert.Less(Quaternion.Angle(data.WorldRotation, rect.rotation), .001f);
+                grip.OnCancel(null); Assert.Less(Vector3.Distance(original, rect.position), .0001f);
+                Assert.Less(Quaternion.Angle(originalRotation, rect.rotation), .001f);
+            } finally { Object.DestroyImmediate(window); owner.Close(); Object.DestroyImmediate(root); Object.DestroyImmediate(camera); }
+        }
         private static void AssertSizes(GameObject window, float pageHeight) {
             LayoutRebuilder.ForceRebuildLayoutImmediate(window.GetComponent<RectTransform>());
             var rects = window.GetComponentsInChildren<RectTransform>();

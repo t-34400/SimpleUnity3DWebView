@@ -11,6 +11,8 @@ namespace T34400.VRWebView.Samples.Browser
         private bool active, hovered;
         private Vector3 startPosition, startPointer;
         private Vector2 startSize;
+        private Quaternion startRotation, startGrip, startFacing;
+        private Vector3 grabOffset;
         private Plane startPlane;
         private float grabDistance;
         private Matrix4x4 localToWorld, worldToLocal;
@@ -25,12 +27,21 @@ namespace T34400.VRWebView.Samples.Browser
         }
         public void OnBeginDrag(PointerEventData data) {
             var rect = (RectTransform)window.transform; startPosition = rect.position; startSize = rect.sizeDelta;
+            startRotation = rect.rotation;
             localToWorld = rect.localToWorldMatrix; worldToLocal = rect.worldToLocalMatrix;
             startPlane = new Plane(rect.forward, rect.position);
             active = TryPoint(data, out startPointer);
             if (data is BrowserRayPointerEventData ray && ray.HasWorldRay)
                 grabDistance = Mathf.Max(.1f, Vector3.Dot(startPointer - ray.WorldRay.origin, ray.WorldRay.direction));
+            grabOffset = Quaternion.Inverse(startRotation) * (startPointer - startPosition);
+            startFacing = window.Viewer != null ? Facing(startPosition - window.Viewer.transform.position, startRotation) : startRotation;
+            startGrip = data is BrowserRayPointerEventData pose && pose.HasWorldRotation ? pose.WorldRotation
+                : data is BrowserRayPointerEventData direction && direction.HasWorldRay ? Quaternion.LookRotation(direction.WorldRay.direction, Vector3.up) : startRotation;
             window.BringToFront(); Paint();
+        }
+        private static Quaternion Facing(Vector3 direction, Quaternion fallback) {
+            return direction.sqrMagnitude > .0001f && Vector3.Cross(direction.normalized, Vector3.up).sqrMagnitude > .0001f
+                ? Quaternion.LookRotation(direction, Vector3.up) : fallback;
         }
         private bool TryPoint(PointerEventData data, out Vector3 world) {
             if (data is BrowserRayPointerEventData ray && ray.HasWorldRay) {
@@ -45,7 +56,17 @@ namespace T34400.VRWebView.Samples.Browser
             if (cornerX == 0 && data is BrowserRayPointerEventData ray && ray.HasWorldRay) world = ray.WorldRay.GetPoint(grabDistance);
             else if (!TryPoint(data, out world)) return;
             var rect = (RectTransform)window.transform;
-            if (cornerX == 0) rect.position = startPosition + world - startPointer;
+            if (cornerX == 0) {
+                Quaternion rotation = startRotation;
+                if (window.PlacementMode == BrowserWindowPlacementMode.FaceViewer && window.Viewer != null) {
+                    Vector3 translatedCenter = startPosition + world - startPointer;
+                    rotation = Facing(translatedCenter - window.Viewer.transform.position, startFacing) * Quaternion.Inverse(startFacing) * startRotation;
+                } else if (window.PlacementMode == BrowserWindowPlacementMode.FollowHand && data is BrowserRayPointerEventData pose && pose.HasWorldRay) {
+                    Quaternion grip = pose.HasWorldRotation ? pose.WorldRotation : Quaternion.LookRotation(pose.WorldRay.direction, Vector3.up);
+                    rotation = grip * Quaternion.Inverse(startGrip) * startRotation;
+                }
+                rect.SetPositionAndRotation(world - rotation * grabOffset, rotation);
+            }
             else {
                 Vector3 delta = worldToLocal.MultiplyVector(world - startPointer);
                 var resized = BrowserWindowGeometry.Resize(startSize.x, startSize.y, delta.x, delta.y, cornerX, cornerY);
@@ -56,7 +77,7 @@ namespace T34400.VRWebView.Samples.Browser
         public void OnEndDrag(PointerEventData data) { active = false; Paint(); }
         public void OnCancel(BaseEventData data) {
             if (!active) return; active = false;
-            var rect = (RectTransform)window.transform; rect.position = startPosition; rect.sizeDelta = startSize; Paint();
+            var rect = (RectTransform)window.transform; rect.SetPositionAndRotation(startPosition, startRotation); rect.sizeDelta = startSize; Paint();
         }
         private void OnDisable() { if (active && window != null) OnCancel(null); hovered = false; Paint(); }
     }

@@ -12,6 +12,8 @@ namespace T34400.VRWebView.Samples.Browser
     {
         [SerializeField] private BrowserPageFactory factory;
         public Camera worldCamera;
+        public BrowserWindowPlacementMode placementMode = BrowserWindowPlacementMode.FaceViewer;
+        [Range(64, 160)] public float cornerHitSize = 96;
         public bool diagnostics = true;
         private BrowserDispatcher owner;
         private Action<Action> schedule;
@@ -43,7 +45,7 @@ namespace T34400.VRWebView.Samples.Browser
             desktop = new BrowserDesktop(() => { pending = factory.CreatePage(owner); return pending.Backend; }, owner.Scheduler);
             desktop.Changed += Refresh;
             CreateWindow();
-            if (diagnostics) Debug.Log("[VRWebViewSample] BS1 event=ui_ready version=43 multiWindow=true");
+            if (diagnostics) Debug.Log("[VRWebViewSample] BS1 event=ui_ready version=44 multiWindow=true");
         }
         public void CreateWindow() {
             if (closed || desktop == null) return;

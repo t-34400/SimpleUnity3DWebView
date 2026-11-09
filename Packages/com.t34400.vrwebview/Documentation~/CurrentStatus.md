@@ -2,6 +2,9 @@
 
 更新: 2026-11-09 JST。preview.35のWF1で、利用者がIME入力と入力終了後の動画操作の成功を確認した（E15）。この構成の基本ループは確認済み。preview.36では同じ方式を使う製品用Android backend、共有render pump、BrowserController/BrowserView、Browser sample factoryを接続した。preview.37までのRT1基本動作は利用者が確認した（E16）。hoverはpreview.38で追加し、利用者が実機動作を確認した（E17）。preview.39ではIME回避策のversion完全一致条件を外し、同じproviderの更新後も保持する。preview.40ではリッチサンプル用BS1シーン生成・uGUI入力接続・採取を追加した。次の入口は[BS1手順](RichBrowserSample.md)。実Editor/Questは未確認で、旧比較試験の総当たりへ戻らない。
 
+
+2026-11-10追記: preview.43のhit修正を利用者が確認（E21）。URL IMEは実boot1でもUnity GameActivityのshowで失敗し未解決。標準InputFieldを維持し、preview.44にWebViewなしの[U1対照](UnityAddressInputInvestigation.md)を追加した。角の拡大と[姿勢変更](SpatialWindowInteraction.md)も実装し、実Quest効果は未確認。
+
 ## 現時点の判断
 
 製品用Android backendを実装し、Core/Unity/UIへ接続した。WF1はE15のログと報告、RT1基本動作はE16の利用者報告で確認。hoverはE17で利用者が確認。version条件の変更は実機観察と分けて扱う。

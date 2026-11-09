@@ -1,6 +1,6 @@
-# Rich Browser sample — preview.43
+# Rich Browser sample — preview.44
 
-preview.42で利用者は移動を確認したが、画面手前のrayが見えず、判定位置が分からないと報告した。URLへの2回のDownはUp時にnone/pageへ移り、prepare/requestは0だった。preview.43はrayの描画順・専用stereo shader・hit markerを追加し、physical rayでUIを直接判定する。URL編集は通常のInputFieldと同じくDownで開始する。新しいUnity C#/shaderコンパイルとQuest効果はクラウドでは未確認。
+利用者がpreview.43のヒット修正を確認した。preview.44は角の判定拡大と配置時の姿勢変更を追加する。URL IMEは未解決で、標準Unity入力を維持して[独立対照U1](UnityAddressInputInvestigation.md)を追加した。今回はBS1で失敗済みのURL操作を繰り返す前にU1を一度比較する。
 
 ## 更新
 
@@ -57,6 +57,9 @@ python3 -m zipfile -c "${vrwebview_logs}.zip" "$vrwebview_logs"
 - 表示中tabだけにproducer Surface/AImageReader/Unity textureを割り当てる。非表示tabに出力queueを常設しない。入力focusを失っても、表示中なら転送は継続する。
 - 切替/resizeは新しい出力世代を作り、古いproducerの停止確認後にGPU完了まで回収する。出力textureをタブ間で直接上書きして使い回さない。定常時は表示tab数に応じた出力数、切替中は退役待ちの旧世代が一時的に残る。世代単位のpool再利用は未実装。
 - event=presentation_statsにpage/target/visibleとGPU copies等、event=window_layoutに実ページ領域の寸法を出す。UI/host readyだけでキーボード・動画や転送最適化の成功と判断しない。
-- pageのURL/title/history/loading/errorは正式なCore capabilityを通す。コマンドのTaskは要求受理であり、ページ読込完了ではない。検索サービス、favicon、履歴UI、bookmarks、window.open/popups、自由な3D回転・奥行き配置は未実装。windowの位置は3D移動するが、掴んだ手の回転への追随や自由回転操作は今回追加していない。
+- pageのURL/title/history/loading/errorは正式なCore capabilityを通す。コマンドのTaskは要求受理であり、ページ読込完了ではない。検索サービス、favicon、履歴UI、bookmarks、window.open/popups、OS window.openとUnity windowの自動接続は未実装。[配置仕様](SpatialWindowInteraction.md)のFaceViewer/FollowHand/TranslateOnlyを選べる。
 
 クラウドでは純モデルの所有/移動/API、C#構文、依存境界、Python採取、Android build/Lint/R8と配布物を確認する。新規の実uGUI寸法テストは同梱しているが、実Unity実行済みではない。QuestではURL欄の修正効果を最初に判断し、失敗時は以降の統合結果を合格にしない。
+
+
+角の判定は標準96pxで主に外側へ広げる。移動は標準FaceViewerで向きも調整する。手の回転へ直接追随させるにはBrowserDesktopPanelのPlacement ModeをFollowHandにする。実機の操作感は未確認。詳細は[空間ウィンドウ調査](SpatialWindowInteraction.md)。

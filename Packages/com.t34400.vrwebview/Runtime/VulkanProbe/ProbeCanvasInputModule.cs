@@ -79,7 +79,7 @@ namespace T34400.VRWebView
                 rotation = headCamera.transform.parent.rotation * rotation;
             }
             var ray = new Ray(origin, rotation * Vector3.forward);
-            ProcessRay(tracked, ray, sample.Pressed, (int)sample.Source, sample.Scroll);
+            ProcessRay(tracked, ray, sample.Pressed, (int)sample.Source, sample.Scroll, rotation);
             if (visual == null) visual = new ProbePointerVisual();
             var currentHit = pointer != null ? pointer.pointerCurrentRaycast : default;
             visual.Show(tracked && pointer != null && pointer.HasWorldRay, ray, currentHit, headCamera,
@@ -93,7 +93,7 @@ namespace T34400.VRWebView
         }
         /// <summary>Explicit ray entry for rig tests/alternate diagnostic sources. Call
         /// once per input update; tracked must be false when the source loses permission.</summary>
-        public void ProcessRay(bool tracked, Ray ray, bool pressed, int sourceId, Vector2 scroll)
+        public void ProcessRay(bool tracked, Ray ray, bool pressed, int sourceId, Vector2 scroll, Quaternion? worldRotation = null)
         {
             if (!tracked || targetCanvas == null || headCamera == null || !Finite(ray.origin.x) || !Finite(ray.origin.y)
                 || !Finite(ray.origin.z) || !Finite(ray.direction.x) || !Finite(ray.direction.y) || !Finite(ray.direction.z) || ray.direction.sqrMagnitude < .5f)
@@ -102,6 +102,7 @@ namespace T34400.VRWebView
             previousSource = sourceId; haveSource = true;
             if (pointer == null) pointer = new BrowserRayPointerEventData(eventSystem) { pointerId = PointerId, button = PointerEventData.InputButton.Left };
             pointer.Reset(); pointer.WorldRay = ray; pointer.HasWorldRay = true;
+            pointer.HasWorldRotation = worldRotation.HasValue; pointer.WorldRotation = worldRotation ?? Quaternion.LookRotation(ray.direction, Vector3.up);
             RaycastResult chosen = default; Vector3 chosenPoint = default; Vector2 chosenScreen = default;
             float nearest = float.PositiveInfinity; int sorting = int.MinValue;
             // Intersect each window at its own depth using the hand/controller ray.

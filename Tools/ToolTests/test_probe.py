@@ -78,6 +78,18 @@ class AnalysisTests(unittest.TestCase):
         self.assertEqual(report['keyboard_visibility'], 'requires_user_observation')
 
 
+    def test_stock_unity_input_control_has_no_browser_host_requirement(self):
+        report = probe.analyze(['Unity: [VRWebViewUnityInput] U1 event=ready stock=True webview=False',
+            'Unity: [VRWebViewUnityInput] U1 event=state selected=True fieldFocus=True keyboard=True visible=False appFocus=True active=False status=LostFocus frames=10',
+            'Unity: [VRWebViewUnityInput] U1 event=text_changed'], 'unity-input')
+        self.assertEqual(report['issues'], [])
+        self.assertTrue(report['unity_input_ready'])
+        self.assertEqual(report['unity_input_text_changes'], 1)
+        self.assertEqual(report['unity_input_states'][0]['status'], 'LostFocus')
+        self.assertEqual(report['keyboard_visibility'], 'requires_user_observation')
+        report = probe.analyze(['VRWebViewRuntime event=host_ready'], 'unity-input')
+        self.assertIn('expected_stock_unity_input_missing', report['issues'])
+
     def test_browser_ui_requires_its_ui_and_a_real_android_host(self):
         report = probe.analyze(['Unity: [VRWebViewSample] BS1 event=ui_ready',
             'Unity: [VRWebViewSample] BS1 event=snapshot configured=True tabs=2 active=2 state=Ready busy=False addressFocus=False frames=10 appFocus=True',

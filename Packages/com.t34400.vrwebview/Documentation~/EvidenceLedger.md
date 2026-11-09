@@ -144,3 +144,8 @@ preview.42は明示選択・main-threadの編集終了待ち・中断理由を�
 addressDownの2回はUpでnone/pageへ移り、addressUpの1回はDownがother。URLのclick成立を示す組がないため、今回をIME側のshow拒否や編集終了待ち失敗としない。ray描画は従来Rendererのorder0、window Canvasはorder1以上で、UIに隠れる可能性がある設定だった。視覚的な根因の断定ではなく、preview43で描画契約とヒットcueを明示して修正する。
 
 preview43は高いorder/Overlay shader/同一world hitのmarker、Graphic geometryに対するphysical ray判定、URLのDownでの編集開始を実装。新しい実Unity/shader/Quest結果は未確認。
+
+
+## E21 — BS1 preview.43: ヒット修正を確認、Unity URL keyboardはIME側showで失敗
+
+利用者がhit修正を確認。角の判定が小さく姿勢が変わらないため改善を要望した。latest raw 583311bytes/5253rows、SHA2562147e897d4a624f70a9bb49a97e76a820aeac490e412b594f7f3e57e98d3ff56。prepare2/request2、Unity timeout2、boot1/overlayDeclaredtrueを3行で確認。2回ともGameActivitySurfaceViewのshow後にIMEがPHASE_IME_ON_SHOW_SOFT_INPUT_TRUEで失敗した。最新の失敗は選択以前の中断ではない。Unity標準入力の不採用を示すものではなく、[U1対照](UnityAddressInputInvestigation.md)を追加して調査を続ける。preview.44の角/回転/対照実装はQuest未確認。

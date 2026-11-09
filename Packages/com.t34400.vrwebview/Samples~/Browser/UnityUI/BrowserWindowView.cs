@@ -27,6 +27,8 @@ namespace T34400.VRWebView.Samples.Browser
         private RectTransform insertionMarker;
         private bool dropPreview;
         private long selected = -1;
+        public Camera Viewer => application.worldCamera;
+        public BrowserWindowPlacementMode PlacementMode => application.placementMode;
         public bool AddressFocused => address != null && address.isFocused;
         public void Build(BrowserDesktopPanel app, long id, BrowserDispatcher dispatcher) {
             application = app; WindowId = id; owner = dispatcher;
@@ -111,12 +113,13 @@ namespace T34400.VRWebView.Samples.Browser
         private void BuildCorner(int x, int y) {
             var node = BrowserSampleWidgets.Node(transform, "Resize corner " + x + " " + y, typeof(Image), typeof(BrowserWindowDrag));
             var rect = (RectTransform)node.transform; rect.anchorMin = rect.anchorMax = new Vector2(x > 0 ? 1 : 0, y > 0 ? 1 : 0);
-            rect.pivot = new Vector2(.5f, .5f); rect.sizeDelta = new Vector2(44, 44); rect.anchoredPosition = Vector2.zero;
+            rect.pivot = new Vector2(.5f, .5f); float size = Mathf.Clamp(application.cornerHitSize, 64, 160), outward = size * .5f - 16;
+            rect.sizeDelta = new Vector2(size, size); rect.anchoredPosition = new Vector2(x * outward, y * outward);
             node.GetComponent<Image>().color = Color.clear;
             var horizontal = BrowserSampleWidgets.Node(node.transform, "Horizontal grip", typeof(Image)).GetComponent<Image>();
-            horizontal.raycastTarget = false; horizontal.rectTransform.sizeDelta = new Vector2(26, 4); horizontal.rectTransform.anchoredPosition = new Vector2(-x * 10, 0);
+            horizontal.raycastTarget = false; horizontal.rectTransform.sizeDelta = new Vector2(32, 5); horizontal.rectTransform.anchoredPosition = new Vector2(-x * (outward + 12), -y * outward);
             var vertical = BrowserSampleWidgets.Node(node.transform, "Vertical grip", typeof(Image)).GetComponent<Image>();
-            vertical.raycastTarget = false; vertical.rectTransform.sizeDelta = new Vector2(4, 26); vertical.rectTransform.anchoredPosition = new Vector2(0, -y * 10);
+            vertical.raycastTarget = false; vertical.rectTransform.sizeDelta = new Vector2(5, 32); vertical.rectTransform.anchoredPosition = new Vector2(-x * outward, -y * (outward + 12));
             node.GetComponent<BrowserWindowDrag>().Configure(this, x, y, new[] { horizontal, vertical });
         }
         private RectTransform Row(Transform parent, string name, float height) {
