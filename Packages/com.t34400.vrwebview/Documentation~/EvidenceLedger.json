@@ -1,5 +1,5 @@
 {
-  "updated_jst": "2026-11-08",
+  "updated_jst": "2026-11-09",
   "policy": "Observations, logs, source references and hypotheses are distinct; hashes identify supplied logs, not reproduced runs",
   "entries": [
     {
@@ -144,6 +144,49 @@
         "nativeTrialの20秒抑止と持続的な復帰不良を判別できない",
         "ONとの比較は未確認",
         "保持ログ回収は0バイトで失敗。原因は未確定"
+      ]
+    },
+    {
+      "id": "E11",
+      "configuration": "IP2 and Native EditText control",
+      "source_kind": "user_report_and_log",
+      "source_log_sha256": null,
+      "observed": [
+        "借用ではキーボード維持・変換候補表示があったがDOM入力は成立しなかった",
+        "Native EditTextはWindow focus=falseでも入力できた"
+      ],
+      "limits": [
+        "Native対照の文字はWebViewへ接続していない",
+        "借用InputConnection方式は製品候補から外す"
+      ]
+    },
+    {
+      "id": "E12",
+      "configuration": "FO1 direct WebView and installed provider DEX",
+      "source_kind": "user_report_log_and_static_analysis",
+      "source_log_sha256": "ac63863199040e24a7ba90718c19909e6d85b6fd91243a7e7871113f399df4ab",
+      "observed": [
+        "Window喪失callback中にIME hide/null接続、その後UnityへのView focus移動",
+        "実機providerのonWindowFocusChanged(false)に無条件resetAndHideKeyboard経路を確認",
+        "既存stackと難読化メソッド・行番号が一致"
+      ],
+      "limits": [
+        "最初のWindowフォーカスの移動先は未特定",
+        "WF1の修正効果と上流修正のQuest上の成立は未確認"
+      ]
+    },
+    {
+      "id": "E13",
+      "configuration": "WF1 implementation",
+      "source_kind": "implementation_not_device_observation",
+      "source_log_sha256": null,
+      "observed": [
+        "既知providerの直接編集要求直後に限定したWindow喪失通知保留を実装",
+        "通常lifecycleとViewフォーカス喪失で保留を解放する設計"
+      ],
+      "limits": [
+        "Quest検証は未実施",
+        "通常のWebView契約を完全に保持する一般解ではなく限定互換回避"
       ]
     }
   ]

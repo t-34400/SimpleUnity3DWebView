@@ -1,6 +1,7 @@
 package com.t34400.vrwebview;
 
 import android.app.Activity;
+import android.app.Application;
 import android.content.Context;
 import android.content.pm.ActivityInfo;
 import android.content.pm.FeatureInfo;
@@ -46,15 +47,27 @@ public final class VulkanProbe {
     static native void nativeStop(long id);
 
     public static void open(Activity owner, long id, int width, int height) {
-        openInternal(owner, id, width, height, false);
+        openInternal(owner, id, width, height, false, false);
     }
     public static void openImeProxy(Activity owner, long id, int width, int height) {
-        openInternal(owner, id, width, height, true);
+        openInternal(owner, id, width, height, true, false);
     }
-    private static void openInternal(Activity owner, long id, int width, int height, boolean proxyTrial) {
+    public static void openImeGuard(Activity owner, long id, int width, int height) {
+        openInternal(owner, id, width, height, false, true);
+    }
+    public static void setImeWindowGuard(long id, boolean enabled) {
+        UI.post(() -> {
+            Host host = HOSTS.get(id);
+            if (host != null && !host.closed && host.web != null && host.guardTrial) {
+                host.web.setImeWindowGuardEnabled(enabled);
+                host.updateStatus();
+            }
+        });
+    }
+    private static void openInternal(Activity owner, long id, int width, int height, boolean proxyTrial, boolean guardTrial) {
         UI.post(() -> {
             if (HOSTS.containsKey(id)) return;
-            Host host = new Host(owner, id, width, height, proxyTrial);
+            Host host = new Host(owner, id, width, height, proxyTrial, guardTrial);
             HOSTS.put(id, host);
             try { host.start(); }
             catch (Exception error) {
@@ -90,6 +103,7 @@ public final class VulkanProbe {
     public static void setImeProxy(long id, boolean enabled) {
         UI.post(() -> {
             Host host = HOSTS.get(id); if (host == null || host.closed || host.proxy == null) return;
+            if (host.guardTrial) return;
             host.hideIme(); host.proxy.setEnabled(enabled);
             host.focusRecovery.setEnabled(false); // Do not mix recovery retries with this trial.
             host.updateStatus();
@@ -98,7 +112,7 @@ public final class VulkanProbe {
     public static void requestNativeIme(long id) {
         UI.post(() -> {
             Host host = HOSTS.get(id);
-            if (host == null || host.closed || host.proxy == null) return;
+            if (host == null || host.closed || host.proxy == null || host.guardTrial) return;
             host.proxy.requestNativeControl();
         });
     }
@@ -111,6 +125,7 @@ public final class VulkanProbe {
     public static void setFocusRecovery(long id, boolean enabled) {
         UI.post(() -> {
             Host host = HOSTS.get(id); if (host == null || host.closed) return;
+            if (host.guardTrial && enabled) return;
             host.focusRecovery.setEnabled(enabled);
             host.trace("focusRecovery enabled=" + enabled);
         });
@@ -126,7 +141,7 @@ public final class VulkanProbe {
         });
     }
     public static void reload(long id) {
-        UI.post(() -> { Host host = HOSTS.get(id); if (host != null && host.web != null) { if (host.proxy != null) host.proxy.cancel("reload"); host.videoTelemetry.reset(); host.trace("video=bundled event=reload"); host.web.reload(); } });
+        UI.post(() -> { Host host = HOSTS.get(id); if (host != null && host.web != null) { host.web.releaseImeWindowGuard("reload"); if (host.proxy != null) host.proxy.cancel("reload"); host.videoTelemetry.reset(); host.editorTelemetry.reset(); host.trace("video=bundled event=reload"); host.web.reload(); } });
     }
     /** Normalized viewport coordinates, y down; never add DOM scroll offsets. */
     public static void pointer(long id, int action, float x, float y) {
@@ -135,6 +150,7 @@ public final class VulkanProbe {
             Host host = HOSTS.get(id); if (host == null || host.web == null) return;
             if (action == MotionEvent.ACTION_DOWN) {
                 host.cancelTouch(); host.downTime = SystemClock.uptimeMillis(); host.touching = true;
+                host.web.armImeWindowGuard();
                 if (host.proxy != null && host.proxy.isEnabled()) host.proxy.arm();
                 host.focusRecovery.claimBrowser();
                 boolean accepted = host.web.requestFocus();
@@ -149,6 +165,7 @@ public final class VulkanProbe {
             }
             if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
                 host.touching = false;
+                if (action == MotionEvent.ACTION_CANCEL) host.web.cancelImeWindowGuardRequest();
                 if (host.proxy != null) host.proxy.gestureEnded(action == MotionEvent.ACTION_CANCEL);
             }
         });
@@ -162,10 +179,11 @@ public final class VulkanProbe {
     }
 
     private static final class Host {
-        final Activity owner; final long id; final int width, height; final boolean proxyTrial;
+        final Activity owner; final long id; final int width, height; final boolean proxyTrial, guardTrial;
         ImeProxyProbe proxy;
         final FocusCallTrace focusCalls = new FocusCallTrace(this::trace);
         final ProbeVideoTelemetry videoTelemetry = new ProbeVideoTelemetry(this::trace);
+        final ProbeEditorTelemetry editorTelemetry = new ProbeEditorTelemetry(this::trace);
         ProbeWebView web; FrameLayout panel; Surface surface; View previousFocus;
         boolean closed, touching, imeAccepted;
         long downTime;
@@ -175,6 +193,24 @@ public final class VulkanProbe {
         String lastFocusMove = "none", lastState;
         String startStage = "new_host";
         ViewTreeObserver focusObserver;
+        boolean lifecycleRegistered;
+        final Application.ActivityLifecycleCallbacks lifecycle = new Application.ActivityLifecycleCallbacks() {
+            @Override public void onActivityCreated(Activity activity, Bundle saved) {}
+            @Override public void onActivityStarted(Activity activity) {}
+            @Override public void onActivityResumed(Activity activity) {
+                if (activity == owner && !closed && web != null) web.setImeWindowGuardResumed(true);
+            }
+            @Override public void onActivityPaused(Activity activity) {
+                if (activity == owner && !closed && web != null) web.setImeWindowGuardResumed(false);
+            }
+            @Override public void onActivityStopped(Activity activity) {
+                if (activity == owner && !closed && web != null) web.setImeWindowGuardResumed(false);
+            }
+            @Override public void onActivitySaveInstanceState(Activity activity, Bundle saved) {}
+            @Override public void onActivityDestroyed(Activity activity) {
+                if (activity == owner && !closed) { HOSTS.remove(id); close(); }
+            }
+        };
         final ViewTreeObserver.OnGlobalFocusChangeListener focusListener = (before, after) -> {
             focusChanges++;
             lastFocusMove = viewName(before) + ">" + viewName(after);
@@ -184,8 +220,9 @@ public final class VulkanProbe {
             focusReturnAt = 0;
             if (!closed && web != null) returnFocus("timer");
         };
-        Host(Activity owner, long id, int width, int height, boolean proxyTrial) {
-            this.owner = owner; this.id = id; this.width = width; this.height = height; this.proxyTrial = proxyTrial;
+        Host(Activity owner, long id, int width, int height, boolean proxyTrial, boolean guardTrial) {
+            this.owner = owner; this.id = id; this.width = width; this.height = height;
+            this.proxyTrial = proxyTrial; this.guardTrial = guardTrial;
         }
         void start() throws Exception {
             startStage = "native_surface";
@@ -203,7 +240,7 @@ public final class VulkanProbe {
             web.getSettings().setAllowFileAccess(false); web.getSettings().setAllowContentAccess(false);
             web.getSettings().setMediaPlaybackRequiresUserGesture(true);
             startStage = "local_assets";
-            web.setWebViewClient(new ProbeAssets(owner.getAssets(), proxyTrial));
+            web.setWebViewClient(new ProbeAssets(owner.getAssets(), proxyTrial || guardTrial));
             web.setWebChromeClient(new WebChromeClient() {
                 @Override public void onPermissionRequest(PermissionRequest request) { request.deny(); }
                 @Override public void onShowCustomView(View view, CustomViewCallback callback) {
@@ -213,6 +250,14 @@ public final class VulkanProbe {
             startStage = "webview_attach";
             panel.addView(web, new FrameLayout.LayoutParams(width, height));
             owner.addContentView(panel, new ViewGroup.LayoutParams(width, height));
+            if (guardTrial) {
+                // An already-focused root does not necessarily dispatch an initial Window=true
+                // callback to a newly attached child. Snapshot the real state after attachment.
+                web.enableImeWindowGuard();
+                focusRecovery.setEnabled(false);
+                owner.getApplication().registerActivityLifecycleCallbacks(lifecycle);
+                lifecycleRegistered = true;
+            }
             if (proxyTrial) {
                 startStage = "proxy_construct";
                 proxy = new ImeProxyProbe(owner, web, panel, this::trace, () -> { if (!closed && web != null) returnFocus("proxy_done_or_back"); });
@@ -247,6 +292,7 @@ public final class VulkanProbe {
         void updateStatus() {
             if (web == null) return;
             if (proxy != null) proxy.pollMetadata();
+            if (guardTrial) editorTelemetry.poll(web);
             videoTelemetry.poll(web);
             InputMethodManager imm = (InputMethodManager) owner.getSystemService(Context.INPUT_METHOD_SERVICE);
             boolean active = imm != null && imm.isActive(web);
@@ -266,7 +312,8 @@ public final class VulkanProbe {
                     + " returns=" + focusReturns + " imeRequests=" + imeRequests
                     + " recovery=" + focusRecovery.isEnabled() + "/" + focusRecoveries
                     + "\nfocusMove=" + lastFocusMove + " touch=" + lastTouchAction
-                    + " returnIn=" + (focusReturnAt == 0 ? "off" : Math.max(0, focusReturnAt - SystemClock.uptimeMillis()) + "ms");
+                    + " returnIn=" + (focusReturnAt == 0 ? "off" : Math.max(0, focusReturnAt - SystemClock.uptimeMillis()) + "ms")
+                    + web.imeWindowGuardStatus();
         }
         // Deliberately avoid getText(), hint/editor contents, URLs, and connection retention.
         void trace(String event) {
@@ -286,6 +333,7 @@ public final class VulkanProbe {
             }
         }
         void returnFocus(String reason) {
+            web.releaseImeWindowGuard("return_unity");
             focusRecovery.release();
             focusReturnAt = 0; UI.removeCallbacks(delayedFocusReturn);
             focusReturns++;
@@ -326,6 +374,7 @@ public final class VulkanProbe {
             updateStatus();
         }
         void showIme(String reason, int flags) {
+            web.armImeWindowGuard();
             InputMethodManager imm = (InputMethodManager) owner.getSystemService(Context.INPUT_METHOD_SERVICE);
             int request = ++imeRequests;
             ResultReceiver receiver = new ImeResultReceiver(this, request, reason);
@@ -380,9 +429,15 @@ public final class VulkanProbe {
         void close() {
             if (closed) return;
             trace("hostClosed");
+            if (web != null) web.releaseImeWindowGuard("host_close");
+            if (lifecycleRegistered) {
+                owner.getApplication().unregisterActivityLifecycleCallbacks(lifecycle);
+                lifecycleRegistered = false;
+            }
             focusRecovery.release();
             closed = true; UI.removeCallbacks(draw); UI.removeCallbacks(delayedFocusReturn);
             videoTelemetry.close();
+            editorTelemetry.close();
             if (focusObserver != null && focusObserver.isAlive()) focusObserver.removeOnGlobalFocusChangeListener(focusListener);
             if (web != null) { web.metadataListener = null; web.windowFocusListener = null; }
             cancelTouch(); hideIme();

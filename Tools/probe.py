@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 TAGS = ('VRWebViewHost:I', 'VRWebViewActivityGPU:I', 'VRWebViewFocus:I', 'VRWebViewProbe:I', 'VRWebViewGpuProbe:I', 'Unity:I',
         'AndroidRuntime:E', 'KeyboardInputMethodService:V', 'ImeTracker:V',
         'InputMethodManager:V', '*:S')
+SYSTEM_FOCUS_TAGS = ('WindowManager:I', 'InputDispatcher:I', 'input_focus:I')
 
 
 class ProbeError(Exception):
@@ -27,6 +28,8 @@ def analyze(lines, expected='any'):
                   ray_visibility='requires_user_observation', video_responses=0, video_samples=0,
                   isolated_ime_variant=False,
                   focus_trace_installed=False, focus_calls=0, focus_frames=0, direct_mode_seen=False,
+                  window_ime_installed=False, window_ime_supported=None, window_ime_events=[],
+                  editor_connections=0, system_focus_rows=0,
                   video_playback='requires_runtime_analysis_and_user_observation')
     for number, line in enumerate(lines, 1):
         if not line.strip():
@@ -39,6 +42,18 @@ def analyze(lines, expected='any'):
         result['legacy_rows'] += int('VRWebViewProbe' in line or 'VRWebViewGpuProbe' in line)
         pid = re.match(r'\d\d-\d\d\s+[\d:.]+\s+(\d+)\s+\d+\s', line)
         location = dict(line=number, pid=int(pid[1]) if pid else None)
+        result['system_focus_rows'] += int(any(tag + ':' in line for tag in ('WindowManager', 'InputDispatcher', 'input_focus')))
+        if 'probe=WF1 ' in line and 'VRWebViewFocus' in line:
+            event = re.search(r'\bevent=([a-z_]+)', line)
+            if event:
+                fields = dict(re.findall(r'\b(enabled|supported|route|actual|action|viewFocus|editor|reason|resumed|actualWindow|input|compositionStart|compositionUpdate|compositionEnd|selectionChanges|editable|frames|appFocus|paused|tracked|pressed|source)=([A-Za-z0-9_]+)', line))
+                result['window_ime_events'].append(dict(location, event=event[1], **fields))
+                if event[1] == 'installed':
+                    result['window_ime_installed'] = True
+                    result['window_ime_supported'] = fields.get('supported') == 'true'
+                    result['direct_mode_seen'] |= fields.get('route') == 'direct'
+        if 'VRWebViewFocus' in line and 'connection nonNull=true' in line:
+            result['editor_connections'] += 1
         if 'probe=FO1 ' in line:
             result['focus_trace_installed'] |= 'event=focus_trace_installed' in line
             result['focus_calls'] += int('event=focus_call ' in line)
@@ -50,7 +65,7 @@ def analyze(lines, expected='any'):
             result['proxy_rows'] += 1
             event = re.search(r'\bevent=([a-z_]+)', line)
             if event:
-                fields = dict(re.findall(r'\b(generation|op|outcome|enabled|connected|sourceFocus|sourceWindow|proxyFocus|windowFocus|accepted|frames|appFocus|paused|tracked|pressed|source|input|compositionStart|compositionUpdate|compositionEnd|selectionChanges|editable|stage|error|reason|host|variant|editor|query|target|focused|changes|composing)=([A-Za-z0-9_]+)', line))
+                fields = dict(re.findall(r'\b(generation|op|outcome|enabled|connected|sourceFocus|sourceWindow|proxyFocus|windowFocus|accepted|frames|appFocus|paused|tracked|pressed|source|input|compositionStart|compositionUpdate|compositionEnd|selectionChanges|editable|stage|error|reason|host|variant|editor|query|target|focused|changes|composing|route)=([A-Za-z0-9_]+)', line))
                 result['proxy_events'].append(dict(location, event=event[1], **fields))
                 if event[1] == 'mode' and fields.get('variant') == 'isolated':
                     result['isolated_ime_variant'] = True
@@ -123,6 +138,17 @@ def analyze(lines, expected='any'):
             result['issues'].append('expected_direct_mode_missing')
         if not result['focus_calls'] or not result['focus_frames']:
             result['issues'].append('expected_focus_call_stack_missing')
+    if expected == 'window-ime':
+        if not result['window_ime_installed']:
+            result['issues'].append('expected_window_ime_guard_missing')
+        elif not result['window_ime_supported']:
+            result['issues'].append('window_ime_provider_unsupported')
+        if not result['direct_mode_seen']:
+            result['issues'].append('expected_direct_mode_missing')
+        if not result['editor_connections']:
+            result['issues'].append('expected_editor_connection_missing')
+        if not any(row['event'] == 'armed' for row in result['window_ime_events']):
+            result['issues'].append('expected_window_ime_request_missing')
     if any(not row['valid'] for row in result['boot_checks']):
         result['issues'].append('boot_expectation_mismatch')
     if any(row['profile_match'] == 'false' for row in result['editor_flags']):
@@ -185,7 +211,9 @@ def capture(args):
     print('Start the trial in another terminal. Ctrl+C ends capture; no log buffers are cleared.', flush=True)
     try:
         with log.open('xb') as output, errors.open('xb') as stderr:
-            process = subprocess.Popen(command + ['logcat', '-v', 'threadtime', '-T', '1', *TAGS],
+            buffers = ['-b', 'main', '-b', 'system', '-b', 'events'] if args.expect == 'window-ime' else []
+            extra_tags = list(SYSTEM_FOCUS_TAGS) if args.expect == 'window-ime' else []
+            process = subprocess.Popen(command + ['logcat', *buffers, '-v', 'threadtime', '-T', '1', *extra_tags, *TAGS],
                                        stdout=subprocess.PIPE, stderr=stderr, start_new_session=os.name != 'nt')
             try:
                 for line in process.stdout:
@@ -235,10 +263,10 @@ def main():
     cap = commands.add_parser('capture', help='Capture all probe families with the same tag list')
     cap.add_argument('--label', default='probe')
     cap.add_argument('--log-dir')
-    cap.add_argument('--expect', choices=('any', 'host', 'activity', 'proxy', 'video', 'ime-video', 'focus'), default='any')
+    cap.add_argument('--expect', choices=('any', 'host', 'activity', 'proxy', 'video', 'ime-video', 'focus', 'window-ime'), default='any')
     summary = commands.add_parser('summarize', help='Inspect an existing log offline; no device is needed')
     summary.add_argument('log', type=Path)
-    summary.add_argument('--expect', choices=('any', 'host', 'activity', 'proxy', 'video', 'ime-video', 'focus'), default='any')
+    summary.add_argument('--expect', choices=('any', 'host', 'activity', 'proxy', 'video', 'ime-video', 'focus', 'window-ime'), default='any')
     import probe_launch
     host = commands.add_parser('launch-host', help='Launch an installed HC2 probe; no build/install/capture')
     host.add_argument('case', nargs='?', choices=probe_launch.HOST_CASES, default='menu')

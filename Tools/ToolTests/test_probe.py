@@ -26,6 +26,45 @@ HOST = [
 
 
 class AnalysisTests(unittest.TestCase):
+    def test_window_ime_observations_do_not_claim_keyboard_or_editing_success(self):
+        report = probe.analyze([
+            'VRWebViewFocus probe=WF1 event=installed supported=true enabled=true route=direct',
+            'VRWebViewFocus connection nonNull=true count=1/1 type=0xc0a1',
+            'VRWebViewFocus probe=WF1 event=armed',
+            'VRWebViewFocus probe=WF1 event=window actual=false action=HOLD_LOSS viewFocus=true editor=true',
+            'VRWebViewFocus probe=WF1 event=dom route=direct input=2 compositionStart=1 compositionEnd=1 editable=true'], 'window-ime')
+        self.assertEqual(report['issues'], [])
+        self.assertEqual(report['window_ime_events'][-1]['input'], '2')
+        self.assertEqual(report['window_ime_events'][-1]['route'], 'direct')
+        self.assertEqual(report['keyboard_visibility'], 'requires_user_observation')
+        self.assertNotIn('ime_fixed', report)
+
+    def test_window_ime_accepts_nonreproduction_with_real_editor_attempt(self):
+        report = probe.analyze([
+            'VRWebViewFocus probe=WF1 event=installed supported=true enabled=true route=direct',
+            'VRWebViewFocus connection nonNull=true count=1/1',
+            'VRWebViewFocus probe=WF1 event=armed'], 'window-ime')
+        self.assertEqual(report['issues'], [])
+
+    def test_window_ime_reports_unsupported_provider(self):
+        report = probe.analyze([
+            'VRWebViewFocus probe=WF1 event=installed supported=false enabled=true route=direct',
+            'VRWebViewFocus connection nonNull=true count=1/1'], 'window-ime')
+        self.assertIn('window_ime_provider_unsupported', report['issues'])
+        self.assertIn('expected_window_ime_request_missing', report['issues'])
+
+    def test_previous_focus_trace_cannot_establish_new_window_ime_workaround(self):
+        report = probe.analyze([
+            'VRWebViewFocus probe=FO1 event=focus_trace_installed',
+            'VRWebViewFocus proxy=IP1 event=mode enabled=false'], 'window-ime')
+        self.assertIn('expected_window_ime_guard_missing', report['issues'])
+        self.assertIn('expected_editor_connection_missing', report['issues'])
+
+    def test_system_focus_rows_are_optional_observations(self):
+        report = probe.analyze([PREFIX + 'input_focus: [Focus entering Example,reason=synthetic]'])
+        self.assertEqual(report['system_focus_rows'], 1)
+        self.assertNotIn('focus_destination', report)
+
     def test_focus_trace_requires_direct_mode_and_observed_stack_without_inferring_cause(self):
         report = probe.analyze([
             'VRWebViewFocus probe=FO1 event=focus_trace_installed',
@@ -247,6 +286,20 @@ if mode=='hold':
         self.assertNotIn('-c', calls[1])  # Never clear the buffer.
         self.assertIn('VRWebViewHost:I', calls[1])
         self.assertIn('VRWebViewActivityGPU:I', calls[1])
+
+    def test_window_ime_capture_adds_system_and_events_buffers(self):
+        rows = [
+            PREFIX + 'VRWebViewFocus: probe=WF1 event=installed supported=true enabled=true route=direct',
+            PREFIX + 'VRWebViewFocus: connection nonNull=true count=1/1',
+            PREFIX + 'VRWebViewFocus: probe=WF1 event=armed',
+            PREFIX + 'input_focus: [Focus entering Example,reason=synthetic]']
+        result = self.run_tool('capture', '--expect', 'window-ime', rows=rows)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        calls = [json.loads(x) for x in self.calls.read_text().splitlines()]
+        self.assertEqual(calls[1][:7], ['logcat', '-b', 'main', '-b', 'system', '-b', 'events'])
+        for tag in probe.SYSTEM_FOCUS_TAGS:
+            self.assertIn(tag, calls[1])
+        self.assertEqual(self.report()['system_focus_rows'], 1)
 
     def test_offline_check_precedes_log_creation(self):
         result = self.run_tool('capture', mode='offline')

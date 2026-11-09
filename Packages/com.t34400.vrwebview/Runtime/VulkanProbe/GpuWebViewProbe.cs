@@ -18,6 +18,9 @@ namespace T34400.VRWebView
         public ProbePointerMode pointerMode = ProbePointerMode.Auto;
         public bool restoreBrowserFocus = true;
         public bool testInputConnectionProxy;
+        public bool testImeWindowFocusGuard = true;
+        private bool imeWindowGuardEnabled = true;
+        private Text imeWindowGuardLabel;
         private bool proxyEnabled;
         private Text proxyLabel;
         private float nextProxyTick;
@@ -74,10 +77,11 @@ namespace T34400.VRWebView
                 bridge = new AndroidJavaClass("com.t34400.vrwebview.VulkanProbe");
                 using (var player = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
                 using (var activity = player.GetStatic<AndroidJavaObject>("currentActivity"))
-                    bridge.CallStatic(testInputConnectionProxy ? "openImeProxy" : "open", activity, (long)id, width, height);
-                proxyEnabled = testInputConnectionProxy;
+                    bridge.CallStatic(testImeWindowFocusGuard ? "openImeGuard" : testInputConnectionProxy ? "openImeProxy" : "open", activity, (long)id, width, height);
+                proxyEnabled = testInputConnectionProxy && !testImeWindowFocusGuard;
                 if (proxyLabel != null) proxyLabel.text = "Proxy " + (proxyEnabled ? "ON" : "OFF");
-                bridge.CallStatic("setFocusRecovery", (long)id, testInputConnectionProxy ? false : restoreBrowserFocus);
+                bridge.CallStatic("setFocusRecovery", (long)id, testInputConnectionProxy || testImeWindowFocusGuard ? false : restoreBrowserFocus);
+                if (testImeWindowFocusGuard) bridge.CallStatic("setImeWindowGuard", (long)id, imeWindowGuardEnabled);
                 image.texture = texture;
             }
             catch (Exception error)
@@ -111,12 +115,12 @@ namespace T34400.VRWebView
         }
         public void RequestIme()
         {
-            if (testInputConnectionProxy) TraceFocus("proxy=IP1 event=start_requested host=" + id);
+            if (testInputConnectionProxy && !testImeWindowFocusGuard) TraceFocus("proxy=IP1 event=start_requested host=" + id);
             if (id != 0 && bridge != null) bridge.CallStatic("requestIme", (long)id);
         }
         public void RequestNativeIme()
         {
-            if (!testInputConnectionProxy || id == 0 || bridge == null) return;
+            if (testImeWindowFocusGuard || !testInputConnectionProxy || id == 0 || bridge == null) return;
             // Native is a separate control after the direct route; synchronize both UI and Java mode.
             if (!proxyEnabled) ToggleImeProxy();
             TraceFocus("proxy=IP1 event=native_requested host=" + id);
@@ -125,14 +129,23 @@ namespace T34400.VRWebView
         public void ArmFocusReturn() { if (id != 0) bridge.CallStatic("armFocusReturn", (long)id); }
         public void ToggleImeProxy()
         {
-            if (!testInputConnectionProxy) return;
+            if (testImeWindowFocusGuard || !testInputConnectionProxy) return;
             ResetInput(); proxyEnabled = !proxyEnabled;
             if (proxyLabel != null) proxyLabel.text = "Proxy " + (proxyEnabled ? "ON" : "OFF");
             if (id != 0) bridge.CallStatic("setImeProxy", (long)id, proxyEnabled);
             TraceFocus("proxy=IP1 event=unity_mode enabled=" + proxyEnabled);
         }
+        public void ToggleImeWindowGuard()
+        {
+            if (!testImeWindowFocusGuard) return;
+            ResetInput(); imeWindowGuardEnabled = !imeWindowGuardEnabled;
+            if (imeWindowGuardLabel != null) imeWindowGuardLabel.text = "IME guard " + (imeWindowGuardEnabled ? "ON" : "OFF");
+            if (id != 0 && bridge != null) bridge.CallStatic("setImeWindowGuard", (long)id, imeWindowGuardEnabled);
+            TraceFocus("probe=WF1 event=unity_mode enabled=" + imeWindowGuardEnabled);
+        }
         public void ToggleFocusRecovery()
         {
+            if (testImeWindowFocusGuard) return;
             restoreBrowserFocus = !restoreBrowserFocus;
             if (recoveryLabel != null) recoveryLabel.text = "Restore " + (restoreBrowserFocus ? "ON" : "OFF");
             if (id != 0) bridge.CallStatic("setFocusRecovery", (long)id, restoreBrowserFocus);
@@ -200,9 +213,9 @@ namespace T34400.VRWebView
             UpdateRay();
             if (status == null || Time.unscaledTime < nextStatus) return;
             nextStatus = Time.unscaledTime + 0.5f;
-            if (testInputConnectionProxy && Time.unscaledTime >= nextProxyTick) {
+            if ((testInputConnectionProxy || testImeWindowFocusGuard) && Time.unscaledTime >= nextProxyTick) {
                 nextProxyTick = Time.unscaledTime + 1;
-                TraceFocus("proxy=IP1 event=unity_tick frames=" + Time.frameCount
+                TraceFocus((testImeWindowFocusGuard ? "probe=WF1 " : "proxy=IP1 ") + "event=unity_tick frames=" + Time.frameCount
                     + " appFocus=" + Application.isFocused + " paused=" + paused
                     + " tracked=" + pointerTracked + " pressed=" + pointerPressed + " source=" + pointerSource);
             }
@@ -219,7 +232,8 @@ namespace T34400.VRWebView
                 + " L=" + input.LeftHandPresent + "/" + input.LeftHandTracked + " controller=" + input.ControllerTracked
                 + "\nappFocus=" + Application.isFocused + " paused=" + paused + " focus/pauseEvents=" + focusEvents + "/" + pauseEvents
                 + "\nR " + input.RightHandDetails + "\n" + roots
-                + (testInputConnectionProxy ? "\nIP2: isolated borrowed IME. Native IME is a control only; it does not edit the page."
+                + (testImeWindowFocusGuard ? "\nWF1: direct WebView IME. Tap Text, type, then Done/Back. IME guard " + (imeWindowGuardEnabled ? "ON" : "OFF")
+                    : testInputConnectionProxy ? "\nIP2: isolated borrowed IME. Native IME is a control only; it does not edit the page."
                     : "\nPinch: click/drag. Focus +5s: arm recovery before selecting a field.");
         }
         private void TraceFocus(string value)
@@ -312,9 +326,11 @@ namespace T34400.VRWebView
             image = browser.GetComponent<RawImage>(); image.color = Color.white;
             image.uvRect = new Rect(0, flipImageVertically ? 1 : 0, 1, flipImageVertically ? -1 : 1);
             status = Label("Status", new Vector2(0, 620), new Vector2(1024, 460), "Waiting for GPU probe", 16);
-            Button(testInputConnectionProxy ? "IP2 Start" : "IME", -420, RequestIme); Button("Focus", -252, ReturnFocus); Button("Reload", -84, Reload);
+            Button(testInputConnectionProxy && !testImeWindowFocusGuard ? "IP2 Start" : "IME", -420, RequestIme); Button("Focus", -252, ReturnFocus); Button("Reload", -84, Reload);
             Button("Recreate", 84, Recreate); Button("Resize", 252, Resize); Button("Flip Y", 420, Flip);
-            if (testInputConnectionProxy) {
+            if (testImeWindowFocusGuard) {
+                imeWindowGuardLabel = Button("IME guard ON", 0, ToggleImeWindowGuard, -510, 320);
+            } else if (testInputConnectionProxy) {
                 Button("Native IME", -350, RequestNativeIme, -510, 300);
                 proxyLabel = Button("Proxy ON", 0, ToggleImeProxy, -510, 320);
             } else {

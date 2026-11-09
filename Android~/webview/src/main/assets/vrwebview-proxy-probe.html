@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>IP2 isolated borrowed WebView input connection</title>
+<title>GPU WebView text input</title>
 <style>
 body{font:18px sans-serif;margin:12px;background:#fff;color:#111}h1{font-size:22px}video{width:100%;max-height:220px;background:#000}
 label{display:block;margin:10px 0}input,textarea,[contenteditable]{font:inherit;display:block;box-sizing:border-box;width:100%;border:1px solid #777;padding:8px}
@@ -8,8 +8,8 @@ button{font:inherit;margin:4px;padding:6px}pre{font:13px monospace;white-space:p
 .tiles{display:flex;gap:8px;align-items:center}.tile{width:80px;height:60px}.animated{background:#e24;animation:spin 2s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}canvas{border:1px solid #333;width:80px;height:60px}
 </style>
-<h1>IP2 / GPU + isolated borrowed connection</h1>
-<p>Use IP2 Start, try Japanese conversion, then Done. Native IME is a control editor only and does not edit this page. Check Unity ray and video/scroll after closing. Use synthetic input only.</p>
+<h1>GPU / WebView text input</h1>
+<p>Tap Text, try Japanese conversion, then Done or Back. Check the Unity ray and video/scroll after closing. The active input mode is shown in the Unity controls. Use synthetic input only.</p>
 <video id="video" src="video.mp4" playsinline controls loop preload="metadata"></video>
 <div><button id="play">Play / Pause</button><button id="seek">Seek +2 seconds</button></div>
 <pre id="videoState">Video waiting for user playback. Page metadata does not prove GPU capture.</pre>

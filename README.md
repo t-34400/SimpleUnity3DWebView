@@ -3,7 +3,7 @@
 Unity 6000.4 / Meta Quest向けWebViewの再設計プロジェクトです。現在は情報整理・設計見直し・技術的負債の解消フェーズで、追加の実機試験は停止しています。製品用バックエンドの完成・日本語IMEとの両立はまだ宣言していません。
 
 入口は[現在の状態](Packages/com.t34400.vrwebview/Documentation~/CurrentStatus.md)です。
-- [次のAndroid検証：IP1](Packages/com.t34400.vrwebview/Documentation~/ImeProxyProbe.md)：同一Activityの借用InputConnectionと日本語入力・Unity操作復帰の一往復。Browser UI sample確認は保留。
+- [次のAndroid検証：WF1](Packages/com.t34400.vrwebview/Documentation~/WindowImeGuard.md)：既知WebViewのWindow喪失時IME終了を回避し、直接日本語入力とUnity操作復帰を確認する。IP1/IP2の借用は不採用。
 
 - [証拠台帳](Packages/com.t34400.vrwebview/Documentation~/EvidenceLedger.md)：実機観察、提供ログ、仮説、未確認事項。
 - [Editor検証](Packages/com.t34400.vrwebview/Documentation~/EditorValidation.md)：batchmodeの起動・XML判定・終了待ち。実EditMode 14/14成功と正常終了、PlayModeのXR起動クラッシュに対する起動環境修正。

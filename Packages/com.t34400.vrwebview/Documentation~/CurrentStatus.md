@@ -1,6 +1,6 @@
 # 現在の状態と整理フェーズ
 
-更新: 2026-11-08 JST。現在は情報整理・設計見直し・技術的負債の解消フェーズ。HC2の再試行とAG3のレイ試験は停止を維持する。Android方式を先に評価する方針へ戻し、[IP1](ImeProxyProbe.md)の一往復だけを次の実機検証とする。任意Browser UI sampleの確認は保留で、IP1の前提ではない。IP1の観測には今回のAAR/sceneを含むAPK更新が必要。
+更新: 2026-11-09 JST。次の主タスクは[WF1](WindowImeGuard.md)の直接WebView IME回避実装の実機確認。IP1/IP2の借用方式は今回の結果で不採用。HC2/AG3やBrowser UI sampleの再試行は前提にしない。既存のIP2/FO1シーンを一度更新して使用する。クラウドでの実装・ローカル検証は、Questでの修正成功ではない。
 
 ## 現時点の判断
 
@@ -8,7 +8,7 @@
 
 - 通常閲覧はUnityが操作主体となる。IME表示中はシステムへ入力を渡し、終了後にUnity操作へ戻ることを要求する。
 - 別Activityを常時前面に置く方式は、現在の製品主候補から外す。描画・IMEの比較資料として残す。
-- 第一候補は同じUnity Activity内のWebView直接入力。代理InputConnectionは成立条件を調べる候補であり、採用済みの設計ではない。
+- 第一候補は同じUnity Activity内のWebView直接入力。IP1/IP2の代理InputConnectionは、接続や候補表示があってもDOM編集が成立せず不採用。
 - EditTextの全文をDOMへ反映する旧方式は、汎用編集の主方式へ戻さない。
 - AHardwareBufferとVulkan/GLES consumerの境界は再利用候補。現在のプローブ全体を製品APIに昇格させない。
 
@@ -37,11 +37,13 @@ HC2の判定/観測はHostPointerObservation、自動開始とUnity keyboard tim
 
 ## 次に判断するAndroid側の前提
 
-[IP1 GPU + 借用InputConnection検証](ImeProxyProbe.md)を追加した。同一Unity Activity内で、代理EditTextをIMEの接続先とし、WebViewの本来の接続を借用する。JavaScriptで文字列を反映する方式ではない。UnityのIP1 Startから固定の通常inputを選び、日本語入力・Done・Unity操作復帰の一往復で、接続生存の最初の関門を調べる。
+FO1と実機providerのDEX解析で、Window喪失→WebView内部reset/hide→null接続→Window復帰→GameActivityのUnity View取得という順序を確認した。UnityへのViewフォーカス移動が先行するIME終了を起こしたわけではない。
 
-IP1の初回実機ログでは、Unityのpinchとモード切替が動く一方、Android hostが代理View初期化中に終了した。コンストラクター中の未初期化参照を修正し、初期化段階と例外class/stackをlogcatへ追加した。修正後の実機確認待ちで、IME方式の成否はまだ判定できない。
+[WF1](WindowImeGuard.md)は、実機解析済みprovider・表示意図の直後・有効なWebView編集接続に限定し、Window喪失のprovider通知を保留する互換回避。通常のpause/非表示/Viewフォーカス喪失/終了では解放する。実際のWindow/XRフォーカスは偽装しない。別Activity移管やエンジン変更は今回実装していない。
 
-Java/AARの実装・ローカル検証と、Quest上でのIME成立を区別する。製品IBrowserBackendへの接続はこの前提の成立後に行う。失敗した接続へ上位UIを載せたり、同じHC2比較を無条件に再試行したりしない。
+IP2はキーボードを維持できたがDOM編集は成立せず、Native EditText対照だけは編集できた。動画のRange修正はFO1で後続streamのskip/read成功とページ側の旧停止位置超えを確認した。動画の全HMDピクセル確認とは区別する。
+
+最初のWindowフォーカスの移動先・Meta内部ポリシーは未特定。WF1の記録ではシステムのfocusイベントも併せて保存し、出力される範囲で対策と同時に調べる。製品Android backendへの接続はIME・復帰の成立後とする。
 
 ## このフェーズの成果と残作業
 
@@ -51,11 +53,11 @@ Java/AARの実装・ローカル検証と、Quest上でのIME成立を区別す�
 - [実装分離](RuntimeSeparation.md)の最初の判定/観測を実装し、従来の抑止条件を保持する。
 - [GPU寿命](GpuLifetime.md)の世代/退役状態処理を実装・合成検証した。既存Probe/Pumpには未接続で、Texture破棄の動作は変更していない。
 - [上位レイヤー](UpperLayers.md)の表示借用契約とBrowserWorkspace/BrowserTabを実装した。サンプルモデルは既存BrowserSessionへ接続している。製品Android backendには未接続。
-- [Unity表示部品](UnityView.md)としてdispatcher、Texture公開口、RawImage view、pointer/scroll接続を実装した。実Unity 6000.4.5f1でEditMode 14/14、修正後PlayMode 3/3と終了コード0を確認した。新しいIP1のEditor menu/sceneの実compile/buildは未確認。実Android backendからTexture/入力を供給する接続は未実装。
+- [Unity表示部品](UnityView.md)としてdispatcher、Texture公開口、RawImage view、pointer/scroll接続を実装した。実Unity 6000.4.5f1でEditMode 14/14、修正後PlayMode 3/3と終了コード0を確認した。今回のWF1の実Editor compile/buildは未確認。実Android backendからTexture/入力を供給する接続は未実装。
 - [Browser UI sample](BrowserUI.md)にタブ列・URL欄・Go/New/Closeとモデル/表示の接続を実装した。実EditorでのUI確認と製品factoryは未確認/未実装。未設定時にfakeページを表示しない。
 - [レイヤー設計](LayeredArchitecture.md)を記録し、新しい純C# assemblyの依存方向を静的検査する。package全体のXR依存除去は未完了。
 - [Editor検証](EditorValidation.md)を共通ツールから起動できるようにした。利用者ログでEditMode全14件、PlayMode全3件とプロセス正常終了を確認した。importしたsampleは保留。前回の終了停滞の根本原因は未確定。
 - ログ採取と起動は共通の`Tools/probe.py`へ集約。従来のcapture/runシェルは互換入口として委譲する。全case/modeの引数と失敗経路を合成ADBで検証し、実機起動は未確認。[診断仕様](Diagnostics.md)を参照。
 - patch-exchangeのWSL修正はmainへ統合済み。[統合結果](FoundationIntegration.md)と[標準手順](StandardWorkflow.md)を参照。新しいmain版CLIで既存ジョブのresumeも確認した。
 
-実機試験の再開条件として、ログの取得・失敗検出、配布CLIの統一、一試験の判断と打ち切り条件を定めた。今回はIP1だけを対象とし、元のHC2/AG3の再開指示にはしない。残るIMEやレイの問題を「解消済み」と宣言しない。
+実機試験の再開条件として、ログの取得・失敗検出、配布CLIの統一、一試験の判断と打ち切り条件を定めた。現在はWF1だけを対象とし、元のHC2/AG3の再開指示にはしない。残るIMEやレイの問題を「解消済み」と宣言しない。

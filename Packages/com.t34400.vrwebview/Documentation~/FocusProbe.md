@@ -1,3 +1,5 @@
+> 最新の直接入力修正は[WF1](WindowImeGuard.md)。以下のHI/FO1記録は履歴で、修正手順はWF1を使用する。
+
 # HI4: Unity / WebViewのフォーカス診断
 
 > **現在は整理フェーズで実機試験を停止しています。** 本書は過去の検証手順です。現在の判断は[CurrentStatus.md](CurrentStatus.md)、共通の取得仕様は[Diagnostics.md](Diagnostics.md)を参照してください。以下の「次の試験」は現在の実行依頼ではありません。

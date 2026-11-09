@@ -1,0 +1,64 @@
+# WF1: 既知WebViewのWindowフォーカス喪失によるIME終了を回避する
+
+更新: 2026-11-09 JST / preview.34。これは実機providerの解析に基づく限定的な互換回避実装。Android libraryの実装とローカル検証を、Questでの修正成功と区別する。
+
+## 根拠
+
+FO1でWindow喪失callback中にclient hide → inputType0/null接続が発生し、その後Window復帰でGameActivityがUnityのSurfaceViewへViewフォーカスを戻した。先行するIME終了をUnityのViewフォーカス取得だけでは説明できない。
+
+利用者から取得した com.android.webview / 154.0.0.55.15.1096209767 / versionCode570701335 のDEXに、Window喪失時の無条件resetAndHideKeyboard呼び出しを確認した。難読化後のonWindowFocusChanged27 → s39 → k99 → t47（restartInput）がFO1の実行stackとも一致する。Native Windowの別Activity検証では、キーボード表示中もWebView所有Windowはfocus=trueで、Unity側appFocus=falseだった。Native EditTextとの比較とは別の証拠。
+
+上流の[導入](https://github.com/chromium/chromium/commit/f04844f7e01375c586b4ea223e6aa133026cd805)と[修正](https://github.com/chromium/chromium/commit/37d5228c9e8b9c9def67a000c4e0a2bdd0b35bff)を参照。上流修正はfocusableなシステムdialog/overlayによる即時IME終了を修正している。実機fork全体のコミット同定ではなく、該当分岐の確認である。
+
+## 変更する動作
+
+既存GpuWebViewProbeに Test Ime Window Focus Guard（既定ON）を追加した。既存シーンでもこのモードが優先され、IP1/IP2の借用・Native EditText・focus復旧再試行を使用しない。固定ページとGPU経路を使い、WebViewの本来のInputConnectionをそのままAndroidへ返す。
+
+ProbeWebViewは次の条件が揃う一回のWindow喪失通知を、providerのsuper.onWindowFocusChangedへ渡すのを保留する。
+
+- 実機解析済みのprovider名・versionNameに完全一致。
+- owner Activityがresumedで、Windowが直前までfocused。
+- 明示IME要求または実際のpointer downから2秒以内。
+- WebViewのViewフォーカスがあり、attach済み・非null編集接続・inputType!=0。
+- IMMでそのWebViewがservedかつisAcceptingText。
+
+2秒は最初の喪失を保留できる条件の有効期限であり、入力時間の上限ではない。入力中の自動終了timerやIME再要求は追加しない。Androidの実際のhasWindowFocus、Unity/XR focus、IMMのserved判定を書き換えず、falseはfalseのまま記録する。通知保留なので、通常のWebView契約を完全に保持する一般解ではない。実機結果をもって採否を決める互換回避である。
+
+既にfocusedなrootへattachすると最初のWindow=true callbackが来ない場合があるため、attach後の実hasWindowFocusを初期状態として使う。架空のtrue callbackは送らない。
+
+## 解放と復帰
+
+- Viewフォーカス喪失、Activity pause/stop、Window非表示、detach、Back、Focusボタン、reload、host close、guard OFFで、保留していた実際のfalse通知を一回だけ渡す。
+- Unityが入力を失ったときのpointer cancelは、既に保留中のIMEを閉じない。未使用の表示意図だけを解除する。
+- 保留中に実Window=trueが戻り、Viewフォーカスが残る場合は、providerはfalseを受け取っていないため重複trueを追加しない。
+- GameActivityがWindow復帰時に先にWebViewのViewフォーカスを外す場合は、保留falseを解放して通常のView喪失を通知し、その後の実Window=trueを渡す。
+- 元のInputConnectionを代理Viewへ移さず、DOMへ文字列・選択・変換状態を書き戻さない。Done/Backの動作は元のWebView/システムを使用する。
+
+最初のAndroid Windowフォーカスの移動先と、Meta内部の判断理由は未特定。この実装は「喪失がキーボード由来である」と完全に判別するものではなく、上記の狭い条件で適用する。システムメニュー、バックグラウンド、再開、連続編集も確認が必要。
+
+## 一回目の実機確認
+
+既存のIP2/FO1で使ったシーンをそのまま一度Build And Runする。新しいシーン生成、graphics API変更、boot設定変更は不要。画面のWF1とIME guard ONを確認する。IP2 Start/Proxy/Native IMEはこのモードのUIに出さない。
+
+起動前から次を実行する。
+
+```bash
+cd /mnt/c/source/Unity/SimpleUnity3DWebView
+vrwebview_logs="/mnt/c/Users/tmiyoshi/Downloads/VRWebView-WF1-$(date +%Y%m%d-%H%M%S)"
+python3 Tools/probe.py capture --expect window-ime --label WF1 --log-dir "$vrwebview_logs"
+```
+
+1. Text欄を一度選ぶ。キーボードが表示・維持されるかを見る。表示されなければ5秒ほどで追加試行を止める。
+2. 入力できれば架空の短い日本語を変換・確定し、DoneまたはBackで閉じる。Unityのレイが戻り、スクロールまたは動画ボタンを操作できるかを見る。
+3. 成功した場合だけもう一度Text欄を選び、開閉を繰り返せるか確認する。確認後、システムメニューを開いてアプリへ戻れるかを見る。
+4. Ctrl+Cで採取を止める。Downloadsの当該フォルダーをZIPにし、キーボード/入力/復帰の実際の結果と送る。スクリーンの診断値を転記する必要はない。
+
+IME guard OFFは同じAPKでの対照用で、初回からON/OFFの総当たりを要求しない。別providerのsupported=falseが出た場合、一般化して適用せず、そのログで止める。
+
+## 診断と検証範囲
+
+probe=WF1のinstalled、armed、windowのactual/action、releasedのreason、lifecycle、固定ページのDOMイベント数を記録する。入力本文・周辺文字・選択内容は取得しない。HOLD_LOSSやDOMイベント数だけでHMD表示・正しい日本語編集の成功とは判定しない。
+
+window-ime採取では従来タグに加えmain/system/eventsバッファーのWindowManager、InputDispatcher、input_focusを保存する。端末がその情報を出す場合だけ移動先を調べられる。タグ追加で非公開Meta内部の分岐まで必ず分かるわけではない。システムイベント不在を採取失敗や移動なしと決めつけない。
+
+純Javaの状態テストは、初期callback欠落、要求期限、非対象provider、実編集・served条件、重複通知、長時間編集、GameActivityのView喪失先行、pause/再開/解除を検査する。Android compile/lintとR8によるJNI保存、Pythonの診断テストを実行する。Unity Editorでの型コンパイル・APKビルド・Quest実行はクラウドでは行っていない。

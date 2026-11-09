@@ -1,6 +1,6 @@
 # 共通診断ツール
 
-現在は実機試験を停止中。以下は再開時の操作仕様と保守用の説明であり、新しい試行の依頼ではない。コードはすべてパッチで配布する。個別のDownloadsスクリプトを新たな標準入口にはしない。
+現在の一試行は[WF1](WindowImeGuard.md)。以下は共通の操作仕様と保守用の説明。コードはすべてパッチで配布する。個別のDownloadsスクリプトを新たな標準入口にはしない。
 
 ## 一つの取得器
 
@@ -67,3 +67,10 @@ ADBとserialの解決はcapture/doctorと共通。直接呼ぶ場合の`--adb`�
 resolve・force-stop・startの各処理に30秒のtimeoutを設け、非0終了だけでなく終了0で返るAndroidのError/Exception等も失敗にする。既存ActivityへのIntent配送を示す`Activity not started`も新しい比較試行の成功にはしない。start失敗/timeout後に自動再試行はしない。起動要求が部分的に実行された可能性は残る。
 
 build/install、scene選択、boot設定の変更、logcat消去・自動採取は行わない。`off/on`は従来どおりAPKのboot設定に対する期待値であり、設定変更ではない。合成ADBで全case/mode・旧入口・serial・改行・各段階の失敗を検証し、Questでの起動は未確認。
+
+
+## WF1の直接IME回避
+
+`capture --expect window-ime --label WF1`はWF1のinstall、対象provider、直接経路、実編集接続と操作の記録を確認する。HOLD_LOSS発生や入力成功そのものを採取成立の条件にしない。unsupported providerや旧APKは明示する。
+
+このexpectだけmain/system/eventsの三バッファーとWindowManager/InputDispatcher/input_focusを追加する。システム記録が出ない端末もあるため、その不在だけで失敗とはしない。DOMイベントは固定ページの数値だけで、本文は保存しない。古いIP1/IP2のsummaryとは区別する。
