@@ -1,6 +1,6 @@
 # 現在の状態と整理フェーズ
 
-更新: 2026-11-09 JST。preview.35のWF1で、利用者がIME入力と入力終了後の動画操作の成功を確認した（E15）。この構成の基本ループは確認済み。preview.36では同じ方式を使う製品用Android backend、共有render pump、BrowserController/BrowserView、Browser sample factoryを接続した。preview.37までのRT1基本動作は利用者が確認した（E16）。hoverはpreview.38で追加し、利用者が実機動作を確認した（E17）。preview.39ではIME回避策のversion完全一致条件を外し、同じproviderの更新後も保持する。[Android backend](AndroidBackend.md)を次の入口とし、古い比較試験の総当たりへ戻らない。
+更新: 2026-11-09 JST。preview.35のWF1で、利用者がIME入力と入力終了後の動画操作の成功を確認した（E15）。この構成の基本ループは確認済み。preview.36では同じ方式を使う製品用Android backend、共有render pump、BrowserController/BrowserView、Browser sample factoryを接続した。preview.37までのRT1基本動作は利用者が確認した（E16）。hoverはpreview.38で追加し、利用者が実機動作を確認した（E17）。preview.39ではIME回避策のversion完全一致条件を外し、同じproviderの更新後も保持する。preview.40ではリッチサンプル用BS1シーン生成・uGUI入力接続・採取を追加した。次の入口は[BS1手順](RichBrowserSample.md)。実Editor/Questは未確認で、旧比較試験の総当たりへ戻らない。
 
 ## 現時点の判断
 
@@ -60,4 +60,6 @@ WF1のsystem記録で、IME表示中の入力先がQuestのFocusPlaceholderActiv
 - ログ採取と起動は共通の`Tools/probe.py`へ集約。従来のcapture/runシェルは互換入口として委譲する。全case/modeの引数と失敗経路を合成ADBで検証し、実機起動は未確認。[診断仕様](Diagnostics.md)を参照。
 - patch-exchangeのWSL修正はmainへ統合済み。[統合結果](FoundationIntegration.md)と[標準手順](StandardWorkflow.md)を参照。新しいmain版CLIで既存ジョブのresumeも確認した。
 
-実機試験の再開条件として、ログの取得・失敗検出、配布CLIの統一、一試験の判断と打ち切り条件を定めた。RT1の基本操作とhoverは確認済みとして扱う。WF1の基本ループは確認済みとして扱い、HC2/AG3へ戻らない。任意サイト・GLES・全lifecycleへ成功を一般化しない。
+実機試験の再開条件として、ログの取得・失敗検出、配布CLIの統一、一試験の判断と打ち切り条件を定めた。RT1の基本操作とhoverは確認済みとして扱い、次はBS1でサンプルUI/URL欄/複数ページを確認する。WF1の基本ループは確認済みとして扱い、HC2/AG3へ戻らない。任意サイト・GLES・全lifecycleへ成功を一般化しない。
+
+今後の利用者メモは[TechnicalDebt.md](TechnicalDebt.md)末尾へ記録した。JavaScript実行等のWebView公開操作interfaceと配布形式の整理は、BS1と別の保留タスク。今回完了とは扱わない。

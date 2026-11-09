@@ -6,7 +6,8 @@
     "T34400.VRWebView.Unity",
     "T34400.VRWebView.UnityUI",
     "UnityEngine.UI",
-    "Unity.XR.Management"
+    "Unity.XR.Management",
+    "T34400.VRWebView.VulkanProbe"
   ],
   "optionalUnityReferences": [
     "TestAssemblies"

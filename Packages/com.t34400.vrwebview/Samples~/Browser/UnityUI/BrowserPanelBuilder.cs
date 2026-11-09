@@ -10,10 +10,12 @@ namespace T34400.VRWebView.Samples.Browser
     {
         [SerializeField] private BrowserPageFactory factory;
         [SerializeField] private BrowserPanel builtPanel;
+        [SerializeField] private string newTabAddress = "";
         public BrowserPanel Panel => builtPanel;
         private void Start()
         {
             var panel = Build();
+            panel.SetNewTabAddress(newTabAddress);
             if (factory != null) panel.Configure(factory.CreatePage);
         }
         [ContextMenu("Build Browser UI")] private void BuildFromMenu() { Build(); }
@@ -68,6 +70,7 @@ namespace T34400.VRWebView.Samples.Browser
                 status.gameObject.AddComponent<LayoutElement>().preferredHeight = 40;
                 var panel = root.AddComponent<BrowserPanel>();
                 panel.SetWidgets(dispatcher, page.GetComponent<BrowserView>(), address, go, create, close, contentRect, status, font);
+                panel.SetNewTabAddress(newTabAddress);
                 builtPanel = panel;
                 return panel;
             } catch { BrowserSampleWidgets.Remove(root); throw; }

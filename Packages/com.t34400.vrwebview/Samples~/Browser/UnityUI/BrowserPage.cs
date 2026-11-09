@@ -11,12 +11,14 @@ namespace T34400.VRWebView.Samples.Browser
         public BrowserBackendLease Backend { get; }
         public IBrowserSurfaceSource<Texture> Surface { get; }
         public IBrowserPointerSink Input { get; }
+        public IBrowserEditingSink Editing { get; }
         public BrowserPage(IBrowserBackend backend, IBrowserSurfaceSource<Texture> surface,
-            IBrowserPointerSink input = null, IDisposable connectionLifetime = null)
+            IBrowserPointerSink input = null, IDisposable connectionLifetime = null, IBrowserEditingSink editing = null)
         {
             if (backend == null) throw new ArgumentNullException(nameof(backend));
             Surface = surface ?? throw new ArgumentNullException(nameof(surface));
-            Input = input; Backend = new BrowserBackendLease(backend, connectionLifetime);
+            Input = input; Editing = editing ?? backend as IBrowserEditingSink ?? input as IBrowserEditingSink;
+            Backend = new BrowserBackendLease(backend, connectionLifetime);
         }
         public void Dispose() { Backend.Dispose(); }
     }

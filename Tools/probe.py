@@ -22,7 +22,7 @@ class ProbeError(Exception):
 
 def analyze(lines, expected='any'):
     """Summarize recorded metadata; do not infer HMD visibility or trial names from order."""
-    result = dict(rows=0, runtime_rows=0, runtime_ready=False, runtime_connections=0, runtime_hover_enter=0, runtime_hover_exit=0, runtime_failures=0, runtime_window_events=[], host_rows=0, activity_rows=0, focus_rows=0, legacy_rows=0, trials=[],
+    result = dict(rows=0, browser_ui_rows=0, browser_ui_ready=False, browser_ui_snapshots=[], runtime_rows=0, runtime_ready=False, runtime_connections=0, runtime_targets_retired=0, runtime_hover_enter=0, runtime_hover_exit=0, runtime_failures=0, runtime_window_events=[], host_rows=0, activity_rows=0, focus_rows=0, legacy_rows=0, trials=[],
                   setup_boot_values=[], boot_checks=[], editor_flags=[], xr_transitions=[],
                   pointer_states=[], proxy_rows=0, proxy_events=[], issues=[], keyboard_visibility='requires_user_observation',
                   ray_visibility='requires_user_observation', video_responses=0, video_samples=0,
@@ -36,8 +36,15 @@ def analyze(lines, expected='any'):
         if not line.strip():
             continue
         result['rows'] += 1
+        if 'VRWebViewSample' in line and 'BS1 ' in line:
+            result['browser_ui_rows'] += 1
+            result['browser_ui_ready'] |= 'event=ui_ready' in line
+            if 'event=snapshot' in line:
+                fields = dict(re.findall(r'\b(configured|tabs|active|state|busy|addressFocus|frames|appFocus)=([A-Za-z0-9_-]+)', line))
+                result['browser_ui_snapshots'].append(dict(line=number, **fields))
         if 'VRWebViewRuntime' in line:
             result['runtime_rows'] += 1
+            result['runtime_targets_retired'] += int('event=target_retired' in line)
             result['runtime_failures'] += int('event=failed' in line)
             result['runtime_hover_enter'] += int('event=hover action=9' in line)
             result['runtime_hover_exit'] += int('event=hover action=10' in line)
@@ -116,10 +123,13 @@ def analyze(lines, expected='any'):
             result['xr_transitions'].append(dict(location, before=int(transition[1]), after=int(transition[2])))
     if not result['rows']:
         result['issues'].append('empty_log')
-    if not (result['runtime_rows'] or result['host_rows'] or result['activity_rows'] or result['focus_rows'] or result['legacy_rows']):
+    if not (result['browser_ui_rows'] or result['runtime_rows'] or result['host_rows'] or result['activity_rows'] or result['focus_rows'] or result['legacy_rows']):
         result['issues'].append('no_probe_rows')
     if result['runtime_failures']:
         result['issues'].append('runtime_browser_failed')
+    if expected == 'browser-ui':
+        if not result['browser_ui_ready']: result['issues'].append('expected_browser_ui_ready_missing')
+        if not result['runtime_ready']: result['issues'].append('expected_browser_ui_android_host_missing')
     if expected == 'runtime' and not result['runtime_ready']:
         result['issues'].append('expected_runtime_browser_ready_missing')
     if expected == 'host' and not result['host_rows']:
@@ -226,8 +236,8 @@ def capture(args):
     print('Start the trial in another terminal. Ctrl+C ends capture; no log buffers are cleared.', flush=True)
     try:
         with log.open('xb') as output, errors.open('xb') as stderr:
-            buffers = ['-b', 'main', '-b', 'system', '-b', 'events'] if args.expect in ('window-ime', 'runtime') else []
-            extra_tags = list(SYSTEM_FOCUS_TAGS) if args.expect in ('window-ime', 'runtime') else []
+            buffers = ['-b', 'main', '-b', 'system', '-b', 'events'] if args.expect in ('window-ime', 'runtime', 'browser-ui') else []
+            extra_tags = list(SYSTEM_FOCUS_TAGS) if args.expect in ('window-ime', 'runtime', 'browser-ui') else []
             process = subprocess.Popen(command + ['logcat', *buffers, '-v', 'threadtime', '-T', '1', *extra_tags, *TAGS],
                                        stdout=subprocess.PIPE, stderr=stderr, start_new_session=os.name != 'nt')
             try:
@@ -278,10 +288,10 @@ def main():
     cap = commands.add_parser('capture', help='Capture all probe families with the same tag list')
     cap.add_argument('--label', default='probe')
     cap.add_argument('--log-dir')
-    cap.add_argument('--expect', choices=('any', 'host', 'activity', 'proxy', 'video', 'ime-video', 'focus', 'window-ime', 'runtime'), default='any')
+    cap.add_argument('--expect', choices=('any', 'host', 'activity', 'proxy', 'video', 'ime-video', 'focus', 'window-ime', 'runtime', 'browser-ui'), default='any')
     summary = commands.add_parser('summarize', help='Inspect an existing log offline; no device is needed')
     summary.add_argument('log', type=Path)
-    summary.add_argument('--expect', choices=('any', 'host', 'activity', 'proxy', 'video', 'ime-video', 'focus', 'window-ime', 'runtime'), default='any')
+    summary.add_argument('--expect', choices=('any', 'host', 'activity', 'proxy', 'video', 'ime-video', 'focus', 'window-ime', 'runtime', 'browser-ui'), default='any')
     import probe_launch
     host = commands.add_parser('launch-host', help='Launch an installed HC2 probe; no build/install/capture')
     host.add_argument('case', nargs='?', choices=probe_launch.HOST_CASES, default='menu')

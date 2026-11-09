@@ -1,6 +1,6 @@
 # 技術的負債と解消条件
 
-2026-11-08 JST。完了は今回の修正範囲に対するもので、製品完成を意味しない。
+履歴表の基準は2026-11-08 JST。現在の入口はCurrentStatus.md。旧IP1等の試験指示は再開指示ではない。最新追記: 2026-11-09。
 
 | ID | 状態 | 課題 | 解消条件 |
 |---|---|---|---|
@@ -35,10 +35,17 @@ GPU資源については[GpuLifetime.md](GpuLifetime.md)の世代/退役ledger�
 - 一試験ごとの判断対象・終了条件・失敗時の次の判断・必要観察を文書化する。
 - 診断コード自身が止めているレイと、本当の復帰不良を区別できるようにする。
 
-次の実機試行は[ImeProxyProbe.md](ImeProxyProbe.md)のIP1だけに限定する。過去のHC2/AG3のコマンドや「Next」記述は再開指示にしない。
+現在の次の実機試行は[RichBrowserSample.md](RichBrowserSample.md)のBS1。IP1/IP2は不採用とし、RT1基本動作とhoverは確認済み。過去のHC2/AG3のコマンドや「Next」記述は再開指示にしない。
 
 
 D06以降の具体的な分離順序と資源所有権は[RuntimeSeparation.md](RuntimeSeparation.md)。main統合は完了したが、Unity/Androidの責務分離やIME/レイの問題まで解消した意味ではない。
 
 
 実Editorの検証起動と成功判定は[EditorValidation.md](EditorValidation.md)。合成実行ファイルのテスト成功と、実Unityのテスト成功を区別する。
+
+## 今後のタスク（利用者メモ、2026-11-09）
+
+- JavaScriptの実行などWebView操作のinterfaceを整える。公開操作・非同期結果・失敗・取消と寿命の契約を整理する。このメモの時点では公開JS実行APIは未実装。
+- 配布形式を整える。Git UPMのコアと任意Samplesを基本に、検証コード/Android成果物/XR必須依存の分離と最小consumerからの導入を確認する。
+
+現在進行中のBS1リッチサンプル統合テストの準備と実機確認を先に進める。このメモは上記2項目を完了扱いにするものではない。

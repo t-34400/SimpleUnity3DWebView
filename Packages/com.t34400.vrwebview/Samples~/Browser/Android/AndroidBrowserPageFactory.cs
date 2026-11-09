@@ -5,9 +5,10 @@ namespace T34400.VRWebView.Samples.Browser
     {
         public int width = 1024, height = 768;
         public bool enableKnownProviderImeWorkaround = true;
+        public bool enableDiagnostics;
         public override BrowserPage CreatePage(BrowserDispatcher dispatcher)
         {
-            var backend = new AndroidBrowserBackend(dispatcher, width, height, enableKnownProviderImeWorkaround);
+            var backend = new AndroidBrowserBackend(dispatcher, width, height, enableKnownProviderImeWorkaround, enableDiagnostics);
             return new BrowserPage(backend, backend.Surface, backend);
         }
     }

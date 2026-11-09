@@ -7,7 +7,8 @@
     "Unity.XR.OpenXR.Editor",
     "T34400.VRWebView.Bootstrap",
     "T34400.VRWebView.Unity",
-    "T34400.VRWebView.UnityUI"
+    "T34400.VRWebView.UnityUI",
+    "UnityEngine.UI"
   ],
   "includePlatforms": [
     "Editor"

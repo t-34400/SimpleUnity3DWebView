@@ -19,14 +19,21 @@ namespace T34400.VRWebView.Samples.Browser.Tests
         private BrowserDispatcher owner;
         private readonly List<Backend> backends = new List<Backend>();
         private readonly List<Texture2D> textures = new List<Texture2D>();
-        private sealed class Backend : IBrowserBackend, IBrowserPointerSink
+        private sealed class Backend : IBrowserBackend, IBrowserPointerSink, IBrowserEditingSink
         {
-            internal int Navigations, Disposals;
+            internal int Navigations, Disposals, EditingEnds;
             internal Task Navigation = Task.CompletedTask;
             public Task InitializeAsync(CancellationToken token) { return Task.CompletedTask; }
             public Task NavigateAsync(Uri address, CancellationToken token) { Navigations++; return Navigation; }
             public void SendPointer(BrowserPointerEvent value) { }
+            public void EndEditing() { EditingEnds++; }
             public void Dispose() { Disposals++; }
+        }
+        private sealed class PointerAdapter : IBrowserPointerSink
+        {
+            private readonly Backend backend;
+            internal PointerAdapter(Backend backend) { this.backend = backend; }
+            public void SendPointer(BrowserPointerEvent value) { backend.SendPointer(value); }
         }
         [SetUp] public void Setup()
         {
@@ -48,7 +55,7 @@ namespace T34400.VRWebView.Samples.Browser.Tests
         {
             var backend = new Backend(); var source = new BrowserTextureSource(dispatcher); var texture = new Texture2D(2, 2);
             backends.Add(backend); textures.Add(texture); source.Publish(texture);
-            return new BrowserPage(backend, source, backend, source);
+            return new BrowserPage(backend, source, new PointerAdapter(backend), source);
         }
         private InputField Address => canvas.GetComponentInChildren<InputField>();
         private Button Button(string name) { return canvas.GetComponentsInChildren<Button>().Single(value => value.name == name); }
@@ -97,6 +104,23 @@ namespace T34400.VRWebView.Samples.Browser.Tests
             Address.text = "https://example.invalid/old"; panel.NavigateActive(); panel.Configure(Create); NewReadyTab();
             Assert.AreEqual(oldId, panel.ActiveTab.Id); Address.text = "https://example.invalid/current"; finish.SetResult(true); owner.PumpPending();
             Assert.AreEqual("https://example.invalid/current", Address.text); Assert.AreEqual(1, backends[0].Disposals);
+        }
+        [Test] public void NewTabPrefillDoesNotNavigateOrOverwriteAnotherDraft()
+        {
+            panel.SetNewTabAddress("https://example.com/"); panel.Configure(Create); NewReadyTab(); long first = panel.ActiveTab.Id;
+            Assert.AreEqual("https://example.com/", Address.text); Assert.AreEqual(0, backends[0].Navigations);
+            Address.text = "https://example.org/draft"; NewReadyTab();
+            Assert.AreEqual("https://example.com/", Address.text); panel.SelectTab(first);
+            Assert.AreEqual("https://example.org/draft", Address.text);
+        }
+        [Test] public void TabSwitchAndAddressSelectionEndThePreviousWebEditor()
+        {
+            panel.Configure(Create); NewReadyTab(); int before = backends[0].EditingEnds;
+            NewReadyTab(); Assert.AreEqual(before + 1, backends[0].EditingEnds);
+            int secondBefore = backends[1].EditingEnds;
+            Address.GetComponent<BrowserAddressFocus>().OnSelect(null);
+            Assert.AreEqual(secondBefore + 1, backends[1].EditingEnds);
+            panel.enabled = false; Assert.AreEqual(secondBefore + 2, backends[1].EditingEnds);
         }
         [Test] public void PageFactoryFailureShowsFailureWithoutCreatingAFakeTab()
         {

@@ -175,7 +175,10 @@ namespace T34400.VRWebView
                 || float.IsNaN(value.DeltaX) || float.IsNaN(value.DeltaY) || float.IsInfinity(value.DeltaX) || float.IsInfinity(value.DeltaY)) return;
             bridge.CallStatic("scroll", (long)id, value.X, value.Y, value.DeltaX, value.DeltaY);
         }
-        public void EndEditing() { VerifyReady(); capture.Cancel(); hover.Exit(); bridge.CallStatic("endEditing", (long)id); }
+        public void EndEditing() {
+            owner.VerifyAccess(); if (disposed || !ready) return;
+            capture.Cancel(); hover.Exit(); bridge.CallStatic("endEditing", (long)id);
+        }
         private void FocusChanged(bool focused) { if (!focused && !disposed) { try { capture.Cancel(); } finally { hover.Exit(); } } }
         private void PauseChanged(bool paused)
         {
@@ -222,7 +225,7 @@ namespace T34400.VRWebView
                     // No producer acknowledgement: retain the target, never abandon a live producer.
                     Debug.LogException(error);
                 }
-                pump.Retire(id, texture); id = 0; texture = null;
+                pump.Retire(id, texture, diagnostics); id = 0; texture = null;
             } else if (texture != null) { UnityEngine.Object.Destroy(texture); texture = null; }
             bridge?.Dispose(); bridge = null; callback = null;
             registration.Dispose();

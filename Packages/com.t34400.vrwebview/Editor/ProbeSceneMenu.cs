@@ -4,11 +4,53 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 namespace T34400.VRWebView.Editor
 {
     public static class ProbeSceneMenu
     {
+        [MenuItem("VRWebView/Create Rich Browser Sample Scene")]
+        public static void CreateRichBrowserSample()
+        {
+            Type Find(string name) => AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("T34400.VRWebView.Samples.Browser." + name)).FirstOrDefault(t => t != null);
+            Type builderType = Find("BrowserPanelBuilder"), factoryType = Find("AndroidBrowserPageFactory"), diagnosticsType = Find("BrowserSampleDiagnostics");
+            if (builderType == null || factoryType == null || diagnosticsType == null) {
+                EditorUtility.DisplayDialog("Import current Browser sample", "Import Browser UI and Model from VRWebView in Package Manager. If an old copy exists, back it up outside Assets before importing this version. Wait for compilation, then run this menu again.", "OK");
+                return;
+            }
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
+            var camera = Camera.main; if (camera != null) camera.transform.position = Vector3.zero;
+            var root = new GameObject("BS1 Browser sample", typeof(RectTransform), typeof(Canvas), typeof(GraphicRaycaster));
+            var canvas = root.GetComponent<Canvas>(); canvas.renderMode = RenderMode.WorldSpace; canvas.worldCamera = camera;
+            root.GetComponent<RectTransform>().sizeDelta = new Vector2(1280, 1000);
+            root.transform.position = new Vector3(0, 1.45f, 1.6f); root.transform.localScale = Vector3.one * .0012f;
+            var factory = root.AddComponent(factoryType); var factorySettings = new SerializedObject(factory);
+            factorySettings.FindProperty("width").intValue = 1280; factorySettings.FindProperty("height").intValue = 800;
+            factorySettings.FindProperty("enableDiagnostics").boolValue = true; factorySettings.ApplyModifiedPropertiesWithoutUndo();
+            var builder = root.AddComponent(builderType); var builderSettings = new SerializedObject(builder);
+            builderSettings.FindProperty("factory").objectReferenceValue = factory;
+            builderSettings.FindProperty("newTabAddress").stringValue = "https://example.com/";
+            builderSettings.ApplyModifiedPropertiesWithoutUndo();
+            var panel = (UnityEngine.Object)builderType.GetMethod("Build").Invoke(builder, null);
+            var title = new GameObject("BS1 title", typeof(RectTransform), typeof(Text)); title.transform.SetParent(root.transform, false);
+            title.GetComponent<RectTransform>().anchoredPosition = new Vector2(0, 550); title.GetComponent<RectTransform>().sizeDelta = new Vector2(1280, 80);
+            var label = title.GetComponent<Text>(); label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            label.fontSize = 24; label.color = Color.white; label.alignment = TextAnchor.MiddleCenter; label.raycastTarget = false;
+            label.text = "BS1 - Browser sample";
+            var diagnostics = root.AddComponent(diagnosticsType); var diagnosticSettings = new SerializedObject(diagnostics);
+            diagnosticSettings.FindProperty("panel").objectReferenceValue = panel; diagnosticSettings.ApplyModifiedPropertiesWithoutUndo();
+            var input = new GameObject("BS1 EventSystem", typeof(EventSystem), typeof(ProbeCanvasInputModule)).GetComponent<ProbeCanvasInputModule>();
+            input.targetCanvas = canvas; input.headCamera = camera;
+            input.GetComponent<EventSystem>().pixelDragThreshold = 16;
+            if (!AssetDatabase.IsValidFolder("Assets/VRWebViewPlayground")) AssetDatabase.CreateFolder("Assets", "VRWebViewPlayground");
+            string path = AssetDatabase.GenerateUniqueAssetPath("Assets/VRWebViewPlayground/RichBrowser.unity");
+            EditorSceneManager.SaveScene(scene, path); EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(path, true) };
+            Debug.Log("Created BS1 rich Browser sample scene using the actual Android factory and uGUI ray input. Keep the proven Android/OpenXR/keyboard settings. See RichBrowserSample.md.");
+        }
+
         [MenuItem("VRWebView/Create Runtime Browser Scene")]
         public static void CreateRuntimeBrowser()
         {

@@ -10,7 +10,7 @@ namespace T34400.VRWebView
     public sealed class BrowserGpuPump : MonoBehaviour
     {
         private static BrowserGpuPump instance;
-        private readonly List<(ulong id, RenderTexture texture)> retired = new List<(ulong, RenderTexture)>();
+        private readonly List<(ulong id, RenderTexture texture, bool diagnostics)> retired = new List<(ulong, RenderTexture, bool)>();
         internal event Action Tick;
         internal event Action<bool> FocusChanged;
         internal event Action<bool> PauseChanged;
@@ -44,7 +44,7 @@ namespace T34400.VRWebView
             }
             return instance;
         }
-        internal void Retire(ulong id, RenderTexture texture) { retired.Add((id, texture)); }
+        internal void Retire(ulong id, RenderTexture texture, bool diagnostics = false) { retired.Add((id, texture, diagnostics)); }
         private void Update()
         {
             Notify(Tick);
@@ -54,6 +54,7 @@ namespace T34400.VRWebView
             {
                 if (BrowserGpuNative.VrAlive(retired[i].id) != 0) continue;
                 if (retired[i].texture != null) Destroy(retired[i].texture);
+                if (retired[i].diagnostics) Debug.Log("[VRWebViewRuntime] event=target_retired host=" + retired[i].id + " nativeAlive=0 unityDestroyRequested=true");
                 retired.RemoveAt(i);
             }
         }

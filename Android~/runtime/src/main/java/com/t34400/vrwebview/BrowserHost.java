@@ -185,6 +185,7 @@ public final class BrowserHost {
         }
         void clearCompletedEditor() {
             exitHover();
+            if (web != null && !web.hasFocus() && EDITORS.get(owner) == this) EDITORS.remove(owner);
             if (closed || web == null || web.hasFocus() || !web.hasWindowFocus()) return;
             web.evaluateJavascript(endEditingScript, result -> { if (!closed) trace("event=editing_end cleared=" + "true".equals(result)); });
         }
@@ -227,9 +228,9 @@ public final class BrowserHost {
         }
         void endEditing(boolean restoreUnity) {
             if (web == null) return;
-            boolean owns = EDITORS.get(owner) == this || web.hasFocus();
-            web.releaseGuard(); cancelTouch(); exitHover();
             InputMethodManager imm = (InputMethodManager) owner.getSystemService(Context.INPUT_METHOD_SERVICE);
+            boolean owns = web.hasFocus() || (imm != null && imm.isActive(web));
+            web.releaseGuard(); cancelTouch(); exitHover();
             if (imm != null && imm.isActive(web)) imm.hideSoftInputFromWindow(web.getWindowToken(), 0);
             web.clearFocus(); clearCompletedEditor();
             if (EDITORS.get(owner) == this) EDITORS.remove(owner);

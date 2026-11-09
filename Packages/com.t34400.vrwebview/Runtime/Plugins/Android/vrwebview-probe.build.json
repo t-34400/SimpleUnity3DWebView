@@ -11,7 +11,7 @@
     "Android~/runtime/consumer-rules.pro": "7d9905b09ba5b7d3315eb71aad8b6fcb29e27cf97d6b7063a189806dd3d7da66",
     "Android~/runtime/src/main/AndroidManifest.xml": "678647a824ef7ab16066708585790ab265135d32fdf84bcd918a4b050f8891b9",
     "Android~/runtime/src/main/assets/vrwebview-end-editing.js": "f3338013cb9f4f615d2b4409f9c095af331d8cae4442072480780404503d528f",
-    "Android~/runtime/src/main/java/com/t34400/vrwebview/BrowserHost.java": "a30a7931e876c686f1c79320cf362d4c5b4494be4756c2607a6cedd62dd79e26",
+    "Android~/runtime/src/main/java/com/t34400/vrwebview/BrowserHost.java": "79f593430a84ab590eaa967963167fde51759e06653aee78dafab3b5c5e0cfeb",
     "Android~/runtime/src/main/java/com/t34400/vrwebview/BrowserWebView.java": "fc4a615ac7e84d5b346f40a10eb43e8c66e40dc106e5de270f2af43b8f1e6ad0",
     "Android~/runtime/src/main/java/com/t34400/vrwebview/GpuBridge.java": "7234ae5f178ecf37897c187703ad2424e9c94759671be0450e10fc6c7a3fca71",
     "Android~/runtime/src/main/java/com/t34400/vrwebview/ImeWindowFocusGuard.java": "9a690bd62919190e314a37a05ef40b45deaba84e8d641dd5c79c4b07aee4ec58",
@@ -72,7 +72,7 @@
   },
   "nativeLibrary": {
     "path": "Packages/com.t34400.vrwebview/Runtime/Plugins/Android/arm64-v8a/libGfxPluginVRWebView.so",
-    "sha256": "2dccb0cbccb0d33c7a114717ccaf0a0d4b0fd40ee0fc0ce90352104f9d4c63be",
+    "sha256": "d1445cd37c7ae1ea317d2019f7839eabd549ad7a604059286b1648626aad36ac",
     "abi": "arm64-v8a",
     "ndk": "27.2.12479018"
   },

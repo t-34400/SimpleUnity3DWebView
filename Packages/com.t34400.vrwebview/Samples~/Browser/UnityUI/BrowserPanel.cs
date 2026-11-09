@@ -26,6 +26,10 @@ namespace T34400.VRWebView.Samples.Browser
         private long configurationVersion;
         private bool hooked, interactionAllowed = true, destroying;
         private string notice;
+        private string newTabAddress = "";
+        private BrowserAddressFocus addressFocus;
+        public bool IsAddressFocused => address != null && address.isFocused;
+        public void SetNewTabAddress(string value) { newTabAddress = value ?? ""; }
         public Exception LastError { get; private set; }
         public BrowserTab ActiveTab => scope?.Workspace.ActiveTab;
         public int TabCount => scope?.Workspace.Tabs.Count ?? 0;
@@ -98,7 +102,9 @@ namespace T34400.VRWebView.Samples.Browser
             if (dispatcher.isActiveAndEnabled) dispatcher.InitializeOnOwnerThread();
             if (!hooked) {
                 go.onClick.AddListener(NavigateActive); newTab.onClick.AddListener(NewTab); closeTab.onClick.AddListener(CloseActiveTab);
-                address.onValueChanged.AddListener(AddressEdited); hooked = true;
+                address.onValueChanged.AddListener(AddressEdited);
+                addressFocus = address.GetComponent<BrowserAddressFocus>() ?? address.gameObject.AddComponent<BrowserAddressFocus>();
+                addressFocus.Selected += EndActiveEditing; hooked = true;
             }
             if (scope == null && factory != null && dispatcher.IsRunning) {
                 var created = new Scope(this, dispatcher, factory);
@@ -118,11 +124,12 @@ namespace T34400.VRWebView.Samples.Browser
             if (newTab != null) newTab.onClick.RemoveListener(NewTab);
             if (closeTab != null) closeTab.onClick.RemoveListener(CloseActiveTab);
             if (address != null) address.onValueChanged.RemoveListener(AddressEdited);
+            if (addressFocus != null) addressFocus.Selected -= EndActiveEditing;
             hooked = false;
         }
         private void OnDisable()
         {
-            Unhook(); boundTab = -1;
+            Unhook(); EndActiveEditing(); boundTab = -1;
             if (address != null) { address.DeactivateInputField(); address.interactable = false; }
             if (go != null) go.interactable = false;
             if (newTab != null) newTab.interactable = false;
@@ -141,7 +148,8 @@ namespace T34400.VRWebView.Samples.Browser
                 var tab = current.Workspace.CreateTab();
                 if (!Current(current)) return;
                 var page = current.Pending ?? throw new InvalidOperationException("Factory did not create page bindings");
-                current.Pending = null; current.Pages.Add(tab.Id, page); current.Drafts.Add(tab.Id, new BrowserAddressDraft());
+                current.Pending = null; current.Pages.Add(tab.Id, page);
+                var draft = new BrowserAddressDraft(); draft.Edit(newTabAddress); current.Drafts.Add(tab.Id, draft);
                 _ = Observe(tab.InitializeAsync(), current, tab, null);
             } catch (Exception error) { if (Current(current)) Fail(error, "Could not create the page."); }
             finally { current.Creating = false; if (Current(current)) Render(); }
@@ -196,6 +204,18 @@ namespace T34400.VRWebView.Samples.Browser
             if (!Current(current) || !current.Drafts.TryGetValue(displayedTab, out var draft)) return;
             draft.Edit(value); notice = null; Render();
         }
+        public void EndActiveEditing()
+        {
+            var current = scope; var tab = current?.Workspace.ActiveTab;
+            if (!Current(current) || tab == null || !current.Pages.TryGetValue(tab.Id, out var page)) return;
+            EndPageEditing(page);
+        }
+        private void EndPageEditing(BrowserPage page)
+        {
+            var editing = page.Editing; if (editing == null) return;
+            try { editing.EndEditing(); }
+            catch (Exception error) { LastError = error; Debug.LogException(error); }
+        }
         public void SetPageInteractionAllowed(bool allowed)
         {
             if (dispatcher != null && dispatcher.IsRunning) dispatcher.VerifyAccess();
@@ -228,6 +248,9 @@ namespace T34400.VRWebView.Samples.Browser
             var current = scope; bool configured = Current(current);
             var tab = configured ? current.Workspace.ActiveTab : null;
             if (!ReferenceEquals(displayedScope, current) || displayedTab != (tab?.Id ?? -1)) {
+                if (displayedScope != null && !displayedScope.Closed && displayedScope.Pages.TryGetValue(displayedTab, out var previous))
+                    EndPageEditing(previous);
+                if (rendering != renderVersion) return;
                 address.DeactivateInputField();
                 if (rendering != renderVersion) return;
             }

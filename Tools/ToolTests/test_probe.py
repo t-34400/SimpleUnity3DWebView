@@ -26,6 +26,27 @@ HOST = [
 
 
 class AnalysisTests(unittest.TestCase):
+    def test_retirement_metadata_does_not_claim_full_rendering_or_keyboard_success(self):
+        report = probe.analyze(['VRWebViewRuntime event=target_retired host=2 nativeAlive=0 unityDestroyRequested=true'])
+        self.assertEqual(report['runtime_targets_retired'], 1)
+        self.assertEqual(report['keyboard_visibility'], 'requires_user_observation')
+
+
+    def test_browser_ui_requires_its_ui_and_a_real_android_host(self):
+        report = probe.analyze(['Unity: [VRWebViewSample] BS1 event=ui_ready',
+            'Unity: [VRWebViewSample] BS1 event=snapshot configured=True tabs=2 active=2 state=Ready busy=False addressFocus=False frames=10 appFocus=True',
+            'VRWebViewRuntime host=1 event=host_ready'], 'browser-ui')
+        self.assertEqual(report['issues'], [])
+        self.assertEqual(report['browser_ui_snapshots'][0]['tabs'], '2')
+        self.assertEqual(report['keyboard_visibility'], 'requires_user_observation')
+
+    def test_rt1_and_a_widget_only_scene_cannot_establish_browser_ui_success(self):
+        report = probe.analyze(['VRWebViewRuntime RT1 state=Ready'], 'browser-ui')
+        self.assertIn('expected_browser_ui_ready_missing', report['issues'])
+        report = probe.analyze(['VRWebViewSample BS1 event=ui_ready'], 'browser-ui')
+        self.assertIn('expected_browser_ui_android_host_missing', report['issues'])
+
+
     def test_native_hover_counts_do_not_assert_dom_or_keyboard_success(self):
         report = probe.analyze(['VRWebViewRuntime event=host_ready',
             'VRWebViewRuntime event=hover action=9', 'VRWebViewRuntime event=hover action=10'], 'runtime')
