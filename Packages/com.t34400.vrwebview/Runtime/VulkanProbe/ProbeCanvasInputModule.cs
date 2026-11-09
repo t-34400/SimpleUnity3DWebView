@@ -17,7 +17,7 @@ namespace T34400.VRWebView
         public Canvas targetCanvas;
         public Camera headCamera;
         public ProbePointerMode pointerMode = ProbePointerMode.Auto;
-        private readonly ProbeRayInput input = new ProbeRayInput();
+        private readonly ProbeRayInput rayInput = new ProbeRayInput();
         private readonly PointerPressState press = new PointerPressState();
         private readonly List<RaycastResult> hits = new List<RaycastResult>();
         private PointerEventData pointer;
@@ -70,7 +70,7 @@ namespace T34400.VRWebView
             if (eventSystem.currentSelectedGameObject != null)
                 ExecuteEvents.Execute(eventSystem.currentSelectedGameObject, GetBaseEventData(), ExecuteEvents.updateSelectedHandler);
             ProbeRaySample sample = default;
-            bool tracked = Application.isFocused && input.TryRead(pointerMode, press.ActiveSourceId, out sample);
+            bool tracked = Application.isFocused && rayInput.TryRead(pointerMode, press.ActiveSourceId, out sample);
             Vector3 origin = sample.Position; Quaternion rotation = sample.Rotation;
             if (headCamera.transform.parent != null) {
                 origin = headCamera.transform.parent.TransformPoint(origin);
