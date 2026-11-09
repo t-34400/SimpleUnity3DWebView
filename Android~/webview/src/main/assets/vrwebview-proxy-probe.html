@@ -8,7 +8,7 @@ button{font:inherit;margin:4px;padding:6px}pre{font:13px monospace;white-space:p
 .tiles{display:flex;gap:8px;align-items:center}.tile{width:80px;height:60px}.animated{background:#e24;animation:spin 2s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}canvas{border:1px solid #333;width:80px;height:60px}
 </style>
-<h1>GPU / WebView text input</h1>
+<h1>WF1 / Text and video</h1>
 <p>Tap Text, try Japanese conversion, then Done or Back. Check the Unity ray and video/scroll after closing. The active input mode is shown in the Unity controls. Use synthetic input only.</p>
 <video id="video" src="video.mp4" playsinline controls loop preload="metadata"></video>
 <div><button id="play">Play / Pause</button><button id="seek">Seek +2 seconds</button></div>
@@ -72,10 +72,31 @@ function animate(time) {
 }
 requestAnimationFrame(animate);
 let events = [], removeArmed = false;
-const proxyCounts = {input:0, compositionstart:0, compositionupdate:0, compositionend:0, selectionchange:0};
+const proxyCounts = {input:0, compositionstart:0, compositionupdate:0, compositionend:0, selectionchange:0,
+  pointerDown:0, editorPointerDown:0, nonEditorPointerDown:0, blurredEditors:0};
+const textInputTypes = new Set(['text','search','tel','url','email','password','number']);
+const isEditor = e => !!e && !e.disabled && !e.readOnly &&
+  (e.isContentEditable === true || e.tagName === 'TEXTAREA' ||
+   (e.tagName === 'INPUT' && textInputTypes.has(e.type)));
+let pointerTarget = 'none';
+// A media control may leave the previous DOM editor focused after the IME closes.
+// Clear that stale focus on the actual non-editor pointerdown, before Chromium's
+// touch-up IME request. Preserve the event and its user activation for media playback.
+// This policy belongs to this controlled probe page; it is not injected into other sites.
+document.addEventListener('pointerdown', event => {
+  if (!event.isTrusted) return;
+  const path = event.composedPath();
+  const editor = path.some(e => isEditor(e) || (e.tagName === 'LABEL' && isEditor(e.control)));
+  pointerTarget = editor ? 'editor' : path.some(e => e.tagName === 'VIDEO' || e.tagName === 'AUDIO') ? 'media' : 'other';
+  proxyCounts.pointerDown++;
+  if (editor) { proxyCounts.editorPointerDown++; return; }
+  proxyCounts.nonEditorPointerDown++;
+  const active = document.activeElement;
+  if (isEditor(active)) { active.blur(); proxyCounts.blurredEditors++; }
+}, true);
 window.vrwebviewProxyMetadata = () => {
   const e = document.activeElement;
-  return {...proxyCounts, editable:!!e && (e.tagName==='INPUT'||e.tagName==='TEXTAREA'||e.isContentEditable===true)};
+  return {...proxyCounts, editable:isEditor(e), pointerPolicy:1, pointerTarget};
 };
 for (const name of ['focusin','focusout','compositionstart','compositionupdate','compositionend','input','selectionchange']) {
   document.addEventListener(name, event => {

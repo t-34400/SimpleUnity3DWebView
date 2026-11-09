@@ -1,6 +1,6 @@
 # 現在の状態と整理フェーズ
 
-更新: 2026-11-09 JST。次の主タスクは[WF1](WindowImeGuard.md)の直接WebView IME回避実装の実機確認。IP1/IP2の借用方式は今回の結果で不採用。HC2/AG3やBrowser UI sampleの再試行は前提にしない。既存のIP2/FO1シーンを一度更新して使用する。クラウドでの実装・ローカル検証は、Questでの修正成功ではない。
+更新: 2026-11-09 JST。WF1の実機でIME表示・WebViewへの入力が成立した。現在は入力終了後の動画操作でIMEが再表示される問題へ対応し、preview.35で検証ページの非編集対象タップ時に残った編集フォーカスを解除した。新しい修正効果は実機未確認。[WF1](WindowImeGuard.md)の同じシーンと採取手順を使う。IP1/IP2の借用は不採用。
 
 ## 現時点の判断
 
@@ -19,7 +19,7 @@
 | H0/H1の通常Activity | 動画・音声・日本語入力を利用者が確認 | Unity/XR統合の証明ではない |
 | H1のWindow draw OFF | スクロール・入力・動画・音声を利用者が確認 | attach/VISIBLEを保った構成。detachやWindow除去の成功とは異なる |
 | VirtualDisplay V1 | 動画・音声は成功、日本語入力は失敗 | 製品IME方式として未成立 |
-| 同じUnity ActivityのGPU表示 | Vulkan描画、手による動画操作・スクロールを確認 | WebViewへの直接システムIMEは未成立 |
+| 同じUnity ActivityのGPU表示 | Vulkan描画、手による動画操作・スクロールを確認 | WF1で実入力を確認。動画操作時の不要な再表示は追加修正の確認待ち |
 | 同じUnity ActivityのEditText | キーボード実表示とUnity画面更新を確認 | ブラウザーの標準編集へ接続できる証明ではない |
 | 別ActivityのWebView | Unity画面との同時表示、日本語変換を確認 | 前面Windowが通常のUnity操作を妨げ、製品主方式として不採用 |
 | 手のreset同期 | HC1復帰後のレイを一度確認 | XR Hands 1.7.3向け実験。全ライフサイクルの保証ではない |
@@ -43,7 +43,7 @@ FO1と実機providerのDEX解析で、Window喪失→WebView内部reset/hide→n
 
 IP2はキーボードを維持できたがDOM編集は成立せず、Native EditText対照だけは編集できた。動画のRange修正はFO1で後続streamのskip/read成功とページ側の旧停止位置超えを確認した。動画の全HMDピクセル確認とは区別する。
 
-最初のWindowフォーカスの移動先・Meta内部ポリシーは未特定。WF1の記録ではシステムのfocusイベントも併せて保存し、出力される範囲で対策と同時に調べる。製品Android backendへの接続はIME・復帰の成立後とする。
+WF1のsystem記録で、IME表示中の入力先がQuestのFocusPlaceholderActivityへ移ることを確認した。Meta内部のポリシー実装は未特定。入力中の回避自体は実機で成立したが、入力終了後の非編集操作について追加修正を確認する。製品Android backendへの接続はIME・復帰の成立後とする。
 
 ## このフェーズの成果と残作業
 
@@ -53,7 +53,7 @@ IP2はキーボードを維持できたがDOM編集は成立せず、Native Edit
 - [実装分離](RuntimeSeparation.md)の最初の判定/観測を実装し、従来の抑止条件を保持する。
 - [GPU寿命](GpuLifetime.md)の世代/退役状態処理を実装・合成検証した。既存Probe/Pumpには未接続で、Texture破棄の動作は変更していない。
 - [上位レイヤー](UpperLayers.md)の表示借用契約とBrowserWorkspace/BrowserTabを実装した。サンプルモデルは既存BrowserSessionへ接続している。製品Android backendには未接続。
-- [Unity表示部品](UnityView.md)としてdispatcher、Texture公開口、RawImage view、pointer/scroll接続を実装した。実Unity 6000.4.5f1でEditMode 14/14、修正後PlayMode 3/3と終了コード0を確認した。今回のWF1の実Editor compile/buildは未確認。実Android backendからTexture/入力を供給する接続は未実装。
+- [Unity表示部品](UnityView.md)としてdispatcher、Texture公開口、RawImage view、pointer/scroll接続を実装した。実Unity 6000.4.5f1でEditMode 14/14、修正後PlayMode 3/3と終了コード0を確認した。WF1旧版の実APK動作は利用者ログあり。今回preview.35の実Editor compile/buildは未確認。実Android backendからTexture/入力を供給する接続は未実装。
 - [Browser UI sample](BrowserUI.md)にタブ列・URL欄・Go/New/Closeとモデル/表示の接続を実装した。実EditorでのUI確認と製品factoryは未確認/未実装。未設定時にfakeページを表示しない。
 - [レイヤー設計](LayeredArchitecture.md)を記録し、新しい純C# assemblyの依存方向を静的検査する。package全体のXR依存除去は未完了。
 - [Editor検証](EditorValidation.md)を共通ツールから起動できるようにした。利用者ログでEditMode全14件、PlayMode全3件とプロセス正常終了を確認した。importしたsampleは保留。前回の終了停滞の根本原因は未確定。

@@ -188,6 +188,23 @@
         "Quest検証は未実施",
         "通常のWebView契約を完全に保持する一般解ではなく限定互換回避"
       ]
+    },
+    {
+      "id": "E14",
+      "configuration": "WF1 actual direct IME editing and subsequent media tap",
+      "source_kind": "user_report_and_log",
+      "source_log_sha256": "0d74e93072e9dc017fff3437c570530c40f49a5f7d957c38a3a11fd11e257316",
+      "observed": [
+        "IME表示とWebViewへの入力を利用者が確認",
+        "5回のHOLD_LOSS中にinput35/compositionend5へ進んだ",
+        "IME中の入力先はQuest FocusPlaceholderActivity、終了後Unityへ戻る",
+        "動画再生タップでIMEも再表示する問題を利用者が報告"
+      ],
+      "limits": [
+        "正確な動画tap対象は旧ログに記録なし",
+        "preview.35の非編集対象tap時blurは実機未確認",
+        "任意サイトの編集や全lifecycleの成立を示さない"
+      ]
     }
   ]
 }

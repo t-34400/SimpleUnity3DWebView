@@ -30,6 +30,7 @@ def analyze(lines, expected='any'):
                   focus_trace_installed=False, focus_calls=0, focus_frames=0, direct_mode_seen=False,
                   window_ime_installed=False, window_ime_supported=None, window_ime_events=[],
                   editor_connections=0, system_focus_rows=0,
+                  pointer_focus_policy_seen=False,
                   video_playback='requires_runtime_analysis_and_user_observation')
     for number, line in enumerate(lines, 1):
         if not line.strip():
@@ -46,8 +47,9 @@ def analyze(lines, expected='any'):
         if 'probe=WF1 ' in line and 'VRWebViewFocus' in line:
             event = re.search(r'\bevent=([a-z_]+)', line)
             if event:
-                fields = dict(re.findall(r'\b(enabled|supported|route|actual|action|viewFocus|editor|reason|resumed|actualWindow|input|compositionStart|compositionUpdate|compositionEnd|selectionChanges|editable|frames|appFocus|paused|tracked|pressed|source)=([A-Za-z0-9_]+)', line))
+                fields = dict(re.findall(r'\b(enabled|supported|route|actual|action|viewFocus|editor|reason|resumed|actualWindow|input|compositionStart|compositionUpdate|compositionEnd|selectionChanges|editable|frames|appFocus|paused|tracked|pressed|source|pointerPolicy|pointerTarget|pointerDown|editorPointerDown|nonEditorPointerDown|blurredEditors)=([A-Za-z0-9_]+)', line))
                 result['window_ime_events'].append(dict(location, event=event[1], **fields))
+                result['pointer_focus_policy_seen'] |= event[1] == 'dom' and fields.get('pointerPolicy') == '1'
                 if event[1] == 'installed':
                     result['window_ime_installed'] = True
                     result['window_ime_supported'] = fields.get('supported') == 'true'
