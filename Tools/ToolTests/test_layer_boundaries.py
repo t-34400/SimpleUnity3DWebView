@@ -60,3 +60,15 @@ class LayerTests(unittest.TestCase):
             with self.subTest(dependency=dependency):
                 self.write('T34400.VRWebView.UnityUI', [dependency], engine=True)
                 with self.assertRaisesRegex(ValueError, 'Forbidden'): layers.check(self.root)
+
+    def test_bootstrap_cannot_rely_on_transitive_surface_contract_reference(self):
+        # Both Unity and Android already reference Presentation in this fixture.
+        # Bootstrap still needs its own reference for BrowserView.Bind's signature.
+        references = layers.ENGINE_POLICY['T34400.VRWebView.Bootstrap'] - {'T34400.VRWebView.Presentation'}
+        self.write('T34400.VRWebView.Bootstrap', references, engine=True)
+        with self.assertRaisesRegex(ValueError, 'Missing direct assembly reference.*Presentation'):
+            layers.check(self.root)
+
+    def test_bootstrap_accepts_an_explicit_surface_contract_reference(self):
+        result = layers.check(self.root)
+        self.assertIn('T34400.VRWebView.Bootstrap', result['required_direct_reference_scope'])

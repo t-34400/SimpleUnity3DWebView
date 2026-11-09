@@ -5,6 +5,7 @@
     "T34400.VRWebView.Core",
     "T34400.VRWebView.Unity",
     "T34400.VRWebView.UnityUI",
-    "T34400.VRWebView.Android"
+    "T34400.VRWebView.Android",
+    "T34400.VRWebView.Presentation"
   ]
 }

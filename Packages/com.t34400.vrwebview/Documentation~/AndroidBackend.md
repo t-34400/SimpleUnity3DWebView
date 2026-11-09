@@ -1,6 +1,8 @@
-# Android backend — preview.36 / RT1
+# Android backend — preview.37 / RT1
 
 WF1 preview.35の実機成功を基に、製品用hostと公開レイヤーを接続した。新しい製品経路のUnity Editor型コンパイル・APK・Quest確認は未実施。旧WF1の基本試験を未確認へ戻さず、次はこの統合経路を確認する。
+
+preview.37はBootstrapのPresentation直接参照漏れ（BrowserControllerのCS0012）を修正する。依存境界checkerにこの直接参照を必須として追加した。checkerはC#の型コンパイル全体の代替ではない。RT1のscene・操作手順は同じ。
 
 ## 所有権と使い方
 

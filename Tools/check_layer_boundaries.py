@@ -10,11 +10,18 @@ POLICY = {
 ENGINE_POLICY = {
     'T34400.VRWebView.Rendering': set(),
     'T34400.VRWebView.Android': {'T34400.VRWebView.Core', 'T34400.VRWebView.Presentation', 'T34400.VRWebView.Unity', 'T34400.VRWebView.Rendering'},
-    'T34400.VRWebView.Bootstrap': {'T34400.VRWebView.Core', 'T34400.VRWebView.Unity', 'T34400.VRWebView.UnityUI', 'T34400.VRWebView.Android'},
+    'T34400.VRWebView.Bootstrap': {'T34400.VRWebView.Presentation', 'T34400.VRWebView.Core', 'T34400.VRWebView.Unity', 'T34400.VRWebView.UnityUI', 'T34400.VRWebView.Android'},
     'T34400.VRWebView.Browser.Android.Sample': {'T34400.VRWebView.Core', 'T34400.VRWebView.Presentation', 'T34400.VRWebView.Unity', 'T34400.VRWebView.Android', 'T34400.VRWebView.Browser.Sample', 'T34400.VRWebView.Browser.UnityUI.Sample'},
     'T34400.VRWebView.Unity': {'T34400.VRWebView.Core', 'T34400.VRWebView.Presentation'},
     'T34400.VRWebView.UnityUI': {'T34400.VRWebView.Core', 'T34400.VRWebView.Presentation', 'T34400.VRWebView.Unity', 'UnityEngine.UI'},
     'T34400.VRWebView.Browser.UnityUI.Sample': {'T34400.VRWebView.Core', 'T34400.VRWebView.Presentation', 'T34400.VRWebView.Unity', 'T34400.VRWebView.UnityUI', 'T34400.VRWebView.Browser.Sample', 'UnityEngine.UI'},
+}
+
+
+# Public Bind signatures expose this contract in Bootstrap's call sites. A path
+# through Unity/Android is not a C# compiler reference to the defining assembly.
+REQUIRED_DIRECT_REFERENCES = {
+    'T34400.VRWebView.Bootstrap': {'T34400.VRWebView.Presentation'},
 }
 
 
@@ -37,6 +44,10 @@ def check(package):
         unexpected = set(value.get('references', [])) - allowed
         if unexpected:
             raise ValueError('Forbidden upper-layer reference: ' + name + ' -> ' + ', '.join(sorted(unexpected)))
+    for name, required in REQUIRED_DIRECT_REFERENCES.items():
+        missing = required - set(assemblies[name].get('references', []))
+        if missing:
+            raise ValueError('Missing direct assembly reference: ' + name + ' -> ' + ', '.join(sorted(missing)))
     visiting, complete = set(), set()
 
     def visit(name):
@@ -55,6 +66,7 @@ def check(package):
         visit(name)
     return dict(pure_boundary_scope=sorted(POLICY), local_assembly_cycles=False, cycle_scope='local_name_references',
                 unity_boundary_scope=sorted(ENGINE_POLICY),
+                required_direct_reference_scope=sorted(REQUIRED_DIRECT_REFERENCES),
                 outside_boundary_scope=sorted(set(assemblies) - set(POLICY) - set(ENGINE_POLICY)),
                 outside_pure_boundary_scope=sorted(set(assemblies) - set(POLICY)),
                 whole_package_xr_dependency_removal='not_implemented')
