@@ -45,7 +45,7 @@ JavaScriptとDOM storageはブラウザー用に有効。file/contentアクセ�
 - 共有.so: Vulkan/GLES consumerとqueue。ABIはGpuBridgeへ集約。
 - Runtime/Renderingのpump/native宣言を既存probesと共有する。移動した既存scriptのGUIDは保持。
 
-現UPMには別probe AAR・診断assemblyとXR package依存がまだ含まれる。製品AARの分離と、UPM全体を最小構成にする作業は別であり、後者は未完了。
+現UPMには別probe AAR・診断assemblyとXR package依存がまだ含まれる。import済み旧IME Sampleを壊さないため、AndroidImeProbe/AndroidGpuProbeの静的入口も従来assemblyに残す。製品AARの分離と、UPM全体を最小構成にする作業は別であり、後者は未完了。
 
 ## 次の一回の実機確認
 

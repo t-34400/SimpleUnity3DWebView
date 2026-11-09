@@ -33,7 +33,7 @@
 
 `AndroidBrowserBackend`がIBrowserBackend、HTML読み込み、pointer/scroll、編集終了と障害通知を実装し、`BrowserTextureSource`を供給する。`BrowserController`が生成・セッション・表示を構成する。Core/Unity/UnityUIは具体Android実装を参照しない。Browser sampleにはAndroidBrowserPageFactoryを追加した。
 
-render pumpとnative宣言はGUIDを保ったままRuntime/Renderingへ移し、既存probesも同じpumpを使う。旧Android probe入口は診断assemblyへ移した。Android runtime AARには検証ページ/Activityを含めないが、現UPMには別probe AARとXR依存がまだ同梱されており、最終配布分離は未完了。
+render pumpとnative宣言はGUIDを保ったままRuntime/Renderingへ移し、既存probesも同じpumpを使う。GPU scene launcherは診断assemblyへ移した。import済み旧IME Sampleとの互換性のため、静的なAndroidImeProbe/AndroidGpuProbe入口は従来assemblyに残す。Android runtime AARには検証ページ/Activityを含めないが、現UPMには別probe AARとXR依存がまだ同梱されており、最終配布分離は未完了。
 
 ## 次に判断するAndroid側の前提
 
