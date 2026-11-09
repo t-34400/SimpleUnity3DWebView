@@ -19,6 +19,8 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.webkit.WebResourceError;
+import android.content.pm.PackageManager;
 import android.widget.FrameLayout;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
@@ -33,6 +35,7 @@ public final class BrowserHost {
         void ready();
         void completed(long operation, boolean success, String code);
         void failed(String code);
+        void pageState(String address, String title, boolean back, boolean forward, boolean loading, int progress, int error);
     }
     private static final Handler UI = new Handler(Looper.getMainLooper());
     private static final Map<Long, Host> HOSTS = new HashMap<>();
@@ -50,6 +53,60 @@ public final class BrowserHost {
                 try { host.close(); } finally { callback.failed("host_open_failed"); }
             }
         });
+    }
+    /** Page lifetime is independent from a window's transient output queue. */
+    public static void openPage(Activity activity, long id, int width, int height, boolean workaround, boolean diagnostics, Callback callback) {
+        UI.post(() -> {
+            if (HOSTS.containsKey(id)) { callback.failed("duplicate_host"); return; }
+            Host host = new Host(activity, id, width, height, diagnostics, callback); host.output = 0;
+            HOSTS.put(id, host);
+            try { host.start(workaround); host.trace("event=host_ready"); callback.ready(); }
+            catch (Exception error) { HOSTS.remove(id); try { host.close(); } finally { callback.failed("host_open_failed"); } }
+        });
+    }
+    public static void present(long id, long operation, long output, int width, int height) {
+        UI.post(() -> {
+            Host h = HOSTS.get(id);
+            if (h == null) { if (output != 0) GpuBridge.nativeStop(output); return; }
+            try {
+                h.detachOutput();
+                if (output != 0) {
+                    Surface value = GpuBridge.nativeSurface(output);
+                    if (value == null) throw new IllegalStateException("Output unavailable");
+                    h.output = output; h.surface = value; h.width = width; h.height = height;
+                    h.web.setLayoutParams(new FrameLayout.LayoutParams(width, height));
+                    ViewGroup.LayoutParams layout = h.panel.getLayoutParams(); layout.width = width; layout.height = height; h.panel.setLayoutParams(layout);
+                    UI.post(h.draw);
+                }
+                h.trace("event=presentation visible=" + (output != 0));
+                h.callback.completed(operation, true, "presentation_bound");
+            } catch (RuntimeException error) {
+                if (output != 0 && h.output != output) GpuBridge.nativeStop(output);
+                h.detachOutput(); h.callback.completed(operation, false, "presentation_failed");
+            }
+        });
+    }
+    public static void command(long id, long operation, String command) {
+        UI.post(() -> {
+            Host h = HOSTS.get(id); if (h == null) return;
+            try {
+                h.endEditing(true);
+                switch (command) {
+                    case "back": if (h.web.canGoBack()) h.web.goBack(); break;
+                    case "forward": if (h.web.canGoForward()) h.web.goForward(); break;
+                    case "reload": h.web.reload(); break;
+                    case "stop": h.web.stopLoading(); h.loading = false; break;
+                    default: throw new IllegalArgumentException("Unknown page command");
+                }
+                h.publishState(); h.callback.completed(operation, true, "command_submitted");
+            } catch (RuntimeException error) { h.callback.completed(operation, false, "command_failed"); }
+        });
+    }
+    public static void endEditingAsync(long id, long operation) {
+        UI.post(() -> { Host h = HOSTS.get(id); if (h == null) return;
+            Host editor = EDITORS.get(h.owner);
+            if (editor != null && editor != h) editor.endEditing(true);
+            h.endEditing(true); h.callback.completed(operation, true, "editing_ended"); });
     }
     public static void close(long id) {
         UI.post(() -> { Host host = HOSTS.remove(id); if (host != null) host.close(); else GpuBridge.nativeStop(id); });
@@ -75,6 +132,14 @@ public final class BrowserHost {
             } catch (RuntimeException error) { host.callback.completed(operation, false, "html_failed"); }
         });
     }
+    private static boolean declaresKeyboard(Activity owner) {
+        try {
+            android.content.pm.PackageInfo info = owner.getPackageManager().getPackageInfo(owner.getPackageName(), PackageManager.GET_CONFIGURATIONS);
+            if (info.reqFeatures != null) for (android.content.pm.FeatureInfo feature : info.reqFeatures)
+                if ("oculus.software.overlay_keyboard".equals(feature.name)) return true;
+        } catch (PackageManager.NameNotFoundException ignored) { }
+        return false;
+    }
     private static boolean allowed(String address) {
         if (address == null) return false;
         Uri uri = Uri.parse(address);
@@ -88,7 +153,7 @@ public final class BrowserHost {
     public static void pointer(long id, int action, float x, float y) {
         if (!Float.isFinite(x) || !Float.isFinite(y) || action < 0 || action > 3) return;
         UI.post(() -> {
-            Host h = HOSTS.get(id); if (h == null || h.paused || h.closed) return;
+            Host h = HOSTS.get(id); if (h == null || h.paused || h.closed || h.surface == null) return;
             if (action == MotionEvent.ACTION_DOWN) {
                 h.cancelTouch(); h.exitHover();
                 Host before = EDITORS.get(h.owner);
@@ -108,7 +173,7 @@ public final class BrowserHost {
         if (!Float.isFinite(x) || !Float.isFinite(y) ||
                 (action != MotionEvent.ACTION_HOVER_ENTER && action != MotionEvent.ACTION_HOVER_MOVE && action != MotionEvent.ACTION_HOVER_EXIT)) return;
         UI.post(() -> {
-            Host h = HOSTS.get(id); if (h == null || h.closed || h.paused || h.touching) return;
+            Host h = HOSTS.get(id); if (h == null || h.closed || h.paused || h.touching || h.surface == null) return;
             if (action == MotionEvent.ACTION_HOVER_ENTER) {
                 if (h.hovering) return;
                 h.hovering = true;
@@ -121,7 +186,7 @@ public final class BrowserHost {
     public static void scroll(long id, float x, float y, float deltaX, float deltaY) {
         if (!Float.isFinite(x) || !Float.isFinite(y) || !Float.isFinite(deltaX) || !Float.isFinite(deltaY)) return;
         UI.post(() -> {
-            Host h = HOSTS.get(id); if (h == null || h.paused || h.touching) return;
+            Host h = HOSTS.get(id); if (h == null || h.paused || h.touching || h.surface == null) return;
             MotionEvent.PointerProperties properties = new MotionEvent.PointerProperties();
             properties.id = 0; properties.toolType = MotionEvent.TOOL_TYPE_MOUSE;
             MotionEvent.PointerCoords coords = new MotionEvent.PointerCoords(); coords.x = x * h.width; coords.y = y * h.height;
@@ -135,20 +200,20 @@ public final class BrowserHost {
     }
 
     private static final class Host implements Application.ActivityLifecycleCallbacks {
-        final Activity owner; final long id; final int width, height; final Callback callback; final boolean diagnostics;
+        final Activity owner; final long id; int width, height; long output; final Callback callback; final boolean diagnostics;
         FrameLayout panel; BrowserWebView web; Surface surface; View previousFocus;
-        boolean closed, paused, touching, hovering, registered;
+        boolean closed, paused, touching, hovering, registered, loading; int progress, pageError;
         float hoverX, hoverY;
         long downTime;
         String endEditingScript;
         Host(Activity owner, long id, int width, int height, boolean diagnostics, Callback callback) {
-            this.owner = owner; this.id = id; this.width = width; this.height = height; this.callback = callback; this.diagnostics = diagnostics;
+            this.owner = owner; this.id = id; this.output = id; this.width = width; this.height = height; this.callback = callback; this.diagnostics = diagnostics;
         }
         void trace(String event) { if (diagnostics) android.util.Log.i("VRWebViewRuntime", "host=" + id + " " + event); }
         void start(boolean workaround) throws Exception {
             if (owner.isFinishing() || owner.isDestroyed()) throw new IllegalStateException("Activity unavailable");
-            surface = GpuBridge.nativeSurface(id);
-            if (surface == null) throw new IllegalStateException("Producer surface unavailable");
+            surface = output == 0 ? null : GpuBridge.nativeSurface(output);
+            if (output != 0 && surface == null) throw new IllegalStateException("Producer surface unavailable");
             try (InputStream stream = owner.getAssets().open("vrwebview-end-editing.js")) {
                 ByteArrayOutputStream bytes = new ByteArrayOutputStream(); byte[] buffer = new byte[4096]; int count;
                 while ((count = stream.read(buffer)) != -1) bytes.write(buffer, 0, count);
@@ -167,12 +232,29 @@ public final class BrowserHost {
             web.getSettings().setAllowFileAccess(false); web.getSettings().setAllowContentAccess(false);
             web.getSettings().setMediaPlaybackRequiresUserGesture(true);
             web.getSettings().setSupportMultipleWindows(false);
+            if (diagnostics) {
+                String boot = "unknown";
+                try (InputStream input = owner.getAssets().open("bin/Data/boot.config")) {
+                    java.util.Properties props = new java.util.Properties(); props.load(input);
+                    boot = props.getProperty("xr-keyboard-overlay-enabled", "missing");
+                    if (!boot.equals("0") && !boot.equals("1")) boot = "missing";
+                } catch (Exception ignored) { }
+                trace("event=keyboard_configuration bootKeyboard=" + boot + " overlayDeclared=" + declaresKeyboard(owner));
+            }
             web.setWebViewClient(new WebViewClient() {
+                @Override public void onPageStarted(WebView view, String url, android.graphics.Bitmap icon) { loading = true; pageError = 0; progress = 0; publishState(); }
+                @Override public void onPageFinished(WebView view, String url) { loading = false; publishState(); }
+                @Override public void doUpdateVisitedHistory(WebView view, String url, boolean reload) { publishState(); }
+                @Override public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+                    if (request.isForMainFrame()) { loading = false; pageError = error.getErrorCode(); publishState(); }
+                }
                 @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                     return !allowed(request.getUrl().toString());
                 }
             });
             web.setWebChromeClient(new WebChromeClient() {
+                @Override public void onReceivedTitle(WebView view, String title) { publishState(); }
+                @Override public void onProgressChanged(WebView view, int value) { progress = value; publishState(); }
                 @Override public void onPermissionRequest(PermissionRequest request) { request.deny(); }
                 @Override public void onShowCustomView(View view, CustomViewCallback callback) { callback.onCustomViewHidden(); }
             });
@@ -181,7 +263,15 @@ public final class BrowserHost {
             owner.addContentView(panel, new ViewGroup.LayoutParams(width, height));
             web.configureGuard(workaround, diagnostics ? this::trace : null); // Snapshot actual Window focus only after attachment.
             owner.getApplication().registerActivityLifecycleCallbacks(this); registered = true;
-            UI.post(draw);
+            if (surface != null) UI.post(draw);
+        }
+        void publishState() {
+            if (!closed && web != null) callback.pageState(web.getUrl(), web.getTitle(), web.canGoBack(), web.canGoForward(), loading, progress, pageError);
+        }
+        void detachOutput() {
+            UI.removeCallbacks(draw); cancelTouch(); exitHover();
+            if (surface != null) { surface.release(); surface = null; }
+            if (output != 0) { GpuBridge.nativeStop(output); output = 0; }
         }
         void clearCompletedEditor() {
             exitHover();
@@ -191,11 +281,11 @@ public final class BrowserHost {
         }
         final Runnable draw = new Runnable() {
             @Override public void run() {
-                if (closed) return;
-                if (!paused && web.isAttachedToWindow() && web.getWidth() == width && web.getHeight() == height && GpuBridge.nativeReserve(id)) {
+                if (closed || surface == null) return;
+                if (!paused && web.isAttachedToWindow() && web.getWidth() == width && web.getHeight() == height && GpuBridge.nativeReserve(output)) {
                     try { web.drawTo(surface); }
                     catch (RuntimeException error) {
-                        GpuBridge.nativeCancelReserve(id); HOSTS.remove(id);
+                        GpuBridge.nativeCancelReserve(output); HOSTS.remove(id);
                         try { close(); } finally { callback.failed("producer_draw_failed"); }
                         return;
                     }
@@ -264,7 +354,7 @@ public final class BrowserHost {
                     } finally {
                         // No future callback can draw to this Surface. Acknowledge only after its release.
                         if (surface != null) { surface.release(); surface = null; }
-                        GpuBridge.nativeStop(id);
+                        GpuBridge.nativeStop(output); output = 0;
                     }
                 }
             }

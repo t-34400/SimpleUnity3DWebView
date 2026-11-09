@@ -68,6 +68,10 @@ def main():
             "com.t34400.vrwebview.BrowserHost", "com.t34400.vrwebview.BrowserHost$Callback", "com.t34400.vrwebview.GpuBridge"], text=True)
         for signature in (
             "public static void open(android.app.Activity, long, int, int, boolean, boolean, com.t34400.vrwebview.BrowserHost$Callback);",
+            "public static void openPage(android.app.Activity, long, int, int, boolean, boolean, com.t34400.vrwebview.BrowserHost$Callback);",
+            "public static void present(long, long, long, int, int);", "public static void command(long, long, java.lang.String);",
+            "public static void endEditingAsync(long, long);",
+            "public abstract void pageState(java.lang.String, java.lang.String, boolean, boolean, boolean, int, int);",
             "public static void close(long);", "public static void navigate(long, long, java.lang.String);",
             "public static void loadHtml(long, long, java.lang.String, java.lang.String);",
             "public static void endEditing(long);", "public static void setPaused(long, boolean);",
@@ -77,7 +81,7 @@ def main():
             "public static native void nativeCancelReserve(long);", "public static native void nativeStop(long);"
         ):
             if signature not in runtime_signatures: raise AssertionError("Runtime ABI removed: " + signature)
-    print("PASS 16 production JNI/callback signatures and R8 shrinking/obfuscation retains 9 host and 5 GPU IME JNI signatures using packaged consumer rules")
+    print("PASS production JNI/callback signatures including page/output bindings and R8 shrinking/obfuscation retains 9 host and 5 GPU IME JNI signatures using packaged consumer rules")
     print("NOT RUN: Unity APK minification/build, Android execution, Quest IME")
 
 

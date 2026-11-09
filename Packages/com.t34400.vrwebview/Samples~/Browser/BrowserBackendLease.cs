@@ -7,7 +7,7 @@ namespace T34400.VRWebView.Samples.Browser
 {
     /// <summary>Transfers a page backend and optional connection lifetime to the
     /// workspace. Disposal ends logical lifetimes; it does not wait for GPU release.</summary>
-    public sealed class BrowserBackendLease : IBrowserBackend, IBrowserFailureSource
+    public sealed class BrowserBackendLease : IBrowserBackend, IBrowserFailureSource, IBrowserNavigationBackend
     {
         private readonly IBrowserBackend backend;
         private readonly IDisposable connection;
@@ -23,6 +23,15 @@ namespace T34400.VRWebView.Samples.Browser
         { ThrowIfDisposed(); return backend.InitializeAsync(token); }
         public Task NavigateAsync(Uri address, CancellationToken token)
         { ThrowIfDisposed(); return backend.NavigateAsync(address, token); }
+        public BrowserPageState PageState => (backend as IBrowserNavigationBackend)?.PageState ?? BrowserPageState.Empty;
+        public event Action<BrowserPageState> PageStateChanged {
+            add { if (backend is IBrowserNavigationBackend source) source.PageStateChanged += value; }
+            remove { if (backend is IBrowserNavigationBackend source) source.PageStateChanged -= value; }
+        }
+        public Task ExecuteAsync(BrowserPageCommand command, CancellationToken token) {
+            ThrowIfDisposed(); return backend is IBrowserNavigationBackend source ? source.ExecuteAsync(command, token)
+                : Task.FromException(new NotSupportedException("Backend has no page navigation capability"));
+        }
         public void Dispose()
         {
             if (IsDisposed) return;

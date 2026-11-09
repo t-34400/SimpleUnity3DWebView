@@ -63,3 +63,7 @@ WF1のsystem記録で、IME表示中の入力先がQuestのFocusPlaceholderActiv
 実機試験の再開条件として、ログの取得・失敗検出、配布CLIの統一、一試験の判断と打ち切り条件を定めた。RT1の基本操作とhoverは確認済みとして扱い、次はBS1でサンプルUI/URL欄/複数ページを確認する。WF1の基本ループは確認済みとして扱い、HC2/AG3へ戻らない。任意サイト・GLES・全lifecycleへ成功を一般化しない。
 
 今後の利用者メモは[TechnicalDebt.md](TechnicalDebt.md)末尾へ記録した。JavaScript実行等のWebView公開操作interfaceと配布形式の整理は、BS1と別の保留タスク。今回完了とは扱わない。
+
+## preview.41 — new integration awaiting device validation
+
+preview.40 BS1 failed Unity address-keyboard display (5 native show failures/~0.4s Unity timeouts); reported page height ~1/3 matches inherited flexible row heights. Fixed heights and prepared boot/ownership diagnostics plus shared multi-window browser sample. Added demand-driven transient presentation queues, navigation state/API and drag reorder/detach/dock. These are new implementations; no Unity type compile or Quest result is claimed. Start with the URL keyboard in RichBrowserSample.md, then continue only if that works.

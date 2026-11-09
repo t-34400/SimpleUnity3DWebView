@@ -8,8 +8,8 @@ namespace T34400.VRWebView.Samples.Browser
         public bool enableDiagnostics;
         public override BrowserPage CreatePage(BrowserDispatcher dispatcher)
         {
-            var backend = new AndroidBrowserBackend(dispatcher, width, height, enableKnownProviderImeWorkaround, enableDiagnostics);
-            return new BrowserPage(backend, backend.Surface, backend);
+            var backend = new AndroidBrowserBackend(dispatcher, width, height, enableKnownProviderImeWorkaround, enableDiagnostics, presentAutomatically: false);
+            return new BrowserPage(backend, backend.Surface, backend, presentation: backend.SetPresentation);
         }
     }
 }

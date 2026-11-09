@@ -15,6 +15,8 @@ namespace T34400.VRWebView.Samples.Browser
         private TaskCompletionSource<bool> pending;
         private CancellationTokenSource operationCancellation;
         private long operationVersion;
+        public BrowserPageState PageState => session.PageState;
+        public Task ExecuteAsync(BrowserPageCommand command) { ThrowIfClosed(); return session.ExecuteAsync(command); }
         public long Id { get; }
         public BrowserState State { get; private set; } = BrowserState.Created;
         public bool IsClosed { get; private set; }
@@ -25,8 +27,10 @@ namespace T34400.VRWebView.Samples.Browser
         internal BrowserTab(long id, BrowserSession value, Action<Action> dispatcher, Action<BrowserTab> notify)
         {
             Id = id; session = value; dispatch = dispatcher; changed = notify;
-            session.StateChanged += SessionChanged;
+            session.StateChanged += SessionChanged; session.PageStateChanged += PageChanged;
         }
+
+        private void PageChanged(BrowserPageState value) { if (!IsClosed) changed(this); }
 
         private void SessionChanged(BrowserState state)
         {
@@ -99,7 +103,7 @@ namespace T34400.VRWebView.Samples.Browser
         {
             if (IsClosed) return;
             IsClosed = true; State = BrowserState.Disposed; IsBusy = false; ++operationVersion;
-            session.StateChanged -= SessionChanged;
+            session.StateChanged -= SessionChanged; session.PageStateChanged -= PageChanged;
             pending?.TrySetCanceled(); pending = null;
             try { operationCancellation?.Cancel(); }
             finally {

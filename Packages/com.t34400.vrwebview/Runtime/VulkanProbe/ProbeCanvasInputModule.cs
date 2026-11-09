@@ -9,7 +9,7 @@ using InputSystem = UnityEngine.InputSystem.InputSystem;
 
 namespace T34400.VRWebView
 {
-    /// <summary>BS1 diagnostic rig: one Quest ray drives a flat uGUI Canvas through
+    /// <summary>BS1 diagnostic rig: one Quest ray drives a group of world-space uGUI Canvases through
     /// normal EventSystem handlers. Applications may supply their own XR UI module.</summary>
     [DisallowMultipleComponent, RequireComponent(typeof(EventSystem))]
     public sealed class ProbeCanvasInputModule : PointerInputModule
@@ -81,8 +81,8 @@ namespace T34400.VRWebView
             line.enabled = tracked;
             if (tracked) {
                 line.SetPosition(0, origin);
-                var plane = new Plane(targetCanvas.transform.forward, targetCanvas.transform.position);
-                line.SetPosition(1, plane.Raycast(ray, out float distance) && distance >= 0 ? ray.GetPoint(distance) : ray.GetPoint(3));
+                var hit = pointer != null ? pointer.pointerCurrentRaycast : default;
+                line.SetPosition(1, hit.gameObject != null ? hit.worldPosition : ray.GetPoint(3));
             }
             if (Time.unscaledTime >= nextTick) {
                 nextTick = Time.unscaledTime + 1;
@@ -116,7 +116,8 @@ namespace T34400.VRWebView
             hits.Clear(); eventSystem.RaycastAll(pointer, hits);
             pointer.pointerCurrentRaycast = default;
             foreach (var hit in hits) if (hit.gameObject != null && hit.gameObject.transform.IsChildOf(targetCanvas.transform)) {
-                pointer.pointerCurrentRaycast = hit; break;
+                if (pointer.pointerCurrentRaycast.gameObject == null || hit.distance < pointer.pointerCurrentRaycast.distance)
+                    pointer.pointerCurrentRaycast = hit;
             }
             ProcessMove(pointer);
             var phase = press.Update(true, sourceId, pressed);

@@ -74,9 +74,14 @@ namespace T34400.VRWebView.Editor
         public int callbackOrder => 0;
         public void OnProcessScene(Scene scene, BuildReport report)
         {
-            if (report == null || report.summary.platform != BuildTarget.Android
-                || !scene.GetRootGameObjects().Any(root => root.GetComponentsInChildren<HostComparisonProbe>(true).Length > 0)) return;
+            if (report == null || report.summary.platform != BuildTarget.Android) return;
+            bool browser = scene.GetRootGameObjects().Any(root => root.GetComponentsInChildren<MonoBehaviour>(true)
+                .Any(component => component != null && component.GetType().FullName == "T34400.VRWebView.Samples.Browser.BrowserDesktopPanel"));
+            bool comparison = scene.GetRootGameObjects().Any(root => root.GetComponentsInChildren<HostComparisonProbe>(true).Length > 0);
+            if (!browser && !comparison) return;
             var feature = KeyboardBootProbeSetup.Feature;
+            if (browser && (feature == null || !feature.enabled || !feature.keyboardOverlayEnabled))
+                throw new BuildFailedException("Browser address input requires Keyboard Boot ON (1). Run Create Rich Browser Sample Scene or select Host Comparison > Keyboard Boot > ON (1).");
             if (feature == null || !feature.enabled)
                 throw new BuildFailedException("HC2 scene requires VRWebView > Host Comparison > Keyboard Boot > OFF (0) or ON (1) before building.");
             if (PlayerSettings.Android.applicationEntry != AndroidApplicationEntry.GameActivity)

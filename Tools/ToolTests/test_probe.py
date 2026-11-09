@@ -26,6 +26,17 @@ HOST = [
 
 
 class AnalysisTests(unittest.TestCase):
+    def test_unity_keyboard_timeouts_are_reported_even_after_browser_ready(self):
+        report = probe.analyze([PREFIX + 'Unity: Timeout while waiting for keyboard to become visible'])
+        self.assertEqual(report['unity_keyboard_timeouts'], 1)
+        self.assertIn('unity_keyboard_visibility_timeout', report['issues'])
+        self.assertEqual(report['keyboard_visibility'], 'requires_user_observation')
+
+    def test_address_keyboard_failed_event_is_not_reported_as_success(self):
+        report = probe.analyze([PREFIX + 'Unity: [VRWebViewSample] BS1 event=address_keyboard_failed reason=visibility_timeout'])
+        self.assertIn('browser_address_keyboard_failed', report['issues'])
+        self.assertEqual(report['address_keyboard_failures'], 1)
+
     def test_new_browser_ui_start_resets_previous_host_readiness(self):
         report = probe.analyze(['VRWebViewSample BS1 event=ui_ready', 'VRWebViewRuntime event=host_ready',
             'VRWebViewSample BS1 event=ui_ready'], 'browser-ui')

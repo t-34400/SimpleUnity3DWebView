@@ -12,10 +12,17 @@ namespace T34400.VRWebView
     /// <summary>One Android WebView, direct native IME and a borrowed GPU surface.
     /// Public operations/Dispose run on the supplied Unity dispatcher owner thread.</summary>
     public sealed class AndroidBrowserBackend : IBrowserBackend, IBrowserHtmlBackend,
-        IBrowserPointerSink, IBrowserScrollSink, IBrowserHoverSink, IBrowserEditingSink, IBrowserFailureSource
+        IBrowserPointerSink, IBrowserScrollSink, IBrowserHoverSink, IBrowserAsyncEditingSink, IBrowserFailureSource, IBrowserNavigationBackend
     {
         private readonly BrowserDispatcher owner;
-        private readonly int width, height;
+        private readonly Action<Action> schedule;
+        private int width, height;
+        private static long nextPageId = 1L << 40;
+        private long pageId, presentationVersion;
+        private bool presentationWanted;
+        private BrowserPageState pageSignal;
+        public BrowserPageState PageState { get; private set; } = BrowserPageState.Empty;
+        public event Action<BrowserPageState> PageStateChanged;
         private readonly bool providerWorkaround, diagnostics;
         private readonly IDisposable registration;
         private readonly object pendingGate = new object();
@@ -29,20 +36,21 @@ namespace T34400.VRWebView
         private Callback callback;
         private ulong id;
         private long nextOperation;
+        private float nextStatistics;
         private int readySignal, cancelInitialization;
         private string failureSignal;
         private bool started, ready, disposed;
         public BrowserTextureSource Surface { get; }
         public event Action<Exception> Failed;
         public Exception LastError { get; private set; }
-        public string GraphicsStatus { get { owner.VerifyAccess(); return id == 0 ? "Browser closed" : BrowserGpuNative.Status(id); } }
+        public string GraphicsStatus { get { owner.VerifyAccess(); return id == 0 ? (disposed ? "Browser closed" : "Page has no visible presentation") : BrowserGpuNative.Status(id); } }
 
         public AndroidBrowserBackend(BrowserDispatcher dispatcher, int width = 1024, int height = 768,
-            bool enableKnownProviderImeWorkaround = true, bool enableDiagnostics = false)
+            bool enableKnownProviderImeWorkaround = true, bool enableDiagnostics = false, bool presentAutomatically = true)
         {
-            owner = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher)); owner.VerifyAccess();
+            owner = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher)); owner.VerifyAccess(); schedule = owner.Scheduler;
             if (width < 128 || width > 2048 || height < 128 || height > 2048) throw new ArgumentOutOfRangeException(nameof(width), "Extent must be 128..2048 per axis");
-            this.width = width; this.height = height; providerWorkaround = enableKnownProviderImeWorkaround; diagnostics = enableDiagnostics;
+            this.width = width; this.height = height; presentationWanted = presentAutomatically; providerWorkaround = enableKnownProviderImeWorkaround; diagnostics = enableDiagnostics;
             Surface = new BrowserTextureSource(owner); registration = owner.Track(this);
             capture.Received += ForwardPointer;
             hover.Received += ForwardHover;
@@ -60,19 +68,11 @@ namespace T34400.VRWebView
                     throw new PlatformNotSupportedException("Android Vulkan or OpenGL ES 3 required");
                 pump = BrowserGpuPump.Ensure();
                 pump.Tick += Tick; pump.FocusChanged += FocusChanged; pump.PauseChanged += PauseChanged;
-                var descriptor = new RenderTextureDescriptor(width, height) {
-                    graphicsFormat = QualitySettings.activeColorSpace == ColorSpace.Linear ? GraphicsFormat.R8G8B8A8_SRGB : GraphicsFormat.R8G8B8A8_UNorm,
-                    depthBufferBits = 0, msaaSamples = 1, useMipMap = false, autoGenerateMips = false,
-                    volumeDepth = 1, dimension = TextureDimension.Tex2D
-                };
-                texture = new RenderTexture(descriptor) { name = "VRWebView browser target", filterMode = FilterMode.Bilinear };
-                if (!texture.Create()) throw new InvalidOperationException("Browser RenderTexture allocation failed");
-                id = BrowserGpuNative.VrCreate(width, height, texture.GetNativeTexturePtr());
-                if (id == 0) throw new InvalidOperationException(BrowserGpuNative.Status(0));
+                pageId = Interlocked.Increment(ref nextPageId);
                 bridge = new AndroidJavaClass("com.t34400.vrwebview.BrowserHost"); callback = new Callback(this);
                 using (var player = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
                 using (var activity = player.GetStatic<AndroidJavaObject>("currentActivity"))
-                    bridge.CallStatic("open", activity, (long)id, width, height, providerWorkaround, diagnostics, callback);
+                    bridge.CallStatic("openPage", activity, pageId, width, height, providerWorkaround, diagnostics, callback);
             } catch (Exception error) { Fault(error); }
             return WaitForInitialization(token);
         }
@@ -92,8 +92,22 @@ namespace T34400.VRWebView
             if (Interlocked.Exchange(ref readySignal, 0) != 0 && !ready) {
                 ready = true;
                 // Raw hardware Canvas rows are top-first, as in the proven GPU probe.
-                Surface.Publish(texture, BrowserSurfaceOrigin.TopLeft);
-                if (!disposed) initialized.TrySetResult(true);
+                initialized.TrySetResult(true);
+                if (presentationWanted) _ = ApplyPresentationAsync(presentationVersion);
+            }
+            if (diagnostics && Time.unscaledTime >= nextStatistics) {
+                nextStatistics = Time.unscaledTime + 1;
+                string counters = "";
+                if (id != 0) foreach (string line in BrowserGpuNative.Status(id).Split('\n'))
+                    if (line.StartsWith("GPU copies=", StringComparison.Ordinal)) { counters = " " + line; break; }
+                Debug.Log("[VRWebViewRuntime] event=presentation_stats page=" + pageId + " target=" + id + " visible=" + (id != 0) + counters);
+            }
+            var observed = Interlocked.Exchange(ref pageSignal, null);
+            if (observed != null) {
+                PageState = observed;
+                var handlers = PageStateChanged;
+                if (handlers != null) foreach (Action<BrowserPageState> handler in handlers.GetInvocationList())
+                    try { handler(observed); } catch (Exception error) { Debug.LogException(error); }
             }
         }
         public Task NavigateAsync(Uri url, CancellationToken token)
@@ -118,7 +132,7 @@ namespace T34400.VRWebView
                 if (pending.Count >= 256) throw new InvalidOperationException("Too many browser operations");
                 operation = checked(++nextOperation); pending.Add(operation, completion);
             }
-            var values = new object[arguments.Length + 2]; values[0] = (long)id; values[1] = operation;
+            var values = new object[arguments.Length + 2]; values[0] = pageId; values[1] = operation;
             Array.Copy(arguments, 0, values, 2, arguments.Length);
             try { bridge.CallStatic(method, values); }
             catch (Exception error) { Complete(operation, error); }
@@ -154,7 +168,7 @@ namespace T34400.VRWebView
         private void ForwardPointer(BrowserPointerEvent value)
         {
             int action = value.Phase == PointerPhase.Down ? 0 : value.Phase == PointerPhase.Up ? 1 : value.Phase == PointerPhase.Move ? 2 : 3;
-            bridge?.CallStatic("pointer", (long)id, action, value.X, value.Y);
+            bridge?.CallStatic("pointer", pageId, action, value.X, value.Y);
         }
         public void SendHover(BrowserHoverEvent value)
         {
@@ -166,25 +180,75 @@ namespace T34400.VRWebView
         private void ForwardHover(BrowserHoverEvent value)
         {
             int action = value.Phase == HoverPhase.Enter ? 9 : value.Phase == HoverPhase.Move ? 7 : 10;
-            bridge?.CallStatic("hover", (long)id, action, value.X, value.Y);
+            bridge?.CallStatic("hover", pageId, action, value.X, value.Y);
         }
         public void SendScroll(BrowserScrollEvent value)
         {
             VerifyReady();
             if (float.IsNaN(value.X) || float.IsNaN(value.Y) || float.IsInfinity(value.X) || float.IsInfinity(value.Y)
                 || float.IsNaN(value.DeltaX) || float.IsNaN(value.DeltaY) || float.IsInfinity(value.DeltaX) || float.IsInfinity(value.DeltaY)) return;
-            bridge.CallStatic("scroll", (long)id, value.X, value.Y, value.DeltaX, value.DeltaY);
+            bridge.CallStatic("scroll", pageId, value.X, value.Y, value.DeltaX, value.DeltaY);
         }
         public void EndEditing() {
             owner.VerifyAccess(); if (disposed || !ready) return;
-            capture.Cancel(); hover.Exit(); bridge.CallStatic("endEditing", (long)id);
+            capture.Cancel(); hover.Exit(); bridge.CallStatic("endEditing", pageId);
+        }
+        public Task EndEditingAsync(CancellationToken token) {
+            owner.VerifyAccess(); if (disposed || !ready) return Task.CompletedTask;
+            capture.Cancel(); hover.Exit(); return Submit("endEditingAsync", token);
+        }
+        public Task ExecuteAsync(BrowserPageCommand command, CancellationToken token) {
+            VerifyReady();
+            if (!Enum.IsDefined(typeof(BrowserPageCommand), command)) throw new ArgumentOutOfRangeException(nameof(command));
+            return Submit("command", token, command.ToString().ToLowerInvariant());
+        }
+        /// <summary>A visible presentation lease. Hiding preserves the WebView/DOM/media policy.
+        /// A fresh output generation avoids writing old queued frames into a new binding.</summary>
+        public void SetPresentation(bool visible, int viewportWidth = 0, int viewportHeight = 0) {
+            owner.VerifyAccess(); if (disposed) return; // A late view withdrawal is idempotent.
+            if (viewportWidth != 0 && (viewportWidth < 128 || viewportWidth > 2048 || viewportHeight < 128 || viewportHeight > 2048))
+                throw new ArgumentOutOfRangeException(nameof(viewportWidth));
+            bool resized = viewportWidth != 0 && (width != viewportWidth || height != viewportHeight);
+            if (viewportWidth != 0) { width = viewportWidth; height = viewportHeight; }
+            if (presentationWanted == visible && !resized) return;
+            presentationWanted = visible; long version = ++presentationVersion;
+            if (ready) _ = ApplyPresentationAsync(version);
+        }
+        private async Task ApplyPresentationAsync(long version) {
+            try {
+                if (disposed || version != presentationVersion) return;
+                var previousId = id; var previousTexture = texture; id = 0; texture = null;
+                if (previousId != 0) pump.Retire(previousId, previousTexture, diagnostics);
+                Surface.Withdraw();
+                if (disposed || version != presentationVersion) return;
+                if (!presentationWanted) { await Submit("present", CancellationToken.None, 0L, width, height); return; }
+                var descriptor = new RenderTextureDescriptor(width, height) {
+                    graphicsFormat = QualitySettings.activeColorSpace == ColorSpace.Linear ? GraphicsFormat.R8G8B8A8_SRGB : GraphicsFormat.R8G8B8A8_UNorm,
+                    depthBufferBits = 0, msaaSamples = 1, useMipMap = false, autoGenerateMips = false,
+                    volumeDepth = 1, dimension = TextureDimension.Tex2D
+                };
+                texture = new RenderTexture(descriptor) { name = "VRWebView visible target", filterMode = FilterMode.Bilinear };
+                if (!texture.Create()) throw new InvalidOperationException("Browser target allocation failed");
+                Graphics.Blit(Texture2D.blackTexture, texture);
+                id = BrowserGpuNative.VrCreate(width, height, texture.GetNativeTexturePtr());
+                if (id == 0) throw new InvalidOperationException(BrowserGpuNative.Status(0));
+                var target = texture;
+                // Completion resumes on the supplied owner context explicitly, never a worker.
+                var task = Submit("present", CancellationToken.None, (long)id, width, height);
+                await task.ConfigureAwait(false);
+                schedule(() => { if (!disposed && version == presentationVersion && presentationWanted && texture == target)
+                    Surface.Publish(target, BrowserSurfaceOrigin.TopLeft); });
+            } catch (Exception error) {
+                try { schedule(() => { if (!disposed && version == presentationVersion) Fault(error); }); }
+                catch (ObjectDisposedException) { }
+            }
         }
         private void FocusChanged(bool focused) { if (!focused && !disposed) { try { capture.Cancel(); } finally { hover.Exit(); } } }
         private void PauseChanged(bool paused)
         {
             if (disposed || bridge == null) return;
             if (paused) { try { capture.Cancel(); } finally { hover.Exit(); } }
-            bridge.CallStatic("setPaused", (long)id, paused);
+            bridge.CallStatic("setPaused", pageId, paused);
         }
         private void Verify() { owner.VerifyAccess(); if (disposed) throw new ObjectDisposedException(nameof(AndroidBrowserBackend)); }
         private void VerifyReady() { Verify(); if (!ready) throw new InvalidOperationException("Await browser initialization first"); }
@@ -217,16 +281,13 @@ namespace T34400.VRWebView
             // Withdraw synchronously before target retirement so bound views stop sampling it.
             Surface.Dispose();
             if (pump != null) { pump.Tick -= Tick; pump.FocusChanged -= FocusChanged; pump.PauseChanged -= PauseChanged; }
-            if (id != 0) {
-                try {
-                    if (bridge != null) bridge.CallStatic("close", (long)id);
-                    else BrowserGpuNative.VrAbandon(id); // No Java producer was opened.
-                } catch (Exception error) {
-                    // No producer acknowledgement: retain the target, never abandon a live producer.
-                    Debug.LogException(error);
-                }
-                pump.Retire(id, texture, diagnostics); id = 0; texture = null;
-            } else if (texture != null) { UnityEngine.Object.Destroy(texture); texture = null; }
+            if (id != 0) { pump.Retire(id, texture, diagnostics); id = 0; texture = null; }
+            else if (texture != null) { UnityEngine.Object.Destroy(texture); texture = null; }
+            if (pageId != 0) {
+                try { bridge?.CallStatic("close", pageId); }
+                catch (Exception error) { Debug.LogException(error); } // Without acknowledgement retain queued resources.
+                pageId = 0;
+            }
             bridge?.Dispose(); bridge = null; callback = null;
             registration.Dispose();
         }
@@ -234,6 +295,9 @@ namespace T34400.VRWebView
         {
             private readonly AndroidBrowserBackend backend;
             internal Callback(AndroidBrowserBackend backend) : base("com.t34400.vrwebview.BrowserHost$Callback") { this.backend = backend; }
+            [UnityEngine.Scripting.Preserve] public void pageState(string address, string title, bool back, bool forward, bool loading, int progress, int error) {
+                Interlocked.Exchange(ref backend.pageSignal, new BrowserPageState(address, title, back, forward, loading, progress, error));
+            }
             [UnityEngine.Scripting.Preserve] public void ready() { Interlocked.Exchange(ref backend.readySignal, 1); }
             [UnityEngine.Scripting.Preserve] public void completed(long operation, bool success, string code) {
                 backend.Complete(operation, success ? null : new InvalidOperationException("Android browser operation failed: " + code));

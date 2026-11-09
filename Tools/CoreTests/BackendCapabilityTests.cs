@@ -6,9 +6,14 @@ using T34400.VRWebView;
 
 internal static class BackendCapabilityTests
 {
-    private sealed class Backend : IBrowserBackend, IBrowserHtmlBackend, IBrowserFailureSource
+    private sealed class Backend : IBrowserBackend, IBrowserHtmlBackend, IBrowserFailureSource, IBrowserNavigationBackend
     {
         public event Action<Exception> Failed;
+        public event Action<BrowserPageState> PageStateChanged;
+        public BrowserPageState PageState { get; private set; } = BrowserPageState.Empty;
+        internal int Commands;
+        public Task ExecuteAsync(BrowserPageCommand command, CancellationToken token) { token.ThrowIfCancellationRequested(); Commands++; return Task.CompletedTask; }
+        internal void Observe(BrowserPageState state) { PageState = state; PageStateChanged?.Invoke(state); }
         internal Uri BaseUrl;
         internal string Html;
         internal int Calls;
@@ -27,6 +32,29 @@ internal static class BackendCapabilityTests
     }
     internal static IEnumerable<(string Name, Func<Task> Run)> Scenarios()
     {
+        yield return ("page observations cross the owner queue and disposed replies are discarded", async () => {
+            var backend = new Backend(); var queue = new Queue<Action>(); var session = new BrowserSession(backend, action => queue.Enqueue(action));
+            int observed = 0; session.PageStateChanged += state => observed++;
+            backend.Observe(new BrowserPageState("https://example.com/", "Example", true, false, false, 100, 0));
+            Check(observed == 0, "Page event bypassed dispatcher"); while (queue.Count > 0) queue.Dequeue()(); Check(observed == 1, "Owner lost page observation");
+            backend.Observe(BrowserPageState.Empty); session.Dispose(); while (queue.Count > 0) queue.Dequeue()();
+            Check(observed == 1, "Disposed page delivered an old observation"); await Task.CompletedTask;
+        });
+        yield return ("page command cancellation and sample leases preserve navigation capability", async () => {
+            var backend = new Backend(); using var lease = new T34400.VRWebView.Samples.Browser.BrowserBackendLease(backend);
+            using var session = new BrowserSession(lease, action => action()); await session.InitializeAsync();
+            using var cancel = new CancellationTokenSource(); cancel.Cancel();
+            await Reject<OperationCanceledException>(session.ExecuteAsync(BrowserPageCommand.Reload, cancel.Token));
+            Check(backend.Commands == 0, "Canceled command reached backend");
+            await session.ExecuteAsync(BrowserPageCommand.Back); Check(backend.Commands == 1, "Sample lease swallowed command");
+            var state = new BrowserPageState("https://example.com/", "Example", true, false, false, 100, 0); backend.Observe(state);
+            Check(ReferenceEquals(session.PageState, state), "Sample lease lost page state");
+        });
+        yield return ("page observers do not interrupt other observers", async () => {
+            var backend = new Backend(); using var session = new BrowserSession(backend, action => action()); int calls = 0;
+            session.PageStateChanged += _ => throw new Exception("observer"); session.PageStateChanged += _ => calls++;
+            backend.Observe(BrowserPageState.Empty); Check(calls == 1 && session.LastNotificationError != null, "Observer failure escaped"); await Task.CompletedTask;
+        });
         yield return ("sample leases propagate idle runtime failures into the tab model", async () => {
             var backend = new Backend();
             using var workspace = new T34400.VRWebView.Samples.Browser.BrowserWorkspace(

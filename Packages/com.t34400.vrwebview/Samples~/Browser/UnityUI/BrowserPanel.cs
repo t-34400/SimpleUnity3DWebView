@@ -268,6 +268,8 @@ namespace T34400.VRWebView.Samples.Browser
                 button.interactable = true;
                 button.GetComponent<Image>().color = item == tab ? BrowserSampleWidgets.SelectedColor : BrowserSampleWidgets.ButtonColor;
             }
+            if (configured) foreach (var entry in current.Pages)
+                entry.Value.SetPresentation(tab != null && entry.Key == tab.Id, 0, 0);
             string text = tab != null && current.Drafts.TryGetValue(tab.Id, out var draft) ? draft.Text : "";
             if (address.text != text) address.SetTextWithoutNotify(text);
             displayedTab = tab?.Id ?? -1;

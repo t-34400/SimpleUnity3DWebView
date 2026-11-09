@@ -43,3 +43,6 @@ workspace.Dispose();
 BS1の手順はDocumentation~/RichBrowserSample.md。最初はNew -> Goで初期URLを開き、UnityのURL欄のIMEとWebView内のIMEを別々に確認する。newTabAddressは新しいtabのdraftの初期値だけで、勝手にnavigationしない。変更済みdraftはtabごとに保持する。タブ切替・URL選択・UI無効化では前ページの編集を終了する。BrowserPage.Editingはpointer sinkと別に指定でき、未指定なら実backendから取得する。
 
 生成シーンはBS1診断用レイを使用する。アプリ向けのXR入力を本体へ固定する仕様ではなく、coreとUnity UIから診断assemblyへの依存を追加しない。
+
+
+preview.41 adds a shared multi-window desktop sample with standard navigation controls and demand-driven output. After importing the current sample, use Create Rich Browser Sample Scene. See package Documentation~/RichBrowserSample.md for the new short Quest trial and current limitations. The standalone BrowserPanel API remains available; importing does not replace an existing generated scene.

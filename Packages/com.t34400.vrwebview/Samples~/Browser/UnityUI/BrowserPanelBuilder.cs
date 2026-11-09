@@ -67,7 +67,8 @@ namespace T34400.VRWebView.Samples.Browser
                 var page = BrowserSampleWidgets.Node(root.transform, "Page", typeof(RawImage), typeof(BrowserPointerSource), typeof(BrowserView), typeof(LayoutElement));
                 page.GetComponent<LayoutElement>().flexibleHeight = 1; page.GetComponent<LayoutElement>().minHeight = 120;
                 var status = BrowserSampleWidgets.Label(root.transform, "Status", "Browser not configured.", font, 18);
-                status.gameObject.AddComponent<LayoutElement>().preferredHeight = 40;
+                var statusLayout = status.gameObject.AddComponent<LayoutElement>();
+                statusLayout.minHeight = statusLayout.preferredHeight = 40; statusLayout.flexibleHeight = 0;
                 var panel = root.AddComponent<BrowserPanel>();
                 panel.SetWidgets(dispatcher, page.GetComponent<BrowserView>(), address, go, create, close, contentRect, status, font);
                 panel.SetNewTabAddress(newTabAddress);
@@ -79,7 +80,8 @@ namespace T34400.VRWebView.Samples.Browser
         private static GameObject Row(Transform parent, string name, float height)
         {
             var row = BrowserSampleWidgets.Node(parent, name, typeof(HorizontalLayoutGroup), typeof(LayoutElement));
-            row.GetComponent<LayoutElement>().preferredHeight = height;
+            var size = row.GetComponent<LayoutElement>();
+            size.minHeight = size.preferredHeight = height; size.flexibleHeight = 0;
             var layout = row.GetComponent<HorizontalLayoutGroup>(); layout.spacing = 8; layout.childControlWidth = true; layout.childControlHeight = true;
             layout.childForceExpandWidth = false; layout.childForceExpandHeight = true;
             return row;

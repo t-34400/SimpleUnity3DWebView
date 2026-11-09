@@ -55,3 +55,11 @@ D06以降の具体的な分離順序と資源所有権は[RuntimeSeparation.md](
   - 添付画像とYouTubeデモの要否・掲載場所・撮影/編集素材を検討する。素材の用意前に完成したデモとして扱わない。
   - ライセンス変更の要否を検討する。MITの簡潔さとApache 2.0の明示的な特許許諾・再配布条件等を比較し、第三者コードの条件と合わせて判断する。選択は未決定で、現ライセンスを今回変更しない。
   - リリースノートの形式・粒度と、CHANGELOG/タグ/GitHub Releasesの分担を検討する。利用者向けの変更点・移行・既知制約を整理する。
+
+## preview.41 implementation
+
+BrowserDesktop owns sessions across windows; BrowserDesktopPanel/WindowView add common browser controls, tab reorder/detach/dock and planar window move/resize. Fixed row flexible heights. Android pages now outlive transient output queues; only visible bindings allocate producer Surface/AImageReader/RenderTexture. Switching creates a new generation and retires the old one after producer/GPU acknowledgement. Physical target pooling is not implemented. WebView media/background execution policy is unchanged by presentation demand.
+
+Unity address keyboard startup now awaits page editing relinquishment, uses explicit boot ON in the scene generator, checks stale OFF at build, reads packaged boot/manifest metadata and reports keyboard timeouts. Root cause resolution and all new integration behaviors remain pending Unity/Quest validation. Existing RT1/WF1 user confirmations are historical evidence, not a preview.41 regression pass.
+
+Public navigation observations/commands are added; JavaScript execution API, production package diagnostic exclusion, README/media/license/release distribution work remain pending. See RichBrowserSample.md for the current short device trial; do not resume old probe matrices.

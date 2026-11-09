@@ -24,6 +24,19 @@ namespace T34400.VRWebView
         private Task initialization;
         private TaskCompletionSource<bool> initializationCompletion;
         private int generation;
+        public BrowserPageState PageState => (backend as IBrowserNavigationBackend)?.PageState ?? BrowserPageState.Empty;
+        public event Action<BrowserPageState> PageStateChanged;
+        private void PageChanged(BrowserPageState value) {
+            int version = generation;
+            try { dispatch(() => {
+                if (version != generation || State == BrowserState.Disposed) return;
+                var handlers = PageStateChanged; if (handlers == null) return;
+                foreach (Action<BrowserPageState> handler in handlers.GetInvocationList()) {
+                    if (version != generation) break;
+                    try { handler(value); } catch (Exception error) { LastNotificationError = error; }
+                }
+            }); } catch (Exception error) { LastNotificationError = error; }
+        }
         public BrowserState State { get; private set; } = BrowserState.Created;
         public event Action<BrowserState> StateChanged;
         public Exception LastNotificationError { get; private set; }
@@ -34,6 +47,7 @@ namespace T34400.VRWebView
             this.backend = backend ?? throw new ArgumentNullException(nameof(backend));
             dispatch = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
             if (backend is IBrowserFailureSource failures) failures.Failed += BackendFailed;
+            if (backend is IBrowserNavigationBackend page) page.PageStateChanged += PageChanged;
         }
 
         public Task InitializeAsync()
@@ -100,6 +114,13 @@ namespace T34400.VRWebView
                 linked.Token.ThrowIfCancellationRequested();
             }
         }
+        public async Task ExecuteAsync(BrowserPageCommand command, CancellationToken token = default) {
+            ThrowIfDisposed(); if (State != BrowserState.Ready) throw new InvalidOperationException("Initialize the browser first");
+            if (!(backend is IBrowserNavigationBackend page)) throw new NotSupportedException("Backend has no page navigation capability");
+            using (var linked = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token, token)) {
+                linked.Token.ThrowIfCancellationRequested(); await page.ExecuteAsync(command, linked.Token); linked.Token.ThrowIfCancellationRequested();
+            }
+        }
         private void BackendFailed(Exception error)
         {
             int version = generation;
@@ -144,6 +165,7 @@ namespace T34400.VRWebView
             if (State == BrowserState.Disposed) return;
             generation++;
             if (backend is IBrowserFailureSource failures) failures.Failed -= BackendFailed;
+            if (backend is IBrowserNavigationBackend page) page.PageStateChanged -= PageChanged;
             State = BrowserState.Disposed;
             initializationCompletion?.TrySetCanceled();
             try { lifetime.Cancel(); }
