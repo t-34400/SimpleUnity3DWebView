@@ -100,7 +100,8 @@ namespace T34400.VRWebView
                 string counters = "";
                 if (id != 0) foreach (string line in BrowserGpuNative.Status(id).Split('\n'))
                     if (line.StartsWith("GPU copies=", StringComparison.Ordinal)) { counters = " " + line; break; }
-                Debug.Log("[VRWebViewRuntime] event=presentation_stats page=" + pageId + " target=" + id + " visible=" + (id != 0) + counters);
+                int operations; lock (pendingGate) operations = pending.Count;
+                Debug.Log("[VRWebViewRuntime] event=presentation_stats page=" + pageId + " target=" + id + " visible=" + (id != 0) + " pendingOperations=" + operations + counters);
             }
             var observed = Interlocked.Exchange(ref pageSignal, null);
             if (observed != null) {

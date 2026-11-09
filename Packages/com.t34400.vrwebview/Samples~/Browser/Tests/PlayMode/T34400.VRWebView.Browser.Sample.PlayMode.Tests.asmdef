@@ -1,0 +1,6 @@
+{
+  "name": "T34400.VRWebView.Browser.Sample.PlayMode.Tests",
+  "references": ["T34400.VRWebView.Browser.UnityUI.Sample", "UnityEngine.UI"],
+  "optionalUnityReferences": ["TestAssemblies"],
+  "defineConstraints": ["UNITY_INCLUDE_TESTS"]
+}

@@ -14,7 +14,8 @@ namespace T34400.VRWebView.Samples.Browser
         private BrowserView page;
         private BrowserAddressInput address;
         private Text message, placeholder;
-        private Button back, forward, reload, go;
+        private Button back, forward, reload, go, newTabButton;
+        private RectTransform freeHeader;
         private RectTransform tabs, viewport, pageRect, tabsRowRect, navigationRect;
         private Font font;
         private readonly Dictionary<long, Button> tabButtons = new Dictionary<long, Button>();
@@ -36,21 +37,37 @@ namespace T34400.VRWebView.Samples.Browser
             BrowserSampleWidgets.Stretch((RectTransform)root.transform); root.GetComponent<Image>().color = BrowserSampleWidgets.Background;
             var column = root.GetComponent<VerticalLayoutGroup>(); column.padding = new RectOffset(12, 12, 12, 12); column.spacing = 8;
             column.childControlWidth = column.childControlHeight = true; column.childForceExpandWidth = true; column.childForceExpandHeight = false;
-            var tabRow = Row(root.transform, "Tabs", 52); tabsRowRect = tabRow;
-            var strip = BrowserSampleWidgets.Node(tabRow, "Tab viewport", typeof(Image), typeof(RectMask2D), typeof(ScrollRect), typeof(LayoutElement));
-            strip.GetComponent<Image>().color = BrowserSampleWidgets.Background; strip.GetComponent<LayoutElement>().flexibleWidth = 1;
+            var tabRow = Row(root.transform, "Tabs", 68); tabsRowRect = tabRow;
+            var stripColumn = BrowserSampleWidgets.Node(tabRow, "Tab area", typeof(VerticalLayoutGroup), typeof(LayoutElement));
+            stripColumn.GetComponent<LayoutElement>().flexibleWidth = 1;
+            var stripLayout = stripColumn.GetComponent<VerticalLayoutGroup>(); stripLayout.spacing = 4;
+            stripLayout.childControlWidth = stripLayout.childControlHeight = true; stripLayout.childForceExpandWidth = true; stripLayout.childForceExpandHeight = false;
+            var strip = BrowserSampleWidgets.Node(stripColumn.transform, "Tab viewport", typeof(Image), typeof(RectMask2D), typeof(ScrollRect), typeof(LayoutElement));
+            strip.GetComponent<Image>().color = BrowserSampleWidgets.Background;
+            var stripSize = strip.GetComponent<LayoutElement>(); stripSize.minHeight = stripSize.preferredHeight = 52; stripSize.flexibleHeight = 0;
             viewport = (RectTransform)strip.transform;
+            freeHeader = (RectTransform)BrowserSampleWidgets.Node(strip.transform, "Unused tab space", typeof(Image), typeof(BrowserWindowDrag)).transform;
+            freeHeader.GetComponent<Image>().color = BrowserSampleWidgets.Background;
+            freeHeader.GetComponent<BrowserWindowDrag>().Configure(this);
+            freeHeader.anchorMin = Vector2.zero; freeHeader.anchorMax = new Vector2(0, 1); freeHeader.pivot = new Vector2(0, .5f);
             tabs = (RectTransform)BrowserSampleWidgets.Node(strip.transform, "Tab strip", typeof(HorizontalLayoutGroup), typeof(ContentSizeFitter)).transform;
             tabs.anchorMin = Vector2.zero; tabs.anchorMax = new Vector2(0, 1); tabs.pivot = new Vector2(0, .5f); tabs.sizeDelta = Vector2.zero;
             var layout = tabs.GetComponent<HorizontalLayoutGroup>(); layout.spacing = 8; layout.childControlHeight = layout.childControlWidth = true;
             layout.childForceExpandHeight = true; layout.childForceExpandWidth = false;
             tabs.GetComponent<ContentSizeFitter>().horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
-            var tabScroll = strip.GetComponent<ScrollRect>(); tabScroll.content = tabs; tabScroll.viewport = viewport; tabScroll.horizontal = true; tabScroll.vertical = false; tabScroll.movementType = ScrollRect.MovementType.Clamped;
+            var tabScroll = strip.GetComponent<ScrollRect>(); tabScroll.content = tabs; tabScroll.viewport = viewport;
+            tabScroll.horizontal = true; tabScroll.vertical = false; tabScroll.movementType = ScrollRect.MovementType.Clamped;
+            tabScroll.horizontalScrollbar = BuildTabScrollbar(stripColumn.transform);
+            tabScroll.horizontalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
             insertionMarker = (RectTransform)BrowserSampleWidgets.Node(strip.transform, "Insertion marker", typeof(Image)).transform;
             insertionMarker.GetComponent<Image>().color = Color.cyan; insertionMarker.GetComponent<Image>().raycastTarget = false;
             insertionMarker.anchorMin = insertionMarker.anchorMax = new Vector2(0, .5f); insertionMarker.sizeDelta = new Vector2(4, 48); insertionMarker.gameObject.SetActive(false);
-            AddButton(tabRow, "New tab", "+", 52, () => application.NewTab(WindowId));
-            AddButton(tabRow, "New window", "New window", 145, application.CreateWindow);
+            newTabButton = AddButton(tabs, "New tab", "+", 52, () => application.NewTab(WindowId));
+            var grip = BrowserSampleWidgets.Node(tabRow, "Reserved title drag space", typeof(Image), typeof(LayoutElement), typeof(BrowserWindowDrag));
+            grip.GetComponent<Image>().color = BrowserSampleWidgets.Background;
+            var gripSize = grip.GetComponent<LayoutElement>(); gripSize.minWidth = gripSize.preferredWidth = 144; gripSize.flexibleWidth = 0;
+            grip.GetComponent<BrowserWindowDrag>().Configure(this);
+            AddButton(tabRow, "New window", "□+", 52, application.CreateWindow);
             AddButton(tabRow, "Close window", "×", 52, () => application.CloseWindow(WindowId));
             var nav = Row(root.transform, "Navigation", 52); navigationRect = nav;
             back = AddButton(nav, "Back", "←", 52, () => application.Command(WindowId, BrowserPageCommand.Back));
@@ -74,11 +91,33 @@ namespace T34400.VRWebView.Samples.Browser
             pageRect = (RectTransform)content.transform;
             var display = BrowserSampleWidgets.Node(content.transform, "Web page", typeof(RawImage), typeof(BrowserPointerSource), typeof(BrowserView));
             BrowserSampleWidgets.Stretch((RectTransform)display.transform); page = display.GetComponent<BrowserView>();
+            display.AddComponent<BrowserWindowActivation>().Window = this;
             placeholder = BrowserSampleWidgets.Label(content.transform, "New tab page", "New tab\nEnter an address above to begin.", font, 28); placeholder.alignment = TextAnchor.MiddleCenter; BrowserSampleWidgets.Stretch(placeholder.rectTransform);
-            var footer = Row(root.transform, "Window handle", 40);
+            var footer = Row(root.transform, "Status bar", 24);
             message = BrowserSampleWidgets.Label(footer, "Status", "", font, 18); message.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1;
-            var handle = AddButton(footer, "Move window", "Move", 100, null).gameObject.AddComponent<BrowserWindowDrag>(); handle.Configure(this, false);
-            var resize = AddButton(footer, "Resize window", "Resize", 100, null).gameObject.AddComponent<BrowserWindowDrag>(); resize.Configure(this, true);
+            foreach (int x in new[] { -1, 1 }) foreach (int y in new[] { -1, 1 }) BuildCorner(x, y);
+        }
+        public void BringToFront() { application.BringToFront(this); }
+        private Scrollbar BuildTabScrollbar(Transform parent) {
+            var node = BrowserSampleWidgets.Node(parent, "Tab scrollbar", typeof(Image), typeof(Scrollbar), typeof(LayoutElement));
+            var size = node.GetComponent<LayoutElement>(); size.minHeight = size.preferredHeight = 12; size.flexibleHeight = 0;
+            node.GetComponent<Image>().color = new Color(.08f, .1f, .14f);
+            var area = (RectTransform)BrowserSampleWidgets.Node(node.transform, "Sliding area").transform; BrowserSampleWidgets.Stretch(area);
+            var handle = BrowserSampleWidgets.Node(area, "Handle", typeof(Image)).GetComponent<Image>();
+            handle.color = new Color(.4f, .5f, .6f); BrowserSampleWidgets.Stretch(handle.rectTransform);
+            var bar = node.GetComponent<Scrollbar>(); bar.handleRect = handle.rectTransform; bar.targetGraphic = handle;
+            bar.direction = Scrollbar.Direction.LeftToRight; return bar;
+        }
+        private void BuildCorner(int x, int y) {
+            var node = BrowserSampleWidgets.Node(transform, "Resize corner " + x + " " + y, typeof(Image), typeof(BrowserWindowDrag));
+            var rect = (RectTransform)node.transform; rect.anchorMin = rect.anchorMax = new Vector2(x > 0 ? 1 : 0, y > 0 ? 1 : 0);
+            rect.pivot = new Vector2(.5f, .5f); rect.sizeDelta = new Vector2(44, 44); rect.anchoredPosition = Vector2.zero;
+            node.GetComponent<Image>().color = Color.clear;
+            var horizontal = BrowserSampleWidgets.Node(node.transform, "Horizontal grip", typeof(Image)).GetComponent<Image>();
+            horizontal.raycastTarget = false; horizontal.rectTransform.sizeDelta = new Vector2(26, 4); horizontal.rectTransform.anchoredPosition = new Vector2(-x * 10, 0);
+            var vertical = BrowserSampleWidgets.Node(node.transform, "Vertical grip", typeof(Image)).GetComponent<Image>();
+            vertical.raycastTarget = false; vertical.rectTransform.sizeDelta = new Vector2(4, 26); vertical.rectTransform.anchoredPosition = new Vector2(0, -y * 10);
+            node.GetComponent<BrowserWindowDrag>().Configure(this, x, y, new[] { horizontal, vertical });
         }
         private RectTransform Row(Transform parent, string name, float height) {
             var value = BrowserSampleWidgets.Node(parent, name, typeof(HorizontalLayoutGroup), typeof(LayoutElement));
@@ -89,6 +128,7 @@ namespace T34400.VRWebView.Samples.Browser
         }
         private Button AddButton(Transform parent, string name, string label, float width, Action action) {
             var button = BrowserSampleWidgets.Button(parent, name, label, font, width);
+            button.gameObject.AddComponent<BrowserWindowActivation>().Window = this;
             if (action != null) button.onClick.AddListener(() => action());
             return button;
         }
@@ -112,9 +152,15 @@ namespace T34400.VRWebView.Samples.Browser
             foreach (long id in window.Tabs) {
                 if (!tabButtons.TryGetValue(id, out var button)) {
                     button = AddButton(tabs, "Tab " + id, "New tab", 220, () => application.Select(WindowId, id));
-                    var title = button.GetComponentInChildren<Text>(); title.rectTransform.offsetMax = new Vector2(-48, -5); title.alignment = TextAnchor.MiddleLeft; title.horizontalOverflow = HorizontalWrapMode.Wrap;
-                    var close = AddButton(button.transform, "Close tab", "×", 44, () => application.CloseTab(id));
-                    var closeRect = (RectTransform)close.transform; closeRect.anchorMin = new Vector2(1, 0); closeRect.anchorMax = Vector2.one; closeRect.pivot = new Vector2(1, .5f); closeRect.offsetMin = new Vector2(-44, 0); closeRect.offsetMax = Vector2.zero;
+                    var inner = button.gameObject.AddComponent<HorizontalLayoutGroup>(); inner.padding = new RectOffset(10, 4, 4, 4); inner.spacing = 4;
+                    inner.childControlWidth = inner.childControlHeight = true; inner.childForceExpandHeight = true; inner.childForceExpandWidth = false;
+                    var title = button.GetComponentInChildren<Text>(); title.alignment = TextAnchor.MiddleLeft; title.horizontalOverflow = HorizontalWrapMode.Wrap;
+                    var titleSize = title.gameObject.AddComponent<LayoutElement>(); titleSize.minWidth = titleSize.preferredWidth = 0; titleSize.flexibleWidth = 1;
+                    var close = AddButton(button.transform, "Close tab", "×", 40, () => application.CloseTab(id));
+                    close.GetComponent<LayoutElement>().minHeight = 40; close.GetComponent<LayoutElement>().minWidth = 40;
+                    close.GetComponent<Image>().color = Color.white;
+                    var colors = close.colors; colors.normalColor = new Color(1, 1, 1, 0); colors.highlightedColor = new Color(.7f, .2f, .2f, 1);
+                    colors.selectedColor = colors.highlightedColor; colors.pressedColor = new Color(.9f, .15f, .15f, 1); colors.disabledColor = colors.normalColor; close.colors = colors;
                     button.gameObject.AddComponent<BrowserTabDrag>().Configure(application, this, id); tabButtons.Add(id, button);
                 }
                 var tab = application.Model.FindTab(id); var state = tab.PageState;
@@ -126,6 +172,7 @@ namespace T34400.VRWebView.Samples.Browser
                 button.GetComponent<Image>().color = window.ActiveTabId == id ? BrowserSampleWidgets.SelectedColor : BrowserSampleWidgets.ButtonColor;
                 button.transform.SetSiblingIndex(order++);
             }
+            newTabButton.transform.SetAsLastSibling();
             var active = CurrentTab(); var entry = active != null ? application.GetEntry(active.Id) : null;
             address.interactable = active != null;
             var observed = active?.PageState ?? BrowserPageState.Empty;
@@ -152,12 +199,15 @@ namespace T34400.VRWebView.Samples.Browser
         }
         private void RevealSelected() {
             if (selected < 0 || !tabButtons.TryGetValue(selected, out var button)) return;
-            float left = ((RectTransform)button.transform).anchoredPosition.x, right = left + ((RectTransform)button.transform).rect.width;
+            var rect = (RectTransform)button.transform;
+            float left = rect.anchoredPosition.x + rect.rect.xMin, right = left + rect.rect.width;
             float offset = -tabs.anchoredPosition.x;
             if (left < offset) offset = left; else if (right > offset + viewport.rect.width) offset = right - viewport.rect.width;
             tabs.anchoredPosition = new Vector2(-Mathf.Max(0, offset), tabs.anchoredPosition.y);
         }
         public void UpdatePresentation() {
+            if (pageRect != null && lastWidth == 0) LayoutRebuilder.ForceRebuildLayoutImmediate((RectTransform)transform);
+            UpdateHeaderSpace();
             if (pageRect == null || !isActiveAndEnabled || !application.isActiveAndEnabled) return;
             Vector2 size = ((RectTransform)transform).rect.size;
             if (size != previousSize) { previousSize = size; resizeAfter = Time.unscaledTime + .15f; }
@@ -169,21 +219,42 @@ namespace T34400.VRWebView.Samples.Browser
             if (application.diagnostics) Debug.Log("[VRWebViewSample] BS1 event=window_layout window=" + WindowId + " width=" + width + " height=" + height
                 + " tabHeight=" + tabsRowRect.rect.height + " navigationHeight=" + navigationRect.rect.height + " windowHeight=" + ((RectTransform)transform).rect.height);
         }
+        private void UpdateHeaderSpace() {
+            if (freeHeader == null) return;
+            float left = Mathf.Clamp(tabs.anchoredPosition.x + tabs.rect.width, 0, viewport.rect.width);
+            float width = Mathf.Max(0, viewport.rect.width - left);
+            freeHeader.gameObject.SetActive(width > 1);
+            freeHeader.SetInsetAndSizeFromParentEdge(RectTransform.Edge.Left, left, width);
+        }
+        private static bool LocalPoint(RectTransform rect, PointerEventData data, out Vector2 local) {
+            if (data is BrowserRayPointerEventData ray && ray.HasWorldRay) {
+                var plane = new Plane(rect.forward, rect.position);
+                if (plane.Raycast(ray.WorldRay, out float distance) && distance >= 0) {
+                    Vector3 point = rect.InverseTransformPoint(ray.WorldRay.GetPoint(distance)); local = new Vector2(point.x, point.y); return true;
+                }
+                local = default; return false;
+            }
+            return RectTransformUtility.ScreenPointToLocalPointInRectangle(rect, data.position, data.enterEventCamera ?? data.pressEventCamera, out local);
+        }
         public void ShowMessage(string value) { notice = value; if (message != null) message.text = value; }
-        public bool IsNearTabs(Vector2 screen, Camera camera, float margin) {
-            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(viewport, screen, camera, out var local)) return false;
+        public bool IsNearTabs(PointerEventData data, float margin) {
+            if (!LocalPoint(viewport, data, out var local)) return false;
             Rect rect = viewport.rect; rect.xMin -= margin; rect.xMax += margin; rect.yMin -= margin; rect.yMax += margin; return rect.Contains(local);
         }
-        public void AutoScrollTabs(Vector2 screen, Camera camera) {
-            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(viewport, screen, camera, out var point)) return;
+        public void AutoScrollTabs(PointerEventData data) {
+            if (!LocalPoint(viewport, data, out var point)) return;
             float direction = point.x < viewport.rect.xMin + 50 ? 1 : point.x > viewport.rect.xMax - 50 ? -1 : 0;
             float x = Mathf.Clamp(tabs.anchoredPosition.x + direction * 650 * Time.unscaledDeltaTime, -Mathf.Max(0, tabs.rect.width - viewport.rect.width), 0);
             tabs.anchoredPosition = new Vector2(x, tabs.anchoredPosition.y);
         }
-        public int InsertionAt(Vector2 screen, Camera camera) {
-            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(tabs, screen, camera, out var local)) return 0;
+        public int InsertionAt(PointerEventData data) {
+            if (!LocalPoint(tabs, data, out var local)) return 0;
             int index = 0;
-            foreach (Transform child in tabs) { var rect = (RectTransform)child; if (local.x < rect.anchoredPosition.x + rect.rect.width * .5f) break; index++; }
+            foreach (Transform child in tabs) {
+                if (child.GetComponent<BrowserTabDrag>() == null) break;
+                var rect = (RectTransform)child;
+                if (local.x < rect.anchoredPosition.x + rect.rect.center.x) break; index++;
+            }
             return index;
         }
         public void SetDropPreview(bool active, int slot) {

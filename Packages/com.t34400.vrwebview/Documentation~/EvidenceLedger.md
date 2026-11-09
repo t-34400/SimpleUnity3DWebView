@@ -122,3 +122,16 @@ E10の試行順を再度疑わない。報告どおりのnative-webinfo成功は
 ## E17 — RT1 preview.38 hover
 
 hover追加後、利用者が実機で「ちゃんと動いているようです」と確認した。RT1の基本動作（E16）に加えてhoverも利用者報告で確認済みとする。新しいログはなく、全サイト・desktop mouse button/hover menu・全lifecycleへ一般化しない。preview.39のversion条件変更とは別の観察。
+
+
+## E18 — BS1 preview.40: 高さ配分とUnity URL IMEの失敗
+
+利用者はページが高さの約1/3と報告。rowのflexibleHeight継承による281/281/349pxというコード上の概算と一致。URL欄クリック後、IME側show失敗→約0.4秒のUnity timeoutが5回。raw log SHA256998fd5edd0da634aa70469f383f9e9edbeb112f9a4dcea83d38d7365312c82dc。
+
+## E19 — BS1 preview.41: UI改善と表示前のURL入力失敗
+
+利用者はUI改善を確認したが、IMEは動作しないと報告。添付ZIP内の最新22:39:00開始ログはui_ready version41、5host、bootKeyboard1/overlayDeclaredtrueを確認。URLへのDown9/Up9、addressFocusTrue0、address_keyboard_request0、Unity keyboard timeout0。Native editing_endは記録されるが、待ちのどの条件で開始が中断したかは旧ログで未観測。設定OFFだけでは今回を説明できず、OSへshowを要求した後の拒否としても扱わない。
+
+2windowと複数tabのsnapshot、表示中targetのコピーと非表示target0のstats21行も記録。UI改善の報告と整合するが、全drag/IME/media/負荷を確認済みにはしない。最新raw459263bytes/4142rows、SHA256f960401825115a18d0d76cd680edf4134a19767438774caf9b3783bf35a1ca19。前の2captureは現在のruntime marker/hostを欠くので、新方式の失敗根拠へ混ぜない。
+
+preview.42は明示選択・main-threadの編集終了待ち・中断理由を追加。対策の実機効果はまだ未確認。

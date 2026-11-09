@@ -67,3 +67,8 @@ WF1のsystem記録で、IME表示中の入力先がQuestのFocusPlaceholderActiv
 ## preview.41 — new integration awaiting device validation
 
 preview.40 BS1 failed Unity address-keyboard display (5 native show failures/~0.4s Unity timeouts); reported page height ~1/3 matches inherited flexible row heights. Fixed heights and prepared boot/ownership diagnostics plus shared multi-window browser sample. Added demand-driven transient presentation queues, navigation state/API and drag reorder/detach/dock. These are new implementations; no Unity type compile or Quest result is claimed. Start with the URL keyboard in RichBrowserSample.md, then continue only if that works.
+
+
+## preview.42 — spatial chrome and address-input handoff
+
+E19: preview41 UI improved on Quest, but URL keyboard request was not reached despite packaged boot1/overlayDeclaredtrue. Implemented explicit field selection/main-thread handoff diagnostics, blank-header 3D dragging, four hover corner resize handles, integrated tab close/trailing plus/overflow scrollbar and world-ray depth picking. preview41 generated RichBrowser scene can be reused after current sample import. New Unity type/geometry tests and Quest operation remain pending; do not claim the IME issue is resolved.

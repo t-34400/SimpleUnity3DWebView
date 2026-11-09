@@ -20,7 +20,9 @@ namespace T34400.VRWebView
         private readonly ProbeRayInput rayInput = new ProbeRayInput();
         private readonly PointerPressState press = new PointerPressState();
         private readonly List<RaycastResult> hits = new List<RaycastResult>();
-        private PointerEventData pointer;
+        private BrowserRayPointerEventData pointer;
+        private Plane capturePlane;
+        private Vector3 pressRayOrigin;
         private LineRenderer line;
         private Material lineMaterial;
         private Vector3 previousWorldPoint, currentWorldPoint, pressWorldPoint;
@@ -94,31 +96,51 @@ namespace T34400.VRWebView
         /// once per input update; tracked must be false when the source loses permission.</summary>
         public void ProcessRay(bool tracked, Ray ray, bool pressed, int sourceId, Vector2 scroll)
         {
-            if (!tracked || targetCanvas == null || headCamera == null) { CancelPointer(); return; }
-            var plane = new Plane(targetCanvas.transform.forward, targetCanvas.transform.position);
-            if (!plane.Raycast(ray, out float distance) || distance < 0) { CancelPointer(); return; }
-            currentWorldPoint = ray.GetPoint(distance);
-            Vector3 screen = headCamera.WorldToScreenPoint(currentWorldPoint);
-            if (screen.z <= 0 || !Finite(screen.x) || !Finite(screen.y)) { CancelPointer(); return; }
+            if (!tracked || targetCanvas == null || headCamera == null || !Finite(ray.origin.x) || !Finite(ray.origin.y)
+                || !Finite(ray.origin.z) || !Finite(ray.direction.x) || !Finite(ray.direction.y) || !Finite(ray.direction.z) || ray.direction.sqrMagnitude < .5f)
+                { CancelPointer(); return; }
             if (haveSource && sourceId != previousSource) CancelPointer();
             previousSource = sourceId; haveSource = true;
-            if (pointer == null) pointer = new PointerEventData(eventSystem) { pointerId = PointerId, button = PointerEventData.InputButton.Left };
-            pointer.Reset();
-            Vector2 point = new Vector2(screen.x, screen.y);
-            Vector3 previousScreen = havePosition ? headCamera.WorldToScreenPoint(previousWorldPoint) : screen;
-            pointer.delta = point - new Vector2(previousScreen.x, previousScreen.y);
+            if (pointer == null) pointer = new BrowserRayPointerEventData(eventSystem) { pointerId = PointerId, button = PointerEventData.InputButton.Left };
+            pointer.Reset(); pointer.WorldRay = ray; pointer.HasWorldRay = true;
+            RaycastResult chosen = default; Vector3 chosenPoint = default; Vector2 chosenScreen = default;
+            float nearest = float.PositiveInfinity; int sorting = int.MinValue;
+            // Intersect each window at its own depth using the hand/controller ray.
+            // Project only that plane's hit for uGUI's graphic/mask tests. A single
+            // projection onto the root plane misidentifies targets at another depth.
+            foreach (var raycaster in targetCanvas.GetComponentsInChildren<GraphicRaycaster>()) {
+                if (!raycaster.isActiveAndEnabled) continue;
+                var canvas = raycaster.GetComponent<Canvas>();
+                if (canvas == null) continue;
+                var plane = new Plane(canvas.transform.forward, canvas.transform.position);
+                if (!plane.Raycast(ray, out float distance) || distance < 0) continue;
+                var world = ray.GetPoint(distance); var screen = headCamera.WorldToScreenPoint(world);
+                if (screen.z <= 0) continue;
+                pointer.position = new Vector2(screen.x, screen.y); hits.Clear(); raycaster.Raycast(pointer, hits);
+                foreach (var hit in hits) {
+                    if (hit.gameObject == null) continue;
+                    if (distance > nearest + .0001f || (Mathf.Abs(distance - nearest) <= .0001f && canvas.sortingOrder < sorting)) break;
+                    if (Mathf.Abs(distance - nearest) <= .0001f && canvas.sortingOrder == sorting && chosen.gameObject != null) break;
+                    chosen = hit; chosen.worldPosition = world; chosen.distance = distance; chosen.screenPosition = pointer.position;
+                    chosenPoint = world; chosenScreen = pointer.position; nearest = distance; sorting = canvas.sortingOrder; break;
+                }
+            }
+            if (chosen.gameObject == null) {
+                var plane = press.ActiveSourceId.HasValue ? capturePlane : new Plane(targetCanvas.transform.forward, targetCanvas.transform.position);
+                chosenPoint = plane.Raycast(ray, out float distance) && distance >= 0 ? ray.GetPoint(distance) : ray.GetPoint(3);
+                var screen = headCamera.WorldToScreenPoint(chosenPoint);
+                if (screen.z <= 0 || !Finite(screen.x) || !Finite(screen.y)) { CancelPointer(); return; }
+                chosenScreen = new Vector2(screen.x, screen.y);
+            }
+            currentWorldPoint = chosenPoint;
+            Vector3 previousScreen = havePosition ? headCamera.WorldToScreenPoint(previousWorldPoint) : new Vector3(chosenScreen.x, chosenScreen.y, 0);
+            pointer.delta = chosenScreen - new Vector2(previousScreen.x, previousScreen.y);
             previousWorldPoint = currentWorldPoint;
             if (press.ActiveSourceId.HasValue) {
                 Vector3 pressScreen = headCamera.WorldToScreenPoint(pressWorldPoint);
                 pointer.pressPosition = new Vector2(pressScreen.x, pressScreen.y);
             }
-            pointer.position = point; havePosition = true; pointer.scrollDelta = scroll;
-            hits.Clear(); eventSystem.RaycastAll(pointer, hits);
-            pointer.pointerCurrentRaycast = default;
-            foreach (var hit in hits) if (hit.gameObject != null && hit.gameObject.transform.IsChildOf(targetCanvas.transform)) {
-                if (pointer.pointerCurrentRaycast.gameObject == null || hit.distance < pointer.pointerCurrentRaycast.distance)
-                    pointer.pointerCurrentRaycast = hit;
-            }
+            pointer.position = chosenScreen; havePosition = true; pointer.scrollDelta = scroll; pointer.pointerCurrentRaycast = chosen;
             ProcessMove(pointer);
             var phase = press.Update(true, sourceId, pressed);
             if (phase == PointerPhase.Cancel) { CancelPointer(); return; }
@@ -132,9 +154,13 @@ namespace T34400.VRWebView
         protected override void ProcessMove(PointerEventData data) { HandlePointerExitAndEnter(data, data.pointerCurrentRaycast.gameObject); }
         protected override void ProcessDrag(PointerEventData data)
         {
-            if (!data.IsPointerMoving() || data.pointerDrag == null) return;
-            if (!data.dragging && (!data.useDragThreshold || (data.pressPosition - data.position).sqrMagnitude >= eventSystem.pixelDragThreshold * eventSystem.pixelDragThreshold)) {
+            if (data.pointerDrag == null) return;
+            bool spatial = data is BrowserRayPointerEventData ray && ray.HasWorldRay
+                && ExecuteEvents.CanHandleEvent<IBrowserSpatialDragHandler>(data.pointerDrag)
+                && (ray.WorldRay.origin - pressRayOrigin).sqrMagnitude >= .0001f;
+            if (!data.dragging && (!data.useDragThreshold || spatial || (data.pressPosition - data.position).sqrMagnitude >= eventSystem.pixelDragThreshold * eventSystem.pixelDragThreshold)) {
                 ExecuteEvents.Execute(data.pointerDrag, data, ExecuteEvents.beginDragHandler); data.dragging = true;
+                if (ExecuteEvents.CanHandleEvent<IBrowserSpatialDragHandler>(data.pointerDrag)) data.eligibleForClick = false;
             }
             if (!data.dragging) return;
             if (data.pointerPress != data.pointerDrag) {
@@ -149,6 +175,9 @@ namespace T34400.VRWebView
             pointer.eligibleForClick = true; pointer.delta = Vector2.zero;
             pointer.dragging = false; pointer.useDragThreshold = true;
             pointer.pressPosition = pointer.position; pressWorldPoint = currentWorldPoint; pointer.pointerPressRaycast = pointer.pointerCurrentRaycast;
+            pressRayOrigin = pointer.WorldRay.origin;
+            var canvas = over != null ? over.GetComponentInParent<Canvas>() : targetCanvas;
+            capturePlane = new Plane(canvas.transform.forward, canvas.transform.position);
             DeselectIfSelectionChanged(over, pointer);
             var pressed = ExecuteEvents.ExecuteHierarchy(over, pointer, ExecuteEvents.pointerDownHandler);
             if (pressed == null) pressed = ExecuteEvents.GetEventHandler<IPointerClickHandler>(over);
@@ -180,6 +209,7 @@ namespace T34400.VRWebView
         {
             press.Reset(); haveSource = false; havePosition = false;
             if (pointer == null) return;
+            pointer.HasWorldRay = false;
             var pressed = pointer.pointerPress; var dragged = pointer.pointerDrag;
             // BrowserPointerSource implements Cancel: never turn focus loss into a
             // touch-up/click. Ordinary uGUI controls still need Up to clear visuals.

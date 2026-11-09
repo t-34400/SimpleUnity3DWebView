@@ -22,7 +22,8 @@ namespace T34400.VRWebView.Samples.Browser
         private bool changing, closed;
         private float nextSnapshot;
         private long draggingTab = -1, candidateWindow = -1;
-        private int insertion;
+        private int insertion, sortingOrder;
+        private float tabGrabDistance;
         private Text ghost;
         private BrowserWindowView sourceView;
         private Vector3 dropWorld;
@@ -42,7 +43,7 @@ namespace T34400.VRWebView.Samples.Browser
             desktop = new BrowserDesktop(() => { pending = factory.CreatePage(owner); return pending.Backend; }, owner.Scheduler);
             desktop.Changed += Refresh;
             CreateWindow();
-            if (diagnostics) Debug.Log("[VRWebViewSample] BS1 event=ui_ready version=41 multiWindow=true");
+            if (diagnostics) Debug.Log("[VRWebViewSample] BS1 event=ui_ready version=42 multiWindow=true");
         }
         public void CreateWindow() {
             if (closed || desktop == null) return;
@@ -59,7 +60,12 @@ namespace T34400.VRWebView.Samples.Browser
             } catch (Exception error) { pending?.Dispose(); pending = null; Failure(window, error); }
             finally { changing = wasChanging; if (!changing) Refresh(); }
         }
-        public void Select(long window, long tab) { if (!closed) desktop.Select(window, tab); }
+        public void Select(long window, long tab) {
+            if (closed) return;
+            if (views.TryGetValue(window, out var view)) BringToFront(view);
+            desktop.Select(window, tab);
+        }
+        internal void BringToFront(BrowserWindowView view) { view.GetComponent<Canvas>().sortingOrder = ++sortingOrder; }
         public void CloseTab(long tab) {
             if (closed) return; var previous = desktop.WindowOf(tab); if (previous == null) return;
             entries.TryGetValue(tab, out var entry); entry?.Page.Editing?.EndEditing();
@@ -82,6 +88,7 @@ namespace T34400.VRWebView.Samples.Browser
         }
         internal Entry GetEntry(long tab) { entries.TryGetValue(tab, out var entry); return entry; }
         public Task PrepareAddress(long window) {
+            if (views.TryGetValue(window, out var view)) BringToFront(view);
             var active = desktop?.FindWindow(window)?.ActiveTabId;
             return active.HasValue && entries.TryGetValue(active.Value, out var entry) ? entry.Page.EndEditingAsync() : Task.CompletedTask;
         }
@@ -135,7 +142,7 @@ namespace T34400.VRWebView.Samples.Browser
                     node.transform.SetParent(transform, false);
                     var canvas = node.GetComponent<Canvas>(); canvas.renderMode = RenderMode.WorldSpace; canvas.worldCamera = worldCamera; canvas.overrideSorting = true;
                     view = node.GetComponent<BrowserWindowView>(); views.Add(window.Id, view);
-                    view.Build(this, window.Id, owner);
+                    view.Build(this, window.Id, owner); BringToFront(view);
                     node.GetComponent<RectTransform>().anchoredPosition = new Vector2((views.Count - 1) * 1350, 0);
                 }
                 view.Render(window);
@@ -151,24 +158,29 @@ namespace T34400.VRWebView.Samples.Browser
         }
         public void BeginTabDrag(long tab, BrowserWindowView from, PointerEventData data) {
             CancelTabDrag(); draggingTab = tab; sourceView = from;
+            if (data is BrowserRayPointerEventData ray && ray.HasWorldRay) {
+                var plane = new Plane(from.transform.forward, from.transform.position);
+                tabGrabDistance = plane.Raycast(ray.WorldRay, out float distance) ? Mathf.Max(.1f, distance) : 1.6f;
+            }
             ghost = BrowserSampleWidgets.Label(transform, "Moving tab", "Moving tab", Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"), 24);
             ghost.gameObject.AddComponent<Canvas>().overrideSorting = true; ghost.GetComponent<Canvas>().sortingOrder = 1000;
             ghost.rectTransform.sizeDelta = new Vector2(500, 70); DragTab(data);
         }
         public void DragTab(PointerEventData data) {
             if (draggingTab < 0) return;
-            var root = (RectTransform)transform;
-            if (RectTransformUtility.ScreenPointToWorldPointInRectangle(root, data.position, worldCamera, out Vector3 world)) {
+            if (data is BrowserRayPointerEventData ray && ray.HasWorldRay) {
+                dropWorld = ray.WorldRay.GetPoint(tabGrabDistance); ghost.transform.position = dropWorld;
+            } else if (RectTransformUtility.ScreenPointToWorldPointInRectangle((RectTransform)transform, data.position, worldCamera, out Vector3 world)) {
                 dropWorld = world; ghost.transform.position = world;
             }
             BrowserWindowView candidate = null;
             // Prefer the actual ray-hit window so a farther overlapping canvas cannot steal a drop.
             var hit = data.pointerCurrentRaycast.gameObject?.GetComponentInParent<BrowserWindowView>();
-            if (hit != null && hit.IsNearTabs(data.position, worldCamera, hit.WindowId == candidateWindow ? 50 : 25)) candidate = hit;
-            if (candidate == null && sourceView != null && sourceView.IsNearTabs(data.position, worldCamera, 25)) candidate = sourceView;
+            if (hit != null && hit.IsNearTabs(data, hit.WindowId == candidateWindow ? 50 : 25)) candidate = hit;
+            if (candidate == null && sourceView != null && sourceView.IsNearTabs(data, 25)) candidate = sourceView;
             candidateWindow = candidate != null ? candidate.WindowId : -1;
-            candidate?.AutoScrollTabs(data.position, worldCamera);
-            insertion = candidate != null ? candidate.InsertionAt(data.position, worldCamera) : 0;
+            candidate?.AutoScrollTabs(data);
+            insertion = candidate != null ? candidate.InsertionAt(data) : 0;
             ghost.text = candidate == null ? "Release to create a window" : "Release to insert tab at " + (insertion + 1);
             foreach (var view in views.Values) view.SetDropPreview(view == candidate, insertion);
         }

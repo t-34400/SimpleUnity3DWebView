@@ -15,6 +15,21 @@ internal static class BrowserDesktopTests
     }
     private static void Check(bool ok) { if (!ok) throw new Exception("Desktop ownership invariant failed"); }
     public static IEnumerable<(string Name, Action Run)> Scenarios() {
+        yield return ("corner resize fixes the opposite corner for all four signs", () => {
+            foreach (int x in new[] { -1, 1 }) foreach (int y in new[] { -1, 1 }) {
+                var size = BrowserWindowGeometry.Resize(1280, 1000, 100 * x, 80 * y, x, y);
+                Check(size.Width == 1380 && size.Height == 1080);
+                Check(size.OffsetX - x * size.Width * .5f == -x * 640);
+                Check(size.OffsetY - y * size.Height * .5f == -y * 500);
+            }
+        });
+        yield return ("resize clamps dimensions without moving the opposite corner", () => {
+            var size = BrowserWindowGeometry.Resize(1280, 1000, -10000, 10000, 1, -1);
+            Check(size.Width == 800 && size.Height == 600);
+            Check(size.OffsetX - size.Width * .5f == -640 && size.OffsetY + size.Height * .5f == 500);
+            bool invalid = false; try { BrowserWindowGeometry.Resize(1280, 1000, float.NaN, 1, 1, 1); } catch (ArgumentOutOfRangeException) { invalid = true; }
+            Check(invalid);
+        });
         yield return ("tab reorder preserves pages and commits final membership", () => {
             var backends = new List<Backend>(); using var app = new BrowserDesktop(() => { var b = new Backend(); backends.Add(b); return b; }, action => action());
             var a = app.CreateWindow(); var x = app.CreateTab(a.Id); var y = app.CreateTab(a.Id); var z = app.CreateTab(a.Id);

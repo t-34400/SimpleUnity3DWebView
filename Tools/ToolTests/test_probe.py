@@ -32,6 +32,14 @@ class AnalysisTests(unittest.TestCase):
         self.assertIn('unity_keyboard_visibility_timeout', report['issues'])
         self.assertEqual(report['keyboard_visibility'], 'requires_user_observation')
 
+    def test_address_handoff_abort_is_observed_without_claiming_keyboard_visibility(self):
+        report = probe.analyze([PREFIX + 'Unity: [VRWebViewSample] BS1 event=address_edit phase=prepare request=1 selected=True',
+                                PREFIX + 'Unity: [VRWebViewSample] BS1 event=address_edit phase=aborted reason=deselected'])
+        self.assertEqual(report['address_edit_prepares'], 1)
+        self.assertEqual(report['address_edit_aborts'], 1)
+        self.assertEqual(report['address_keyboard_requests'], 0)
+        self.assertEqual(report['keyboard_visibility'], 'requires_user_observation')
+
     def test_address_keyboard_failed_event_is_not_reported_as_success(self):
         report = probe.analyze([PREFIX + 'Unity: [VRWebViewSample] BS1 event=address_keyboard_failed reason=visibility_timeout'])
         self.assertIn('browser_address_keyboard_failed', report['issues'])

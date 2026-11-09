@@ -46,3 +46,5 @@ BS1の手順はDocumentation~/RichBrowserSample.md。最初はNew -> Goで初期
 
 
 preview.41 adds a shared multi-window desktop sample with standard navigation controls and demand-driven output. After importing the current sample, use Create Rich Browser Sample Scene. See package Documentation~/RichBrowserSample.md for the new short Quest trial and current limitations. The standalone BrowserPanel API remains available; importing does not replace an existing generated scene.
+
+preview.42 moves window grabs to blank header space and resizing to four highlighted corners. The plus button follows the last tab; overflow uses a scrollbar while a fixed header grab area remains. A preview.41 RichBrowser scene can be reused with the current sample scripts.

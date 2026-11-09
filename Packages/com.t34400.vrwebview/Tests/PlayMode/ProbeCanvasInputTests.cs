@@ -55,6 +55,20 @@ namespace T34400.VRWebView.Tests
             Send(true, false); Send(true, true); Send(true, false); Assert.AreEqual(1, clicks);
             Send(true, true); module.CancelPointer(); Send(true, false); Assert.AreEqual(1, clicks);
         }
+        [UnityTest] public IEnumerator RayChoosesTheNearestWindowAtItsActualDepth() {
+            var far = Target(typeof(Image), typeof(Button)).GetComponent<Button>(); int farClicks = 0, nearClicks = 0;
+            far.onClick.AddListener(() => farClicks++);
+            var near = new GameObject("Near window", typeof(RectTransform), typeof(Canvas), typeof(GraphicRaycaster)); near.transform.SetParent(canvas.transform, false);
+            near.GetComponent<RectTransform>().sizeDelta = new Vector2(40, 100); near.transform.position = new Vector3(.5f, 0, 1);
+            var nearCanvas = near.GetComponent<Canvas>(); nearCanvas.renderMode = RenderMode.WorldSpace; nearCanvas.worldCamera = camera.GetComponent<Camera>();
+            near.GetComponent<GraphicRaycaster>().ignoreReversedGraphics = false;
+            var target = new GameObject("Near button", typeof(RectTransform), typeof(Image), typeof(Button)); target.transform.SetParent(near.transform, false);
+            target.GetComponent<RectTransform>().sizeDelta = new Vector2(40, 100); target.GetComponent<Button>().onClick.AddListener(() => nearClicks++);
+            Canvas.ForceUpdateCanvases(); yield return null;
+            var ray = new Ray(new Vector3(1, 0, 0), new Vector3(-.5f, 0, 1));
+            module.ProcessRay(true, ray, false, 1, Vector2.zero); module.ProcessRay(true, ray, true, 1, Vector2.zero); module.ProcessRay(true, ray, false, 1, Vector2.zero);
+            Assert.AreEqual(1, nearClicks); Assert.AreEqual(0, farClicks);
+        }
         [UnityTest] public IEnumerator RayViewGetsHoverAndCancelInsteadOfAnUpOnFocusLoss()
         {
             var source = Target(typeof(RawImage), typeof(BrowserPointerSource)).GetComponent<BrowserPointerSource>();
