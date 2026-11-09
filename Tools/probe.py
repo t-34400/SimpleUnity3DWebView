@@ -114,7 +114,7 @@ def analyze(lines, expected='any'):
             result['xr_transitions'].append(dict(location, before=int(transition[1]), after=int(transition[2])))
     if not result['rows']:
         result['issues'].append('empty_log')
-    if not (result['host_rows'] or result['activity_rows'] or result['focus_rows'] or result['legacy_rows']):
+    if not (result['runtime_rows'] or result['host_rows'] or result['activity_rows'] or result['focus_rows'] or result['legacy_rows']):
         result['issues'].append('no_probe_rows')
     if result['runtime_failures']:
         result['issues'].append('runtime_browser_failed')
