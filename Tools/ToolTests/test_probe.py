@@ -26,6 +26,16 @@ HOST = [
 
 
 class AnalysisTests(unittest.TestCase):
+    def test_previous_rt1_host_cannot_satisfy_a_later_browser_ui_trial(self):
+        report = probe.analyze(['VRWebViewRuntime event=host_ready', 'VRWebViewSample BS1 event=ui_ready'], 'browser-ui')
+        self.assertIn('expected_browser_ui_android_host_missing', report['issues'])
+
+    def test_another_process_cannot_satisfy_the_browser_ui_host(self):
+        report = probe.analyze(['11-09 12:00:00.000 123 124 I Unity: VRWebViewSample BS1 event=ui_ready',
+            '11-09 12:00:00.100 456 457 I VRWebViewRuntime: event=host_ready'], 'browser-ui')
+        self.assertIn('expected_browser_ui_android_host_missing', report['issues'])
+
+
     def test_retirement_metadata_does_not_claim_full_rendering_or_keyboard_success(self):
         report = probe.analyze(['VRWebViewRuntime event=target_retired host=2 nativeAlive=0 unityDestroyRequested=true'])
         self.assertEqual(report['runtime_targets_retired'], 1)

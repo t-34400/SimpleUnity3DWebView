@@ -65,7 +65,7 @@ DownloadsのZIPと、止まった手順番号・URL欄かWebページ内か・�
 - input focusやtrackingを失ったときはpointerをCancelし、押していないbuttonをクリックしない。BrowserPointerSourceにはCancelを送り、touch-upで確定しない。URL欄の選択は維持してInputField/TouchScreenKeyboardが編集を続けられるようにする。XR Hands reset同期はRT1と同じ検証済みhelperを使う。
 - タブ切替・URL欄選択・UI無効化で前ページの編集を終了する。Editing capabilityはpointer sinkと別の役割で保持する。閉じたbackendのEndEditingはno-op。Androidは過去のpointer owner記録だけでUnityへfocusを戻さず、実View focus/IMM servedを使う。非選択hostの終了がUnityのURLキーボードを奪わないための処理で、新しい複数UI構成は実機で確認する。
 - native targetが退役したら、診断ONのbackendだけtarget_retiredを記録する。nativeAlive=0とUnity Texture破棄要求を区別し、Destroy要求時点を物理メモリー解放の完了とは扱わない。
-- BS1のUI構成完了と実Android host作成を別々に記録する。採取のbrowser-ui判定は両方を要求し、RT1のログやwidgetだけのsceneを成功と扱わない。snapshotはtab数・選択id・状態・addressFocus・frame等のmetadataのみ。URL・draft・入力本文を記録しない。
+- BS1のUI構成完了と実Android host作成を別々に記録する。採取のbrowser-ui判定はUI構成後・同じPIDのAndroid hostを要求し、RT1のログやwidgetだけのsceneを成功と扱わない。snapshotはtab数・選択id・状態・addressFocus・frame等のmetadataのみ。URL・draft・入力本文を記録しない。
 
 サンプルEditorテストに初期draft保持と編集終了の接続を追加した。PlayModeテストに、実uGUI buttonのclick/cancelとBrowserPointerSourceへのhover/Cancel配送を追加した。クラウドではこれらの実Unityテストを実行したとは扱わない。依存境界、C#構文、Python採取、Android build/Lint/R8と配布物を検査し、最初の実Editor/Quest結果は利用者の試行で判断する。
 

@@ -22,7 +22,7 @@ class ProbeError(Exception):
 
 def analyze(lines, expected='any'):
     """Summarize recorded metadata; do not infer HMD visibility or trial names from order."""
-    result = dict(rows=0, browser_ui_rows=0, browser_ui_ready=False, browser_ui_snapshots=[], runtime_rows=0, runtime_ready=False, runtime_connections=0, runtime_targets_retired=0, runtime_hover_enter=0, runtime_hover_exit=0, runtime_failures=0, runtime_window_events=[], host_rows=0, activity_rows=0, focus_rows=0, legacy_rows=0, trials=[],
+    result = dict(rows=0, browser_ui_rows=0, browser_ui_ready=False, browser_ui_pid=None, browser_ui_android_ready=False, browser_ui_snapshots=[], runtime_rows=0, runtime_ready=False, runtime_connections=0, runtime_targets_retired=0, runtime_hover_enter=0, runtime_hover_exit=0, runtime_failures=0, runtime_window_events=[], host_rows=0, activity_rows=0, focus_rows=0, legacy_rows=0, trials=[],
                   setup_boot_values=[], boot_checks=[], editor_flags=[], xr_transitions=[],
                   pointer_states=[], proxy_rows=0, proxy_events=[], issues=[], keyboard_visibility='requires_user_observation',
                   ray_visibility='requires_user_observation', video_responses=0, video_samples=0,
@@ -36,14 +36,19 @@ def analyze(lines, expected='any'):
         if not line.strip():
             continue
         result['rows'] += 1
+        actor = re.match(r'\d\d-\d\d\s+[\d:.]+\s+(\d+)\s+\d+\s', line)
+        actor_pid = int(actor[1]) if actor else None
         if 'VRWebViewSample' in line and 'BS1 ' in line:
             result['browser_ui_rows'] += 1
-            result['browser_ui_ready'] |= 'event=ui_ready' in line
+            if 'event=ui_ready' in line:
+                result['browser_ui_ready'] = True; result['browser_ui_pid'] = actor_pid
             if 'event=snapshot' in line:
                 fields = dict(re.findall(r'\b(configured|tabs|active|state|busy|addressFocus|frames|appFocus)=([A-Za-z0-9_-]+)', line))
                 result['browser_ui_snapshots'].append(dict(line=number, **fields))
         if 'VRWebViewRuntime' in line:
             result['runtime_rows'] += 1
+            if result['browser_ui_ready'] and actor_pid == result['browser_ui_pid'] and 'event=host_ready' in line:
+                result['browser_ui_android_ready'] = True
             result['runtime_targets_retired'] += int('event=target_retired' in line)
             result['runtime_failures'] += int('event=failed' in line)
             result['runtime_hover_enter'] += int('event=hover action=9' in line)
@@ -129,7 +134,7 @@ def analyze(lines, expected='any'):
         result['issues'].append('runtime_browser_failed')
     if expected == 'browser-ui':
         if not result['browser_ui_ready']: result['issues'].append('expected_browser_ui_ready_missing')
-        if not result['runtime_ready']: result['issues'].append('expected_browser_ui_android_host_missing')
+        if not result['browser_ui_android_ready']: result['issues'].append('expected_browser_ui_android_host_missing')
     if expected == 'runtime' and not result['runtime_ready']:
         result['issues'].append('expected_runtime_browser_ready_missing')
     if expected == 'host' and not result['host_rows']:
