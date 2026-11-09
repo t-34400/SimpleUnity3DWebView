@@ -27,6 +27,10 @@ def main():
                                     args=['--no-sandbox', '--disable-dev-shm-usage'])
         context = browser.new_context(viewport={'width': 1024, 'height': 768}, has_touch=True, is_mobile=True)
         page = context.new_page()
+        # Playwright normally emulates focus even for background tabs. Disable that
+        # emulation to exercise document.hasFocus() at the real handoff boundary.
+        focus_session = context.new_cdp_session(page)
+        focus_session.send('Emulation.setFocusEmulationEnabled', {'enabled': False})
         errors = []
         page.on('pageerror', lambda error: errors.append(str(error)))
 
@@ -40,6 +44,7 @@ def main():
 
         page.route('**/*', route)
         page.goto('https://vrwebview.invalid/probe/index.html')
+        focus_session.send('Emulation.setFocusEmulationEnabled', {'enabled': False})
         page.wait_for_function("typeof window.vrwebviewProxyMetadata==='function'")
         # Registered after the page's capture listener: observe its result before default focus actions.
         page.evaluate("""document.addEventListener('pointerdown', event => {
@@ -66,10 +71,23 @@ def main():
         check(meta()['pointerTarget'] == 'media' and not meta()['editable'], 'Media surface tap must release stale editor focus')
         check(meta()['blurredEditors'] == 2, 'Media tap must blur exactly one editor')
         page.locator('#password').focus()
+        # Simulate the host's completed-session notification while the actual page
+        # no longer owns focus. This also covers UA controls with no DOM pointer event.
+        handoff = context.new_page()
+        context.new_cdp_session(handoff).send('Emulation.setFocusEmulationEnabled', {'enabled': False})
+        handoff.set_content('<button>Host input</button>')
+        handoff.bring_to_front()
+        handoff.locator('button').click()
+        page.wait_for_function('!document.hasFocus()', polling=50, timeout=5000)
+        check(not page.evaluate('document.hasFocus()'), 'Completed-session fixture must lose focus')
+        check(page.evaluate('window.vrwebviewEndEditingIfUnfocused()'), 'Host handoff must clear the old editor before native media controls')
+        handoff.close()
+        page.bring_to_front()
         box = page.locator('#video').bounding_box()
         page.locator('#video').tap(position={'x': 20, 'y': box['height'] - 15})
-        check(meta()['pointerTarget'] == 'media' and not meta()['editable'], 'Native video control area must release stale editor focus')
-        check(meta()['blurredEditors'] == 3, 'Native media control hit must not retain the old editor')
+        check(not meta()['editable'], 'Native video control area must not inherit a completed editor')
+        # Some UA control pointer events are consumed before reaching the document.
+        # The completed-session cleanup below must cover that path independently.
 
         page.locator('#text').tap()
         count = meta()['blurredEditors']
@@ -101,10 +119,30 @@ def main():
         check(not meta()['editable'] and meta()['blurredEditors'] == count + 1, 'Checkbox must release the previous text editor')
         check(page.locator('#checkbox').is_checked(), 'Checkbox default action must survive')
         check(meta()['pointerPolicy'] == 1, 'New page revision must be detectable from metadata')
+        page.locator('#text').focus()
+        check(not page.evaluate('window.vrwebviewEndEditingIfUnfocused()'), 'A late cleanup must preserve an active editing session')
+        check(meta()['editable'], 'Focused editor must survive a late cleanup request')
+        other = context.new_page()
+        context.new_cdp_session(other).send('Emulation.setFocusEmulationEnabled', {'enabled': False})
+        other.set_content('<button>Host input</button>')
+        other.bring_to_front()
+        other.locator('button').click()
+        page.wait_for_function('!document.hasFocus()', polling=50, timeout=5000)
+        check(not page.evaluate('document.hasFocus()'), 'Fixture must actually lose browser focus')
+        ended = meta()['endedEditors']
+        check(page.evaluate('window.vrwebviewEndEditingIfUnfocused()'), 'Completed unfocused session must release its editor')
+        check(not meta()['editable'] and meta()['endedEditors'] == ended + 1, 'Session cleanup must be observable without reading text')
+        check(not page.evaluate('window.vrwebviewEndEditingIfUnfocused()'), 'Repeated session cleanup must be idempotent')
+        other.close()
+        page.bring_to_front()
+        page.locator('#video').tap(position={'x': 20, 'y': box['height'] - 15})
+        check(not meta()['editable'], 'Native media controls must not inherit an editor after completed-session cleanup')
+        page.locator('#text').tap()
+        check(meta()['editable'], 'A fresh input tap must start editing again')
         check(not errors, 'Page JavaScript must not throw')
         context.close()
         browser.close()
-    print(f'PASS {checks} Chromium touch/focus checks, real playback and native media-surface hit')
+    print(f'PASS {checks} Chromium touch/focus checks, completed-session cleanup and real playback')
     print('NOT RUN: Android WebView provider, Quest keyboard/composition, Unity GPU and ray recovery')
 
 

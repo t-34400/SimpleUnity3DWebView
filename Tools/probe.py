@@ -47,7 +47,7 @@ def analyze(lines, expected='any'):
         if 'probe=WF1 ' in line and 'VRWebViewFocus' in line:
             event = re.search(r'\bevent=([a-z_]+)', line)
             if event:
-                fields = dict(re.findall(r'\b(enabled|supported|route|actual|action|viewFocus|editor|reason|resumed|actualWindow|input|compositionStart|compositionUpdate|compositionEnd|selectionChanges|editable|frames|appFocus|paused|tracked|pressed|source|pointerPolicy|pointerTarget|pointerDown|editorPointerDown|nonEditorPointerDown|blurredEditors)=([A-Za-z0-9_]+)', line))
+                fields = dict(re.findall(r'\b(enabled|supported|route|actual|action|viewFocus|editor|reason|resumed|actualWindow|input|compositionStart|compositionUpdate|compositionEnd|selectionChanges|editable|frames|appFocus|paused|tracked|pressed|source|pointerPolicy|pointerTarget|pointerDown|editorPointerDown|nonEditorPointerDown|blurredEditors|endedEditors|cleared|documentFocused)=([A-Za-z0-9_]+)', line))
                 result['window_ime_events'].append(dict(location, event=event[1], **fields))
                 result['pointer_focus_policy_seen'] |= event[1] == 'dom' and fields.get('pointerPolicy') == '1'
                 if event[1] == 'installed':

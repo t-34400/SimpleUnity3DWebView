@@ -73,12 +73,19 @@ function animate(time) {
 requestAnimationFrame(animate);
 let events = [], removeArmed = false;
 const proxyCounts = {input:0, compositionstart:0, compositionupdate:0, compositionend:0, selectionchange:0,
-  pointerDown:0, editorPointerDown:0, nonEditorPointerDown:0, blurredEditors:0};
+  pointerDown:0, editorPointerDown:0, nonEditorPointerDown:0, blurredEditors:0, endedEditors:0};
 const textInputTypes = new Set(['text','search','tel','url','email','password','number']);
 const isEditor = e => !!e && !e.disabled && !e.readOnly &&
   (e.isContentEditable === true || e.tagName === 'TEXTAREA' ||
    (e.tagName === 'INPUT' && textInputTypes.has(e.type)));
 let pointerTarget = 'none';
+// Called only after the native WebView actually loses View focus and hands input
+// back to Unity. A new focused session must never be blurred by a late request.
+window.vrwebviewEndEditingIfUnfocused = () => {
+  const active = document.activeElement;
+  if (document.hasFocus() || !isEditor(active)) return false;
+  active.blur(); proxyCounts.endedEditors++; return true;
+};
 // A media control may leave the previous DOM editor focused after the IME closes.
 // Clear that stale focus on the actual non-editor pointerdown, before Chromium's
 // touch-up IME request. Preserve the event and its user activation for media playback.
@@ -96,7 +103,7 @@ document.addEventListener('pointerdown', event => {
 }, true);
 window.vrwebviewProxyMetadata = () => {
   const e = document.activeElement;
-  return {...proxyCounts, editable:isEditor(e), pointerPolicy:1, pointerTarget};
+  return {...proxyCounts, editable:isEditor(e), documentFocused:document.hasFocus(), pointerPolicy:1, pointerTarget};
 };
 for (const name of ['focusin','focusout','compositionstart','compositionupdate','compositionend','input','selectionchange']) {
   document.addEventListener(name, event => {

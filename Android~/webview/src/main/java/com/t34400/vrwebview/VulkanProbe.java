@@ -234,6 +234,7 @@ public final class VulkanProbe {
             web = new ProbeWebView(owner);
             web.metadataListener = this::trace;
             web.windowFocusListener = this::windowFocusChanged;
+            if (guardTrial) web.viewFocusLostListener = this::endPageEditing;
             web.suppressWindowDraw = true;
             web.setFocusable(true); web.setFocusableInTouchMode(true);
             web.getSettings().setJavaScriptEnabled(true);
@@ -342,6 +343,14 @@ public final class VulkanProbe {
             if (previousFocus != null && previousFocus.isAttachedToWindow()) previousFocus.requestFocus();
             updateStatus();
         }
+        void endPageEditing() {
+            if (closed || web == null || web.hasFocus() || !web.hasWindowFocus()) return;
+            // The fixed local probe page owns this policy. No arbitrary-site injection,
+            // text reflection, focus restoration or IME show/hide retry is involved.
+            web.evaluateJavascript("typeof window.vrwebviewEndEditingIfUnfocused==='function'&&window.vrwebviewEndEditingIfUnfocused()", result -> {
+                if (!closed) trace("probe=WF1 event=editing_end cleared=" + "true".equals(result));
+            });
+        }
         void windowFocusChanged(boolean focused) {
             if (!focused) { focusRecovery.windowLost(web.hasFocus()); return; }
             long ticket = focusRecovery.windowGained();
@@ -439,7 +448,7 @@ public final class VulkanProbe {
             videoTelemetry.close();
             editorTelemetry.close();
             if (focusObserver != null && focusObserver.isAlive()) focusObserver.removeOnGlobalFocusChangeListener(focusListener);
-            if (web != null) { web.metadataListener = null; web.windowFocusListener = null; }
+            if (web != null) { web.metadataListener = null; web.windowFocusListener = null; web.viewFocusLostListener = null; }
             cancelTouch(); hideIme();
             if (proxy != null) { proxy.close(); proxy = null; }
             if (web != null) { web.stopLoading(); web.onPause(); panel.removeView(web); web.destroy(); web = null; }

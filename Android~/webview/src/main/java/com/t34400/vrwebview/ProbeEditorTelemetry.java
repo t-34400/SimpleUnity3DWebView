@@ -33,12 +33,14 @@ final class ProbeEditorTelemetry {
                         + " compositionEnd=" + metadata.getLong("compositionend")
                         + " selectionChanges=" + metadata.getLong("selectionchange")
                         + " editable=" + metadata.getBoolean("editable")
+                        + " documentFocused=" + metadata.optBoolean("documentFocused", false)
                         + " pointerPolicy=" + metadata.optLong("pointerPolicy", 0)
                         + " pointerTarget=" + target
                         + " pointerDown=" + metadata.optLong("pointerDown", 0)
                         + " editorPointerDown=" + metadata.optLong("editorPointerDown", 0)
                         + " nonEditorPointerDown=" + metadata.optLong("nonEditorPointerDown", 0)
-                        + " blurredEditors=" + metadata.optLong("blurredEditors", 0);
+                        + " blurredEditors=" + metadata.optLong("blurredEditors", 0)
+                        + " endedEditors=" + metadata.optLong("endedEditors", 0);
                 if (!value.equals(last)) { trace.accept("probe=WF1 event=dom route=direct " + value); last = value; }
             } catch (Exception ignored) { /* Not loaded; never log the raw JS response or exception. */ }
         });

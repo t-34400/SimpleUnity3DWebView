@@ -28,10 +28,11 @@ HOST = [
 class AnalysisTests(unittest.TestCase):
     def test_pointer_policy_keeps_target_classification_separate_from_ime_visibility(self):
         report = probe.analyze([
-            'VRWebViewFocus probe=WF1 event=dom route=direct input=3 editable=false pointerPolicy=1 pointerTarget=media pointerDown=4 editorPointerDown=2 nonEditorPointerDown=2 blurredEditors=1'])
+            'VRWebViewFocus probe=WF1 event=dom route=direct input=3 editable=false pointerPolicy=1 pointerTarget=media pointerDown=4 editorPointerDown=2 nonEditorPointerDown=2 blurredEditors=1 endedEditors=2'])
         self.assertTrue(report['pointer_focus_policy_seen'])
         self.assertEqual(report['window_ime_events'][0]['pointerTarget'], 'media')
         self.assertEqual(report['window_ime_events'][0]['blurredEditors'], '1')
+        self.assertEqual(report['window_ime_events'][0]['endedEditors'], '2')
         self.assertEqual(report['keyboard_visibility'], 'requires_user_observation')
 
     def test_window_ime_observations_do_not_claim_keyboard_or_editing_success(self):

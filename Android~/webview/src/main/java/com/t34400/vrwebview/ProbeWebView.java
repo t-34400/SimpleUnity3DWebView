@@ -28,6 +28,7 @@ final class ProbeWebView extends WebView {
     ConnectionMetadataListener connectionMetadataListener;
     interface WindowFocusListener { void onChanged(boolean focused); }
     WindowFocusListener windowFocusListener;
+    Runnable viewFocusLostListener;
 
     interface BorrowedConnectionListener { void onCreated(InputConnection connection, EditorInfo info); }
     BorrowedConnectionListener borrowedConnectionListener;
@@ -92,6 +93,7 @@ final class ProbeWebView extends WebView {
         if (!focused) releaseImeWindowGuard("view_focus_lost");
         super.onFocusChanged(focused, direction, previous);
         metadata("webFocus=" + focused);
+        if (!focused && viewFocusLostListener != null) viewFocusLostListener.run();
     }
 
     @Override public void onWindowFocusChanged(boolean focused) {
