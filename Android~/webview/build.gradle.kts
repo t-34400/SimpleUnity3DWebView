@@ -1,4 +1,5 @@
 plugins { id("com.android.library") }
+dependencies { implementation(project(":runtime")) }
 
 android {
     namespace = "com.t34400.vrwebview"

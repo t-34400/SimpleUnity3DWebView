@@ -54,6 +54,16 @@ def main():
     aar = PACKAGE / "Runtime/Plugins/Android/vrwebview-probe.aar"
     provenance = json.loads(aar.with_suffix(".build.json").read_text())
     assert provenance["aarSha256"] == hashlib.sha256(aar.read_bytes()).hexdigest()
+    runtime_aar = aar.with_name("vrwebview-runtime.aar")
+    runtime_provenance = json.loads(runtime_aar.with_suffix(".build.json").read_text())
+    assert runtime_provenance["aarSha256"] == hashlib.sha256(runtime_aar.read_bytes()).hexdigest()
+    assert runtime_provenance["sources"] == provenance["sources"]
+    with zipfile.ZipFile(runtime_aar) as runtime:
+        assert runtime.testzip() is None
+        assert runtime.read("assets/vrwebview-end-editing.js") == (ROOT / "Android~/runtime/src/main/assets/vrwebview-end-editing.js").read_bytes()
+        with zipfile.ZipFile(__import__('io').BytesIO(runtime.read('classes.jar'))) as classes:
+            assert all('Probe' not in name for name in classes.namelist()), "Diagnostic class in production AAR"
+            assert 'com/t34400/vrwebview/BrowserHost.class' in classes.namelist()
     for name, expected in provenance["sources"].items():
         assert hashlib.sha256((ROOT / name).read_bytes()).hexdigest() == expected, "Stale AAR: " + name
     with zipfile.ZipFile(aar) as archive:

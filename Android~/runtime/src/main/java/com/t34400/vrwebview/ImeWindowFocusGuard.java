@@ -1,6 +1,6 @@
 package com.t34400.vrwebview;
 
-/** UI-thread policy for the verified provider's Window-loss IME regression. Probe only. */
+/** UI-thread policy for the verified provider's Window-loss IME regression. */
 final class ImeWindowFocusGuard {
     enum Action { FORWARD, HOLD_LOSS, KEEP_GAIN }
     private static final long REQUEST_WINDOW_MS = 2000;

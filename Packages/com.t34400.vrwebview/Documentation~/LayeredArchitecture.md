@@ -84,7 +84,7 @@ Android HostがWebViewの編集接続とIME要求を扱う。OpenXR/Meta側の�
 
 通常のpointer操作を止める判断は、必要な観測を集める入力調整部分で行い、XR SDKの値をCoreから直接読ませない。複数ページがある場合は、編集対象とIME要求をActivity単位で調整し、各Sessionが同時にfocusを奪い合わないようにする。
 
-同一Unity Activity内の直接入力は引き続き第一候補だが未成立。代理InputConnectionは検証候補。常時前面の別Activityを標準backendにせず、旧EditText -> DOM全文同期も主方式へ戻さない。未知のIME方式を抽象interfaceの存在だけで対応済みにしない。
+同一Unity Activity内の直接入力はWF1 preview.35でIME・入力終了後の動画操作が成立した。既知providerに限定した互換回避を製品候補へ移し、代理InputConnectionは不採用とした。常時前面の別Activityを標準backendにせず、旧EditText -> DOM全文同期も主方式へ戻さない。未知のIME方式を抽象interfaceの存在だけで対応済みにしない。
 
 ## パッケージとassembly
 
@@ -140,3 +140,9 @@ Samples~/Browserにはタブ/URLバー/ブックマーク/履歴のUIと保存�
 6. Browser sampleと任意XR統合を追加し、空のconsumer projectからGit URLで導入する。開発projectへ偶然入っているpackageに依存しないことを確認する。
 
 この設計によってIMEや製品backendが完成したとは扱わない。まず境界と確認項目を決めるための提案。
+
+## preview.36の実装状況
+
+Runtime/Renderingに共有GPU pump/native宣言、Runtime/Androidに実backend、Runtime/BootstrapにBrowserControllerを追加した。BrowserViewはTexture借用と入力契約を通じて接続し、Browser sampleのAndroid factoryだけが具体backendを知る。Android runtime moduleのAARに検証Activity/assetsは入らず、旧probesは別moduleから共有guard/JNIを参照する。公開HTML読み込みとfatal backend通知は任意capabilityとしてCoreへ追加した。
+
+一般ページの編集終了は、実View喪失とWindow復帰の条件下で、document.hasFocus()がfalseの場合だけ標準DOM blurを実行する。本文同期はない。open shadow rootと同一origin frameを辿り、cross-origin frame/closed shadow rootは対象外。新経路のUnity/Quest確認と、UPM全体からの診断成果物・XR依存除去は残る。

@@ -86,3 +86,9 @@ preview.35は管理下の検証HTMLへ、実際のtrusted pointerdownで「対�
 Native controlのpointerイベントがdocumentへ届かない場合、pointerDownは増えずpointerTargetは直前のDOMイベントの値を維持する。この値を全てのnativeタップ対象と解釈せず、native touchログとカウンター増分を合わせて読む。
 
 DOMのdocumentFocusedも数値以外のboolean診断として記録する。ブラウザー検証ではPlaywrightの背景tabへのfocusエミュレーションを無効にし、実際のフォーカス喪失で編集終了を検査する。背景tabではrequestAnimationFrameが停止し得るため、状態待ちは描画に依存させない。
+
+## preview.35の実機確認完了
+
+2026-11-09 16:05–16:07 JSTの利用者ログと報告でIME・動画操作が成功した（E15）。3回の編集終了後にediting_end cleared=true、endedEditors=3。blurredEditors=0なのでDOM pointer判定だけで直ったとはしない。入力終了後の動画操作ではIME再表示がなく、次の編集で再び表示され、動画も継続した。このWF1基本ループを再試験の前提に戻さない。
+
+preview.36はこの知見を製品hostへ接続する実装で、固定ページの関数呼び出しを標準DOMによる一般的な編集終了処理へ置き換える。新hostの実機確認は[RT1](AndroidBackend.md)で行う。

@@ -108,3 +108,9 @@
 E10の試行順を再度疑わない。報告どおりのnative-webinfo成功は入力属性だけを原因とする説明への反証候補になるが、属性値の診断確認は未完了。レイについても、XR focus復帰・検証gate・Input System・実表示を分けて判定する。
 
 追加試験は停止中。既存の観察を「未確認」に戻して何度も同じ操作を依頼せず、足りない証拠を特定してから再開判断をする。
+
+## E15 — WF1 preview.35: 入力・終了後の動画操作
+
+利用者がIMEと動画再生の成功を確認。3回の編集でinput25/compositionend6、Window保留/解放、editing_end cleared=trueを記録した。endedEditors=3、blurredEditors=0なので、効果は実View喪失後の編集終了処理を含めて説明する。入力終了後の動画操作でIMEが再表示されず、再編集と動画再生も併存。動画buffer0:8、frame1036、error0。
+
+ログSHA-256: `211913fb4b73f55e6e4f2e055c6a900774b38d2d568743b9d36f6a936bb16c3b`。この構成の基本ループは確認済み。任意サイト・GLES・全lifecycleや、preview.36の製品経路を確認した証拠にはしない。

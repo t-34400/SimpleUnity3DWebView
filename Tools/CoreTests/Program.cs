@@ -358,6 +358,7 @@ internal static class Program
             Check(!capture.Send(2, PointerPhase.Down, 0, 0), "Foreign cancellation released owner");
             capture.Cancel(1); Check(capture.Send(2, PointerPhase.Down, 0, 0), "Owner cancellation failed");
         }));
+        foreach (var scenario in BackendCapabilityTests.Scenarios()) await Test(scenario.Name, scenario.Run);
         Console.WriteLine($"Passed {passed} core tests; no Unity or Android runtime was exercised.");
     }
 }

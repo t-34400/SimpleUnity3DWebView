@@ -26,6 +26,24 @@ HOST = [
 
 
 class AnalysisTests(unittest.TestCase):
+    def test_runtime_ready_is_not_a_keyboard_visibility_assertion(self):
+        report = probe.analyze(['VRWebViewRuntime host=5 event=host_ready',
+            'VRWebViewRuntime host=5 event=connection connected=true inputType=1',
+            'VRWebViewRuntime host=5 event=window actual=false action=HOLD_LOSS viewFocus=true'], 'runtime')
+        self.assertEqual(report['issues'], [])
+        self.assertEqual(report['runtime_connections'], 1)
+        self.assertEqual(report['runtime_window_events'][0]['action'], 'HOLD_LOSS')
+        self.assertEqual(report['keyboard_visibility'], 'requires_user_observation')
+
+    def test_runtime_failure_after_ready_is_not_hidden(self):
+        report = probe.analyze(['VRWebViewRuntime event=host_ready', 'VRWebViewRuntime event=failed type=InvalidOperationException'], 'runtime')
+        self.assertIn('runtime_browser_failed', report['issues'])
+
+    def test_runtime_missing_or_unrelated_scene_is_rejected(self):
+        report = probe.analyze(['Unity other scene is running', 'VRWebViewFocus probe=WF1 event=installed'], 'runtime')
+        self.assertIn('expected_runtime_browser_ready_missing', report['issues'])
+
+
     def test_pointer_policy_keeps_target_classification_separate_from_ime_visibility(self):
         report = probe.analyze([
             'VRWebViewFocus probe=WF1 event=dom route=direct input=3 editable=false pointerPolicy=1 pointerTarget=media pointerDown=4 editorPointerDown=2 nonEditorPointerDown=2 blurredEditors=1 endedEditors=2'])

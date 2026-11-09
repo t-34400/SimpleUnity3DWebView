@@ -1,4 +1,4 @@
-"""Build the Android probe and refresh the AAR in the embedded UPM package."""
+"""Build the Android runtime and probes and refresh the AAR in the embedded UPM package."""
 import argparse
 import hashlib
 import json
@@ -41,7 +41,7 @@ def main():
         target_native.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(Path(native_build) / "libGfxPluginVRWebView.so", target_native)
     wrapper = ROOT / "Android~" / ("gradlew.bat" if sys.platform == "win32" else "gradlew")
-    command = [args.gradle or str(wrapper), "--no-daemon", ":webview:assembleRelease", ":webview:lintRelease", "--console=plain"]
+    command = [args.gradle or str(wrapper), "--no-daemon", ":runtime:assembleRelease", ":runtime:lintRelease", ":webview:assembleRelease", ":webview:lintRelease", "--console=plain"]
     if args.offline:
         command.append("--offline")
     # Keep machine-local Gradle state outside the transferable source workspace.
@@ -51,6 +51,9 @@ def main():
     target = ROOT / "Packages/com.t34400.vrwebview/Runtime/Plugins/Android/vrwebview-probe.aar"
     target.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(source, target)
+    runtime_source = ROOT / "Android~/runtime/build/outputs/aar/runtime-release.aar"
+    runtime_target = target.with_name("vrwebview-runtime.aar")
+    shutil.copy2(runtime_source, runtime_target)
     inputs = {}
     for path in sorted((ROOT / "Android~").rglob("*")):
         rel = path.relative_to(ROOT / "Android~")
@@ -64,7 +67,9 @@ def main():
                                     "sha256": hashlib.sha256(target_native.read_bytes()).hexdigest(),
                                     "abi": "arm64-v8a", "ndk": ndk_revision},
                   "runtimeValidation": "Not performed by the build"}
-    target.with_suffix(".build.json").write_text(json.dumps(provenance, indent=2) + "\n", encoding="utf-8")
+    for artifact in (target, runtime_target):
+        record = dict(provenance, aarSha256=hashlib.sha256(artifact.read_bytes()).hexdigest())
+        artifact.with_suffix(".build.json").write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
     subprocess.run([sys.executable, str(ROOT / "Tools/generate_meta.py")], check=True)
     print("Updated", target)
 

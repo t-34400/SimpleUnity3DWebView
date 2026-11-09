@@ -9,6 +9,20 @@ namespace T34400.VRWebView.Editor
 {
     public static class ProbeSceneMenu
     {
+        [MenuItem("VRWebView/Create Runtime Browser Scene")]
+        public static void CreateRuntimeBrowser()
+        {
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
+            var probe = new GameObject("RT1 runtime browser integration", typeof(RuntimeBrowserProbe)).GetComponent<RuntimeBrowserProbe>();
+            probe.headCamera = Camera.main;
+            if (Camera.main != null) Camera.main.transform.position = Vector3.zero;
+            if (!AssetDatabase.IsValidFolder("Assets/VRWebViewPlayground")) AssetDatabase.CreateFolder("Assets", "VRWebViewPlayground");
+            string path = AssetDatabase.GenerateUniqueAssetPath("Assets/VRWebViewPlayground/RuntimeBrowser.unity");
+            EditorSceneManager.SaveScene(scene, path);
+            EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(path, true) };
+            Debug.Log("Created RT1 production backend integration scene. Keep the device-tested GameActivity/Vulkan/ARM64/keyboard settings. See AndroidBackend.md.");
+        }
         [MenuItem("VRWebView/Create Activity GPU Probe Scene")]
         public static void CreateActivityGpuProbe()
         {

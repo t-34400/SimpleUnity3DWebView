@@ -20,7 +20,7 @@ namespace T34400.VRWebView
         private AndroidJavaObject unityOwner;
         private ulong id;
         private RenderTexture texture;
-        private VulkanProbePump pump;
+        private BrowserGpuPump pump;
         private RawImage image;
         private RectTransform webRect;
         private Transform panel, spinner;
@@ -59,19 +59,19 @@ namespace T34400.VRWebView
             failure = null;
             if (SystemInfo.graphicsDeviceType != GraphicsDeviceType.Vulkan && SystemInfo.graphicsDeviceType != GraphicsDeviceType.OpenGLES3) { failure = "Select Vulkan or OpenGL ES 3"; return; }
             try {
-                width = Mathf.Clamp(width, 128, 2048); height = Mathf.Clamp(height, 128, 2048); pump = VulkanProbePump.Ensure();
+                width = Mathf.Clamp(width, 128, 2048); height = Mathf.Clamp(height, 128, 2048); pump = BrowserGpuPump.Ensure();
                 texture = new RenderTexture(new RenderTextureDescriptor(width, height) {
                     graphicsFormat = QualitySettings.activeColorSpace == ColorSpace.Linear ? GraphicsFormat.R8G8B8A8_SRGB : GraphicsFormat.R8G8B8A8_UNorm,
                     depthBufferBits = 0, msaaSamples = 1, useMipMap = false, autoGenerateMips = false, volumeDepth = 1, dimension = TextureDimension.Tex2D
                 }) { name = "AG1 Unity GPU target", filterMode = FilterMode.Bilinear };
                 if (!texture.Create()) throw new InvalidOperationException("Texture creation failed");
-                id = VulkanProbeNative.VrCreate(width, height, texture.GetNativeTexturePtr());
-                if (id == 0) throw new InvalidOperationException(VulkanProbeNative.Status(0));
+                id = BrowserGpuNative.VrCreate(width, height, texture.GetNativeTexturePtr());
+                if (id == 0) throw new InvalidOperationException(BrowserGpuNative.Status(0));
                 bridge.CallStatic("open", unityOwner, (long)id, width, height, mode);
                 image.texture = texture; Trace("opened id=" + id + " mode=" + mode);
             } catch (Exception error) {
                 failure = "AG1 open failed: " + error.GetType().Name;
-                try { failure += "; " + VulkanProbeNative.Status(0); } catch (Exception) { }
+                try { failure += "; " + BrowserGpuNative.Status(0); } catch (Exception) { }
                 Trace(failure); Close();
             }
         }
@@ -104,7 +104,7 @@ namespace T34400.VRWebView
             string focus = "app=" + Application.isFocused + ",XR=" + (effective.HasValue ? effective.ToString() : "unknown")
                 + ",focusSource=" + (ActivityProbeFocusFeature.SeenInstance ? "OpenXRSession" : "DisplayEvent") + ",xrState=" + ActivityProbeFocusFeature.SessionState;
             if (id != 0) bridge.CallStatic("pulse", (long)id, (long)Time.frameCount, renders, focus);
-            string native = id == 0 ? "GPU host closed; use Reopen" : VulkanProbeNative.Status(id);
+            string native = id == 0 ? "GPU host closed; use Reopen" : BrowserGpuNative.Status(id);
             string host = id == 0 ? "" : bridge.CallStatic<string>("status", (long)id);
             string details = "renders=" + renders + " " + focus + " paused=" + paused + " running=" + running
                 + " bits=" + stateBits + " pointer=" + pointerSource + " tracked=" + pointerTracked + " blocked=" + pointerBlocked + " " + joints.Diagnostics;

@@ -10,7 +10,7 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-TAGS = ('VRWebViewHost:I', 'VRWebViewActivityGPU:I', 'VRWebViewFocus:I', 'VRWebViewProbe:I', 'VRWebViewGpuProbe:I', 'Unity:I',
+TAGS = ('VRWebViewRuntime:I', 'VRWebViewHost:I', 'VRWebViewActivityGPU:I', 'VRWebViewFocus:I', 'VRWebViewProbe:I', 'VRWebViewGpuProbe:I', 'Unity:I',
         'AndroidRuntime:E', 'KeyboardInputMethodService:V', 'ImeTracker:V',
         'InputMethodManager:V', '*:S')
 SYSTEM_FOCUS_TAGS = ('WindowManager:I', 'InputDispatcher:I', 'input_focus:I')
@@ -22,7 +22,7 @@ class ProbeError(Exception):
 
 def analyze(lines, expected='any'):
     """Summarize recorded metadata; do not infer HMD visibility or trial names from order."""
-    result = dict(rows=0, host_rows=0, activity_rows=0, focus_rows=0, legacy_rows=0, trials=[],
+    result = dict(rows=0, runtime_rows=0, runtime_ready=False, runtime_connections=0, runtime_failures=0, runtime_window_events=[], host_rows=0, activity_rows=0, focus_rows=0, legacy_rows=0, trials=[],
                   setup_boot_values=[], boot_checks=[], editor_flags=[], xr_transitions=[],
                   pointer_states=[], proxy_rows=0, proxy_events=[], issues=[], keyboard_visibility='requires_user_observation',
                   ray_visibility='requires_user_observation', video_responses=0, video_samples=0,
@@ -36,6 +36,13 @@ def analyze(lines, expected='any'):
         if not line.strip():
             continue
         result['rows'] += 1
+        if 'VRWebViewRuntime' in line:
+            result['runtime_rows'] += 1
+            result['runtime_failures'] += int('event=failed' in line)
+            result['runtime_ready'] |= 'event=host_ready' in line or 'RT1 state=Ready' in line
+            result['runtime_connections'] += int('event=connection connected=true' in line)
+            window = re.search(r'event=window actual=(true|false) action=(FORWARD|HOLD_LOSS|KEEP_GAIN)', line)
+            if window: result['runtime_window_events'].append(dict(line=number, actual=window[1], action=window[2]))
         host = 'VRWebViewHost' in line
         result['host_rows'] += int(host)
         result['activity_rows'] += int('VRWebViewActivityGPU' in line)
@@ -109,6 +116,10 @@ def analyze(lines, expected='any'):
         result['issues'].append('empty_log')
     if not (result['host_rows'] or result['activity_rows'] or result['focus_rows'] or result['legacy_rows']):
         result['issues'].append('no_probe_rows')
+    if result['runtime_failures']:
+        result['issues'].append('runtime_browser_failed')
+    if expected == 'runtime' and not result['runtime_ready']:
+        result['issues'].append('expected_runtime_browser_ready_missing')
     if expected == 'host' and not result['host_rows']:
         result['issues'].append('expected_host_rows_missing')
     if expected == 'activity' and not result['activity_rows']:
@@ -213,8 +224,8 @@ def capture(args):
     print('Start the trial in another terminal. Ctrl+C ends capture; no log buffers are cleared.', flush=True)
     try:
         with log.open('xb') as output, errors.open('xb') as stderr:
-            buffers = ['-b', 'main', '-b', 'system', '-b', 'events'] if args.expect == 'window-ime' else []
-            extra_tags = list(SYSTEM_FOCUS_TAGS) if args.expect == 'window-ime' else []
+            buffers = ['-b', 'main', '-b', 'system', '-b', 'events'] if args.expect in ('window-ime', 'runtime') else []
+            extra_tags = list(SYSTEM_FOCUS_TAGS) if args.expect in ('window-ime', 'runtime') else []
             process = subprocess.Popen(command + ['logcat', *buffers, '-v', 'threadtime', '-T', '1', *extra_tags, *TAGS],
                                        stdout=subprocess.PIPE, stderr=stderr, start_new_session=os.name != 'nt')
             try:
@@ -265,10 +276,10 @@ def main():
     cap = commands.add_parser('capture', help='Capture all probe families with the same tag list')
     cap.add_argument('--label', default='probe')
     cap.add_argument('--log-dir')
-    cap.add_argument('--expect', choices=('any', 'host', 'activity', 'proxy', 'video', 'ime-video', 'focus', 'window-ime'), default='any')
+    cap.add_argument('--expect', choices=('any', 'host', 'activity', 'proxy', 'video', 'ime-video', 'focus', 'window-ime', 'runtime'), default='any')
     summary = commands.add_parser('summarize', help='Inspect an existing log offline; no device is needed')
     summary.add_argument('log', type=Path)
-    summary.add_argument('--expect', choices=('any', 'host', 'activity', 'proxy', 'video', 'ime-video', 'focus', 'window-ime'), default='any')
+    summary.add_argument('--expect', choices=('any', 'host', 'activity', 'proxy', 'video', 'ime-video', 'focus', 'window-ime', 'runtime'), default='any')
     import probe_launch
     host = commands.add_parser('launch-host', help='Launch an installed HC2 probe; no build/install/capture')
     host.add_argument('case', nargs='?', choices=probe_launch.HOST_CASES, default='menu')

@@ -31,7 +31,9 @@ namespace T34400.VRWebView.Samples.Browser
         private void SessionChanged(BrowserState state)
         {
             if (IsClosed) return;
-            State = state; changed(this);
+            State = state;
+            if (state == BrowserState.Faulted) LastError = session.LastBackendError ?? LastError;
+            changed(this);
         }
 
         public Task InitializeAsync()
@@ -83,7 +85,7 @@ namespace T34400.VRWebView.Samples.Browser
         private void Finish(TaskCompletionSource<bool> completion, long version, Exception failure)
         {
             if (IsClosed || version != operationVersion) { completion.TrySetCanceled(); return; }
-            IsBusy = false; LastError = failure; pending = null;
+            IsBusy = false; LastError = failure ?? session.LastBackendError; pending = null;
             operationCancellation.Dispose(); operationCancellation = null;
             // Ready/Failed snapshot is visible before the command task completes.
             State = session.State;

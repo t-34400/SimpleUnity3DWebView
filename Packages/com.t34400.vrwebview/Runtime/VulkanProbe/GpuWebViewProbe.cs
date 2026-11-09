@@ -29,7 +29,7 @@ namespace T34400.VRWebView
         private ulong id;
         private RenderTexture texture;
         private AndroidJavaClass bridge;
-        private VulkanProbePump pump;
+        private BrowserGpuPump pump;
         private Text status;
         private RawImage image;
         private Text recoveryLabel;
@@ -63,7 +63,7 @@ namespace T34400.VRWebView
             if (SystemInfo.graphicsDeviceType != GraphicsDeviceType.Vulkan && SystemInfo.graphicsDeviceType != GraphicsDeviceType.OpenGLES3) { failure = "Select Vulkan or OpenGL ES 3 in Android Graphics APIs."; return; }
             try
             {
-                pump = VulkanProbePump.Ensure();
+                pump = BrowserGpuPump.Ensure();
                 width = Mathf.Clamp(width, 128, 2048); height = Mathf.Clamp(height, 128, 2048);
                 var descriptor = new RenderTextureDescriptor(width, height) {
                     graphicsFormat = QualitySettings.activeColorSpace == ColorSpace.Linear ? GraphicsFormat.R8G8B8A8_SRGB : GraphicsFormat.R8G8B8A8_UNorm, depthBufferBits = 0,
@@ -72,8 +72,8 @@ namespace T34400.VRWebView
                 };
                 texture = new RenderTexture(descriptor) { name = "VRWebView GPU target", filterMode = FilterMode.Bilinear };
                 if (!texture.Create()) throw new InvalidOperationException("RenderTexture creation failed");
-                id = VulkanProbeNative.VrCreate(width, height, texture.GetNativeTexturePtr());
-                if (id == 0) { failure = VulkanProbeNative.Status(0); Destroy(texture); texture = null; return; }
+                id = BrowserGpuNative.VrCreate(width, height, texture.GetNativeTexturePtr());
+                if (id == 0) { failure = BrowserGpuNative.Status(0); Destroy(texture); texture = null; return; }
                 bridge = new AndroidJavaClass("com.t34400.vrwebview.VulkanProbe");
                 using (var player = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
                 using (var activity = player.GetStatic<AndroidJavaObject>("currentActivity"))
@@ -88,7 +88,7 @@ namespace T34400.VRWebView
             {
                 failure = "Probe creation failed: " + error.GetType().Name;
                 Debug.LogError(failure, this);
-                if (id != 0) { VulkanProbeNative.VrAbandon(id); pump.Retire(id, texture); id = 0; texture = null; }
+                if (id != 0) { BrowserGpuNative.VrAbandon(id); pump.Retire(id, texture); id = 0; texture = null; }
                 else if (texture != null) { Destroy(texture); texture = null; }
                 bridge?.Dispose(); bridge = null;
             }
@@ -221,7 +221,7 @@ namespace T34400.VRWebView
             }
             SubsystemManager.GetSubsystems(displays);
             bool xrRunning = displays.Exists(display => display.running);
-            string native = failure ?? (id == 0 ? "Probe closed" : VulkanProbeNative.Status(id));
+            string native = failure ?? (id == 0 ? "Probe closed" : BrowserGpuNative.Status(id));
             string host = id == 0 || bridge == null ? "" : bridge.CallStatic<string>("status");
             string roots = input.RootDetails();
             string details = "input=HI4 handSync=" + synchronizeHandReset + " source=" + pointerSource + " R " + input.RightHandDetails + " L " + input.LeftHandDetails + " " + roots;

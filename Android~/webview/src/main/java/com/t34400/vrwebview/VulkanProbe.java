@@ -41,10 +41,10 @@ public final class VulkanProbe {
     private static volatile String status = "Host not created";
     private static final String TAG = "VRWebViewFocus";
     private VulkanProbe() {}
-    static native Surface nativeSurface(long id);
-    static native boolean nativeReserve(long id);
-    static native void nativeCancelReserve(long id);
-    static native void nativeStop(long id);
+    static Surface nativeSurface(long id) { return GpuBridge.nativeSurface(id); }
+    static boolean nativeReserve(long id) { return GpuBridge.nativeReserve(id); }
+    static void nativeCancelReserve(long id) { GpuBridge.nativeCancelReserve(id); }
+    static void nativeStop(long id) { GpuBridge.nativeStop(id); }
 
     public static void open(Activity owner, long id, int width, int height) {
         openInternal(owner, id, width, height, false, false);

@@ -1,6 +1,6 @@
 # Browser UI and Model sample
 
-Package ManagerのSamplesから任意にimportするタブ/SessionモデルとuGUI。UnityUI/BrowserPanelBuilderが既存Canvasの下にタブ列・URL欄・Go/New/Close・ページ枠を生成する。完成シーンや実Android factoryは含まず、未設定なら操作を無効にして表示する。既定のfakeページやbackendは同梱しない。
+Package ManagerのSamplesから任意にimportするタブ/SessionモデルとuGUI。UnityUI/BrowserPanelBuilderが既存Canvasの下にタブ列・URL欄・Go/New/Close・ページ枠を生成する。完成シーンは含まない。Android/AndroidBrowserPageFactoryをBrowserPanelへ指定すると実backendを生成でき、未設定なら操作を無効にして表示する。既定のfakeページやbackendは同梱しない。
 
 詳細はpackageのDocumentation~/BrowserUI.mdを参照。Unity Editorでのcompile/import/実行、QuestのIMEや操作復帰は未確認。Tests/Editorのテスト用factoryはEditor専用fixtureで、Playerや通常のsample起動には使わない。
 
@@ -8,7 +8,7 @@ Canvas/Camera/EventSystem/XR UI moduleは利用アプリが用意する。Browse
 
 サンプルはimport時にAssets/Samplesへコピーされる。更新時は利用者の変更を保全して移行し、同名asmdefを持つ複数versionのコピーを同時にcompileしない。自動で古いコピーを削除・上書きする処理は追加していない。
 
-`BrowserWorkspace`へ、呼出しごとに新しく所有権を渡す`IBrowserBackend`のfactoryと、所有threadへ直列配送するdispatcherを注入する。既存のBrowserSessionを使って初期化・ナビゲーション・終了する。現在、製品用Android factoryは未実装。
+`BrowserWorkspace`へ、呼出しごとに新しく所有権を渡す`IBrowserBackend`のfactoryと、所有threadへ直列配送するdispatcherを注入する。既存のBrowserSessionを使って初期化・ナビゲーション・終了する。preview.36でAndroidBrowserPageFactoryを追加した。製品経路の実Editor/APK/Quest確認は未実施。
 
 ```csharp
 var workspace = new BrowserWorkspace(createOwnedBackend, postToOwnerThread);

@@ -205,6 +205,24 @@
         "preview.35の非編集対象tap時blurは実機未確認",
         "任意サイトの編集や全lifecycleの成立を示さない"
       ]
+    },
+    {
+      "id": "E15",
+      "configuration": "WF1 pointer preview.35 direct IME and media control",
+      "source_kind": "user_report_and_log",
+      "source_log_sha256": "211913fb4b73f55e6e4f2e055c6a900774b38d2d568743b9d36f6a936bb16c3b",
+      "observed": [
+        "利用者がIMEと動画操作の成功を確認",
+        "3回のWindow喪失保留と解放、DOM input25/compositionend6",
+        "View喪失後のediting_end cleared=trueを3回記録、endedEditors=3",
+        "入力終了後の動画操作でIME再表示なし。再編集中も動画再生継続",
+        "動画buffer0:8、4周、frame1036、error0"
+      ],
+      "limits": [
+        "blurredEditors=0であり、DOM pointer判定だけの効果とは説明しない",
+        "任意サイト・iframe・全provider・GLES・sleep/menu/resumeの成功へ一般化しない",
+        "preview.36の製品用hostと一般DOM終了処理は別の実装で実機未確認"
+      ]
     }
   ]
 }

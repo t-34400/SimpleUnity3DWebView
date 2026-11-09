@@ -7,3 +7,5 @@
 -keepclassmembers class com.t34400.vrwebview.ActivityGpuProbe$EditMetadata {
     @android.webkit.JavascriptInterface <methods>;
 }
+
+-keep class com.t34400.vrwebview.RuntimeProbeContent { public *; }

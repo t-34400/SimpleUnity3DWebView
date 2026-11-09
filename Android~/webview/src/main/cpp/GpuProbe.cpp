@@ -151,6 +151,10 @@ UNITY_INTERFACE_EXPORT uint64_t VrCreate(int width, int height, void* target) {
     auto id = s->id; sessions.emplace(id, std::move(s)); return id;
 }
 UNITY_INTERFACE_EXPORT int VrAlive(uint64_t id) { std::lock_guard<std::mutex> guard(mutex); return find(id) != nullptr; }
+UNITY_INTERFACE_EXPORT int VrFailed(uint64_t id) {
+    std::lock_guard<std::mutex> guard(mutex); auto s = find(id);
+    return !s || !s->error.empty() || !deviceError.empty();
+}
 UNITY_INTERFACE_EXPORT void VrAbandon(uint64_t id) {
     std::lock_guard<std::mutex> guard(mutex); if (auto s = find(id)) s->stopping = true;
 }
@@ -169,13 +173,13 @@ UNITY_INTERFACE_EXPORT int VrStatus(uint64_t id, char* output, int capacity) {
     auto result = text.str(); int length = std::min(capacity - 1, static_cast<int>(result.size()));
     memcpy(output, result.data(), length); output[length] = 0; return length;
 }
-JNIEXPORT jobject JNICALL Java_com_t34400_vrwebview_VulkanProbe_nativeSurface(JNIEnv* env, jclass, jlong id) {
+JNIEXPORT jobject JNICALL Java_com_t34400_vrwebview_GpuBridge_nativeSurface(JNIEnv* env, jclass, jlong id) {
     std::lock_guard<std::mutex> guard(mutex); auto s = find(id); if (!s || s->stopping) return nullptr;
     ANativeWindow* window = nullptr;
     if (AImageReader_getWindow(s->reader, &window) != AMEDIA_OK || !window) return nullptr;
     return ANativeWindow_toSurface(env, window);
 }
-JNIEXPORT jboolean JNICALL Java_com_t34400_vrwebview_VulkanProbe_nativeReserve(JNIEnv*, jclass, jlong id) {
+JNIEXPORT jboolean JNICALL Java_com_t34400_vrwebview_GpuBridge_nativeReserve(JNIEnv*, jclass, jlong id) {
     std::lock_guard<std::mutex> guard(mutex); auto s = find(id);
     if (!s || s->stopping || !s->error.empty() || !deviceError.empty()) return false;
     // Bound ALL outstanding buffers. This keeps lockHardwareCanvas away from a full queue,
@@ -183,10 +187,10 @@ JNIEXPORT jboolean JNICALL Java_com_t34400_vrwebview_VulkanProbe_nativeReserve(J
     if (s->outstanding >= 6) { ++s->skipped; return false; }
     ++s->outstanding; return true;
 }
-JNIEXPORT void JNICALL Java_com_t34400_vrwebview_VulkanProbe_nativeCancelReserve(JNIEnv*, jclass, jlong id) {
+JNIEXPORT void JNICALL Java_com_t34400_vrwebview_GpuBridge_nativeCancelReserve(JNIEnv*, jclass, jlong id) {
     std::lock_guard<std::mutex> guard(mutex); if (auto s = find(id)) --s->outstanding;
 }
-JNIEXPORT void JNICALL Java_com_t34400_vrwebview_VulkanProbe_nativeStop(JNIEnv*, jclass, jlong id) {
+JNIEXPORT void JNICALL Java_com_t34400_vrwebview_GpuBridge_nativeStop(JNIEnv*, jclass, jlong id) {
     std::lock_guard<std::mutex> guard(mutex);
     if (auto s = find(id)) {
         s->stopping = true;

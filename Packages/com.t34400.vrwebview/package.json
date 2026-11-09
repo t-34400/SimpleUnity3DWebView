@@ -1,8 +1,8 @@
 {
   "name": "com.t34400.vrwebview",
-  "version": "0.1.0-preview.35",
+  "version": "0.1.0-preview.36",
   "displayName": "VRWebView",
-  "description": "Browser foundations and experimental same-Activity Vulkan/OpenGL ES 3 WebView probes for Quest/OpenXR. Device validation is required.",
+  "description": "Android GPU WebView backend, direct native IME, Unity presentation and optional browser UI samples. Quest integration validation is in progress.",
   "unity": "6000.4",
   "author": {
     "name": "t34400"
@@ -17,7 +17,7 @@
   "samples": [
     {
       "displayName": "Browser UI and Model",
-      "description": "uGUI tabs, URL controls and page view with UI-independent state models. Requires an injected page factory; no default Android backend or complete scene is included.",
+      "description": "uGUI tabs and URL controls with an optional real AndroidBrowserPageFactory. XR input modules remain application-owned.",
       "path": "Samples~/Browser"
     },
     {

@@ -4,7 +4,10 @@
     "T34400.VRWebView.Android",
     "T34400.VRWebView.VulkanProbe",
     "Unity.XR.OpenXR",
-    "Unity.XR.OpenXR.Editor"
+    "Unity.XR.OpenXR.Editor",
+    "T34400.VRWebView.Bootstrap",
+    "T34400.VRWebView.Unity",
+    "T34400.VRWebView.UnityUI"
   ],
   "includePlatforms": [
     "Editor"

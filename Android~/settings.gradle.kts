@@ -13,4 +13,4 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "VRWebViewAndroid"
-include(":webview")
+include(":runtime", ":webview")

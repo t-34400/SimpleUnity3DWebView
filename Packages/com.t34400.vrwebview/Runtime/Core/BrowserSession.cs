@@ -27,11 +27,13 @@ namespace T34400.VRWebView
         public BrowserState State { get; private set; } = BrowserState.Created;
         public event Action<BrowserState> StateChanged;
         public Exception LastNotificationError { get; private set; }
+        public Exception LastBackendError { get; private set; }
 
         public BrowserSession(IBrowserBackend backend, Action<Action> dispatcher)
         {
             this.backend = backend ?? throw new ArgumentNullException(nameof(backend));
             dispatch = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
+            if (backend is IBrowserFailureSource failures) failures.Failed += BackendFailed;
         }
 
         public Task InitializeAsync()
@@ -85,6 +87,30 @@ namespace T34400.VRWebView
             }
         }
 
+        public async Task LoadHtmlAsync(string html, string baseAddress = "https://vrwebview.invalid/", CancellationToken cancellationToken = default)
+        {
+            ThrowIfDisposed();
+            if (State != BrowserState.Ready) throw new InvalidOperationException("Await InitializeAsync before loading HTML.");
+            if (!(backend is IBrowserHtmlBackend content)) throw new NotSupportedException("Backend cannot load application HTML.");
+            if (html == null) throw new ArgumentNullException(nameof(html));
+            Uri baseUrl = NavigationPolicy.Parse(baseAddress);
+            using (var linked = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token, cancellationToken)) {
+                linked.Token.ThrowIfCancellationRequested();
+                await content.LoadHtmlAsync(html, baseUrl, linked.Token);
+                linked.Token.ThrowIfCancellationRequested();
+            }
+        }
+        private void BackendFailed(Exception error)
+        {
+            int version = generation;
+            try { dispatch(() => {
+                if (version != generation || State == BrowserState.Disposed) return;
+                LastBackendError = error;
+                if (State == BrowserState.Ready) ChangeState(BrowserState.Faulted);
+            }); }
+            catch (Exception failure) { LastNotificationError = failure; }
+        }
+
         private void ChangeState(BrowserState state)
         {
             State = state;
@@ -117,6 +143,7 @@ namespace T34400.VRWebView
         {
             if (State == BrowserState.Disposed) return;
             generation++;
+            if (backend is IBrowserFailureSource failures) failures.Failed -= BackendFailed;
             State = BrowserState.Disposed;
             initializationCompletion?.TrySetCanceled();
             try { lifetime.Cancel(); }

@@ -25,7 +25,7 @@ def main():
                         str(JAVA / "ProbeMediaStream.java"), str(ROOT / "Tools/ProbeTests/MediaStreamTests.java"),
                         str(JAVA / "ImeCallMetadata.java"), str(ROOT / "Tools/ProbeTests/ImeCallMetadataTests.java"),
                         str(JAVA / "FocusCallTrace.java"), str(ROOT / "Tools/ProbeTests/FocusCallTraceTests.java"),
-                        str(JAVA / "ImeWindowFocusGuard.java"), str(ROOT / "Tools/ProbeTests/ImeWindowFocusGuardTests.java"),
+                        str(ROOT / "Android~/runtime/src/main/java/com/t34400/vrwebview/ImeWindowFocusGuard.java"), str(ROOT / "Tools/ProbeTests/ImeWindowFocusGuardTests.java"),
                         str(JAVA / "ProbeFocusRecovery.java"),
                         str(JAVA / "BorrowedInputConnection.java"), str(JAVA / "ProxyTrialState.java"), str(JAVA / "HostFailureMetadata.java"),
                         str(ROOT / "Tools/ProbeTests/ProxyConnectionTests.java"),
@@ -62,7 +62,7 @@ def main():
             with zipfile.ZipFile(jar) as classes:
                 assert "com/t34400/vrwebview/GpuProbeActivity.class" in classes.namelist()
                 assert "com/t34400/vrwebview/GpuProbePreview.class" in classes.namelist()
-                for name in ("HostComparison", "HostComparisonActivity", "OpaqueHostActivity", "TransparentHostActivity", "HostTrialState", "HostProbeEnvironment", "HostProbeEditText", "HostEditorProfile", "HostEditorProfileStore", "ActivityGpuProbe", "ActivityGpuHostActivity", "ActivityGpuLifetime", "ActivityGpuTouchPolicy", "ImeProxyProbe", "BorrowedInputConnection", "ProxyTrialState", "HostFailureMetadata", "ProbeMediaStream", "ProbeVideoTelemetry", "ProbeEditorTelemetry", "ImeCallMetadata", "FocusCallTrace", "ImeWindowFocusGuard"):
+                for name in ("HostComparison", "HostComparisonActivity", "OpaqueHostActivity", "TransparentHostActivity", "HostTrialState", "HostProbeEnvironment", "HostProbeEditText", "HostEditorProfile", "HostEditorProfileStore", "ActivityGpuProbe", "ActivityGpuHostActivity", "ActivityGpuLifetime", "ActivityGpuTouchPolicy", "ImeProxyProbe", "BorrowedInputConnection", "ProxyTrialState", "HostFailureMetadata", "ProbeMediaStream", "ProbeVideoTelemetry", "ProbeEditorTelemetry", "ImeCallMetadata", "FocusCallTrace", "RuntimeProbeContent"):
                     assert "com/t34400/vrwebview/" + name + ".class" in classes.namelist(), name
     print("PASS H.264/AAC media decode, 240 numbered source frames, and exact AAR assets/classes")
     print("NOT RUN: Android GPU rendering/playback/IME; Unity import/build; Quest/OpenXR runtime")

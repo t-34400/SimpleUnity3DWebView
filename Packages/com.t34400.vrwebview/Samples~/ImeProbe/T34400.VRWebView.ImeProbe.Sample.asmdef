@@ -1,4 +1,6 @@
 {
   "name": "T34400.VRWebView.ImeProbe.Sample",
-  "references": ["T34400.VRWebView.Android"]
+  "references": [
+    "T34400.VRWebView.VulkanProbe"
+  ]
 }
