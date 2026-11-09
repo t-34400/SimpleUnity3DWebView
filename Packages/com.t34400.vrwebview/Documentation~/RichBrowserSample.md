@@ -25,7 +25,7 @@ python3 scripts/exchange.py --repo "$PWD" apply \
 ```
 
 3. Unityでプロジェクトを開く。Package Manager > VRWebView > Samples > **Browser UI and Model** をImportする。以前のBrowserサンプルをimport済みなら、そのコピーを編集内容と.meta込みでDownloads等のAssets外へ退避してから今回版をimportする。同じasmdef名の新旧コピーを同時に残さない。IME Probeなど別サンプルまで移す必要はない。
-4. 通常のEditorコンパイル完了後、**VRWebView > Create Rich Browser Sample Scene** を選ぶ。Build Settingsには生成したRichBrowser sceneだけが入る。タイトルは **BS1 - Browser sample**、UIはNew / Close / URL欄 / Go / タブ列。
+4. 通常のEditorコンパイル完了後、**VRWebView > Create Rich Browser Sample Scene** を選ぶ。生成メニューはグローバルScene ListへRichBrowserだけを登録する。Unity 6のアクティブBuild Profileで独自Scene Listを使っている場合は、そちらもRichBrowserだけを有効にする。タイトルは **BS1 - Browser sample**、UIはNew / Close / URL欄 / Go / タブ列。
 
 メニューはimportされた現行sampleのBuilder・AndroidBrowserPageFactory・Diagnosticsを確認する。足りなければImport案内で停止し、fake backendへ置き換えない。試験シーンのCanvas、Camera、EventSystem、レイ、factory、診断を自動接続する。RT1シーンの再生成、graphics API、GameActivity、ARM64、OpenXR、Requires System Keyboard、ハンド設定の変更は不要。
 

@@ -26,6 +26,12 @@ HOST = [
 
 
 class AnalysisTests(unittest.TestCase):
+    def test_new_browser_ui_start_resets_previous_host_readiness(self):
+        report = probe.analyze(['VRWebViewSample BS1 event=ui_ready', 'VRWebViewRuntime event=host_ready',
+            'VRWebViewSample BS1 event=ui_ready'], 'browser-ui')
+        self.assertIn('expected_browser_ui_android_host_missing', report['issues'])
+
+
     def test_previous_rt1_host_cannot_satisfy_a_later_browser_ui_trial(self):
         report = probe.analyze(['VRWebViewRuntime event=host_ready', 'VRWebViewSample BS1 event=ui_ready'], 'browser-ui')
         self.assertIn('expected_browser_ui_android_host_missing', report['issues'])

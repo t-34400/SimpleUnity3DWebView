@@ -42,6 +42,7 @@ def analyze(lines, expected='any'):
             result['browser_ui_rows'] += 1
             if 'event=ui_ready' in line:
                 result['browser_ui_ready'] = True; result['browser_ui_pid'] = actor_pid
+                result['browser_ui_android_ready'] = False
             if 'event=snapshot' in line:
                 fields = dict(re.findall(r'\b(configured|tabs|active|state|busy|addressFocus|frames|appFocus)=([A-Za-z0-9_-]+)', line))
                 result['browser_ui_snapshots'].append(dict(line=number, **fields))
