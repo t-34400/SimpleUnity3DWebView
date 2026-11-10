@@ -15,6 +15,7 @@ def main():
     p=ROOT/'Packages/com.t34400.vrwebview/Editor/GameActivityImeCompat/games-activity-4.4.0-vrwebview-ime.aar'
     assert 'Android: Android\n    second:\n      enabled: 0' in p.with_name(p.name+'.meta').read_text(), 'Diagnostic AAR must not be auto imported'
     record=json.loads(p.with_suffix('.build.json').read_text())
+    assert record['revision']==2, 'Expected connection-before-show GameActivity revision'
     assert record['originalAarSha256']=='3a8b0887ac55a0a6ab56021ced7353a250539eac811278b74bccd8a5b678d9c9'
     assert sha(p.read_bytes())==record['aarSha256'], 'Stale/corrupt GameActivity diagnostic AAR'
     for name,expected in record['sources'].items():

@@ -11,6 +11,7 @@ import android.view.View;
 import android.view.inputmethod.BaseInputConnection;
 import android.view.inputmethod.ExtractedText;
 import android.view.inputmethod.ExtractedTextRequest;
+import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
 import android.view.inputmethod.InputMethodManager;
 
@@ -25,17 +26,98 @@ public final class ImeStateMonitor {
     private boolean closed, monitoring, posted, dirty;
     private int token, requestFlags, batchDepth, generation;
     private Snapshot previous;
+    private boolean showPending, showPosted, connectionReady;
+    private int showFlags, showSerial, connectedType, connectedOptions;
+    private final Runnable show = this::showOnUiThread;
+    private Runnable showDeadline;
 
     public ImeStateMonitor(com.google.androidgamesdk.gametextinput.InputConnection connection, View view) {
         this.connection = connection;
         this.view = view;
         imm = (InputMethodManager) view.getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
-        Log.i(TAG, "event=connection_patch revision=1 google=4.4.0 sameConnection=true");
+        Log.i(TAG, "event=connection_patch revision=2 google=4.4.0 sameConnection=true showOrder=connection_then_show");
     }
 
-    /** Called on the original SurfaceView's return path; never makes a connection. */
-    public static void opened(com.google.androidgamesdk.gametextinput.InputConnection connection) {
-        if (connection != null) ((Owner) connection).vrwebviewImeMonitor().reopen();
+    /** Called only after the original SurfaceView has populated Android's EditorInfo. */
+    public static void opened(com.google.androidgamesdk.gametextinput.InputConnection connection, EditorInfo info) {
+        if (connection == null) return;
+        ImeStateMonitor monitor = ((Owner) connection).vrwebviewImeMonitor();
+        monitor.reopen();
+        monitor.connectionOpened(info);
+    }
+
+    /** Replacement for the original inline show, AFTER its restartInput call. */
+    public static boolean queueShow(InputMethodManager ignoredImm, View ignoredView, int flags,
+                                    com.google.androidgamesdk.gametextinput.InputConnection connection) {
+        ((Owner) connection).vrwebviewImeMonitor().requestShow(flags);
+        return false; // Original caller discards this value; actual result is logged later.
+    }
+
+    /** The original trailing restart remains only on the hide path. */
+    public static void finishActivation(com.google.androidgamesdk.gametextinput.InputConnection connection) {
+        if (!connection.getSoftKeyboardActive()) connection.restartInput();
+    }
+
+    private synchronized void connectionOpened(EditorInfo info) {
+        if (info == null) return; // A local null-attributes lookup is not Android's binding callback.
+        connectedType = info.inputType;
+        connectedOptions = info.imeOptions;
+        connectionReady = (connectedType & InputType.TYPE_MASK_CLASS) != InputType.TYPE_NULL;
+        Log.i(TAG, "event=connection_ready inputType=" + connectedType + " imeOptions=" + connectedOptions);
+        scheduleShow();
+    }
+
+    private synchronized void requestShow(int flags) {
+        cancelShow();
+        showPending = true;
+        showFlags = flags;
+        final int serial = ++showSerial;
+        showDeadline = () -> {
+            synchronized (ImeStateMonitor.this) {
+                if (!showPending || serial != showSerial) return;
+                Log.i(TAG, "event=show_timeout localInputType=" + connection.getEditorInfo().inputType
+                    + " connectedInputType=" + connectedType + " viewFocus=" + view.hasFocus()
+                    + " windowFocus=" + view.hasWindowFocus());
+                cancelShow();
+            }
+        };
+        view.postDelayed(showDeadline, 2000); // Bounded failure, never a delayed unconditional show.
+        Log.i(TAG, "event=show_requested localInputType=" + connection.getEditorInfo().inputType);
+        scheduleShow();
+    }
+
+    private void scheduleShow() {
+        if (!showPending || showPosted) return;
+        showPosted = true;
+        if (!view.post(show)) showPosted = false;
+    }
+
+    private synchronized void cancelShow() {
+        showPending = showPosted = false;
+        showSerial++;
+        view.removeCallbacks(show);
+        if (showDeadline != null) view.removeCallbacks(showDeadline);
+        showDeadline = null;
+    }
+
+    private void showOnUiThread() {
+        synchronized (this) {
+            showPosted = false;
+            if (!showPending || closed || !connection.getSoftKeyboardActive()) return;
+            if (!view.isAttachedToWindow() || !view.hasFocus() || !view.hasWindowFocus()
+                || imm == null || !imm.isActive(view)) return;
+            EditorInfo info = connection.getEditorInfo();
+            if (!connectionReady || info.inputType != connectedType || info.imeOptions != connectedOptions) return;
+            int flags = showFlags;
+            cancelShow(); // Claim before entering the framework; never retry on a callback/rejection.
+            try {
+                boolean accepted = imm.showSoftInput(view, flags);
+                Log.i(TAG, "event=show_result issued=true accepted=" + accepted
+                    + " inputType=" + connectedType + " imeOptions=" + connectedOptions);
+            } catch (RuntimeException error) {
+                Log.i(TAG, "event=show_result issued=true accepted=false reason=exception type=" + error.getClass().getSimpleName());
+            }
+        }
     }
 
     public synchronized void reopen() {
@@ -47,12 +129,13 @@ public final class ImeStateMonitor {
     }
 
     public void activate(boolean active) {
-        if (active) reopen(); else close();
+        if (active) reopen(); else { cancelShow(); close(); }
     }
 
     /** restartInput invalidates a previous IME's monitoring token, not the editor. */
     public synchronized void restart() {
         monitoring = false;
+        connectionReady = false;
         previous = null;
         generation++;
     }
@@ -81,6 +164,10 @@ public final class ImeStateMonitor {
 
     public synchronized void close() {
         closed = true;
+        connectionReady = false;
+        // Android closes the old remote wrapper during restartInput, then returns
+        // this same retained Google connection. Keep only a still-active show intent.
+        if (!connection.getSoftKeyboardActive()) cancelShow();
         monitoring = posted = dirty = false;
         batchDepth = 0;
         previous = null;

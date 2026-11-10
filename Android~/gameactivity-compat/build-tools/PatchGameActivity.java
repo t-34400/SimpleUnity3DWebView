@@ -55,12 +55,33 @@ public final class PatchGameActivity implements Opcodes {
                             monitor(mv); mv.visitVarInsn(ILOAD, 1); mv.visitMethodInsn(INVOKEVIRTUAL, MON, "activate", "(Z)V", false);
                         }
                     }
+                    @Override public void visitMethodInsn(int opcode, String owner, String method, String signature, boolean itf) {
+                        if (connection && name.equals("setSoftKeyboardActive")) {
+                            if (owner.equals("android/view/inputmethod/InputMethodManager") && method.equals("showSoftInput")) {
+                                // Leave the original IMM/view/flags stack intact while
+                                // preparing Android input, then queue exactly one show.
+                                mv.visitVarInsn(ALOAD, 0);
+                                mv.visitMethodInsn(INVOKEVIRTUAL, IC, "restartInput", "()V", false);
+                                mv.visitVarInsn(ALOAD, 0);
+                                super.visitMethodInsn(INVOKESTATIC, MON, "queueShow",
+                                    "(Landroid/view/inputmethod/InputMethodManager;Landroid/view/View;IL" + IC + ";)Z", false);
+                                seen.add("orderedShow");
+                                return;
+                            }
+                            if (owner.equals(IC) && method.equals("restartInput")) {
+                                super.visitMethodInsn(INVOKESTATIC, MON, "finishActivation", "(L" + IC + ";)V", false);
+                                seen.add("hideRestart");
+                                return;
+                            }
+                        }
+                        super.visitMethodInsn(opcode, owner, method, signature, itf);
+                    }
                     @Override protected void onMethodExit(int opcode) {
                         if (opcode == ATHROW) return;
                         if (!connection) {
                             if (name.equals("onCreateInputConnection") && desc.equals("(Landroid/view/inputmethod/EditorInfo;)L" + IC + ";")) {
-                                seen.add(name); mv.visitInsn(DUP);
-                                mv.visitMethodInsn(INVOKESTATIC, MON, "opened", "(L" + IC + ";)V", false);
+                                seen.add(name); mv.visitInsn(DUP); mv.visitVarInsn(ALOAD, 1);
+                                mv.visitMethodInsn(INVOKESTATIC, MON, "opened", "(L" + IC + ";Landroid/view/inputmethod/EditorInfo;)V", false);
                             }
                             return;
                         }
@@ -88,7 +109,7 @@ public final class PatchGameActivity implements Opcodes {
             }
         }, ClassReader.EXPAND_FRAMES);
         Set<String> required = new HashSet<>();
-        if (connection) { required.addAll(MUTATIONS); required.addAll(Arrays.asList("<init>", "getExtractedText", "endBatchEdit", "setState")); }
+        if (connection) { required.addAll(MUTATIONS); required.addAll(Arrays.asList("<init>", "getExtractedText", "endBatchEdit", "setState", "orderedShow", "hideRestart")); }
         else required.add("onCreateInputConnection");
         if (!seen.equals(required)) throw new IllegalStateException("Unexpected pinned class structure: " + seen);
         Files.write(Paths.get(args[2]), writer.toByteArray());

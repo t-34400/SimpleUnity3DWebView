@@ -70,14 +70,14 @@ def main():
     # These Google types/members are also reached through the unchanged native
     # library. Preserve their ABI independently of a host's shrinker defaults.
     entries['proguard.txt'] += b'\n-keep class com.google.androidgamesdk.GameActivity { *; }\n-keep class com.google.androidgamesdk.GameActivity$* { *; }\n-keep class com.google.androidgamesdk.gametextinput.** { *; }\n-keep class com.t34400.vrwebview.gameime.** { *; }\n'
-    entries['META-INF/vrwebview-gameime.json'] = json.dumps(dict(revision=1, originalAarSha256=SOURCE_SHA,
+    entries['META-INF/vrwebview-gameime.json'] = json.dumps(dict(revision=2, originalAarSha256=SOURCE_SHA,
         notice='Diagnostic modification: extracted text/monitor notifications on the original connection; native entries unmodified'), sort_keys=True).encode()
     result = archive(entries)
     a.output_dir.mkdir(parents=True, exist_ok=True)
     output = a.output_dir / 'games-activity-4.4.0-vrwebview-ime.aar'
     output.write_bytes(result)
     inputs = [Path(__file__).resolve(), *sorted(sources.rglob('*.java'))]
-    record = dict(schemaVersion=1, revision=1, googleCoordinate='androidx.games:games-activity:4.4.0',
+    record = dict(schemaVersion=1, revision=2, googleCoordinate='androidx.games:games-activity:4.4.0',
         sourceUrl='https://dl.google.com/dl/android/maven2/androidx/games/games-activity/4.4.0/games-activity-4.4.0.aar',
         originalAarSha256=SOURCE_SHA, aarSha256=digest(result),
         sources={p.relative_to(ROOT).as_posix(): digest(p.read_bytes()) for p in inputs},

@@ -1,3 +1,5 @@
+preview.48: P47のキーボード内表示更新を利用者が確認（E25）。初回showをrestart/入力接続取得後へ移し、[BS1のURL欄](GameActivityImeCompatibility.md)で追加showなしの表示を試す。新経路の実機効果は未確認。既存BS1を使い、サンプル再Importは不要。
+
 preview.47: GameActivity4.4.0の既存接続へ全文抽出・監視通知を補う[診断用互換修正](GameActivityImeCompatibility.md)を追加。post processで厳密な依存照合とAAR差替えを行い、既定は無効。U2をそのまま使用する。Questでの修正効果・製品適用は未確認。
 
 # 現在の状態と整理フェーズ

@@ -23,7 +23,7 @@ namespace T34400.VRWebView.Editor
         {
             EditorPrefs.SetBool(Key, !Enabled);
             Debug.Log("VRWebView GameActivity IME diagnostic patch " + (Enabled ? "enabled" : "disabled")
-                + ". Rebuild the current U2 scene. This is a project-local Editor preference, not a product default.");
+                + ". Rebuild the selected scene (BS1 for address input). This is a project-local Editor preference, not a product default.");
         }
         [MenuItem(Menu, true)]
         private static bool Check() { UnityEditor.Menu.SetChecked(Menu, Enabled); return true; }
@@ -50,7 +50,7 @@ namespace T34400.VRWebView.Editor
             if (!Enabled) {
                 if (source != before) File.WriteAllText(script, source);
                 // This exact file is owned by the diagnostic in generated output.
-                if (File.Exists(installed)) File.Delete(installed);
+                if (File.Exists(installed)) { MakeWritable(installed); File.Delete(installed); }
                 return;
             }
             var package = UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(GameActivityImeCompatPostprocess).Assembly);
@@ -65,12 +65,22 @@ namespace T34400.VRWebView.Editor
             string output = Path.Combine(path, "vrwebview-gameime");
             Directory.CreateDirectory(output);
             Directory.CreateDirectory(Path.GetDirectoryName(installed));
-            File.Copy(aar, installed, true);
-            File.Copy(Path.Combine(assets, "apply.gradle"), Path.Combine(output, "apply.gradle"), true);
+            CopyGenerated(aar, installed);
+            CopyGenerated(Path.Combine(assets, "apply.gradle"), Path.Combine(output, "apply.gradle"));
             File.WriteAllText(script, source);
-            Debug.Log("VRWebView IME diagnostic: patched Google 4.4.0 integration generated; original AAR hash will also be checked by Gradle. Keep the current U2 scene.");
+            Debug.Log("VRWebView IME diagnostic: patched Google 4.4.0 integration generated; original AAR hash will also be checked by Gradle. Use BS1 to validate standard address input without the U2 extra show.");
         }
 
+        private static void MakeWritable(string path)
+        {
+            File.SetAttributes(path, File.GetAttributes(path) & ~FileAttributes.ReadOnly);
+        }
+        private static void CopyGenerated(string source, string target)
+        {
+            if (File.Exists(target)) MakeWritable(target);
+            File.Copy(source, target, true);
+            MakeWritable(target);
+        }
         private static string Hash(string path)
         {
             using (var sha = SHA256.Create()) using (var stream = File.OpenRead(path))

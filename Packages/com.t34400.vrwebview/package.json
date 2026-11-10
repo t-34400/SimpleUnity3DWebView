@@ -1,6 +1,6 @@
 {
   "name": "com.t34400.vrwebview",
-  "version": "0.1.0-preview.47",
+  "version": "0.1.0-preview.48",
   "displayName": "VRWebView",
   "description": "Android GPU WebView backend, direct native IME, Unity presentation and optional browser UI samples. Quest integration validation is in progress.",
   "unity": "6000.4",

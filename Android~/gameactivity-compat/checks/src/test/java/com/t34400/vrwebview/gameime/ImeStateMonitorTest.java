@@ -17,6 +17,7 @@ import org.robolectric.*;
 import org.robolectric.annotation.*;
 import org.robolectric.shadows.ShadowInputMethodManager;
 import java.util.*;
+import java.time.Duration;
 
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk=29, shadows=ImeStateMonitorTest.Imm.class)
@@ -30,6 +31,15 @@ public class ImeStateMonitorTest {
         static List<Integer> tokens;
         static List<String> texts;
         static int selections;
+        static List<String> activation;
+        static Runnable onRestart;
+        static boolean acceptShow;
+        @Implementation protected void restartInput(View v) {
+            activation.add("restart"); if (onRestart != null) onRestart.run();
+        }
+        @Implementation protected boolean isActive(View v) { return true; }
+        @Implementation protected boolean showSoftInput(View v, int flags) { activation.add("show"); return acceptShow; }
+        @Implementation protected boolean hideSoftInputFromWindow(android.os.IBinder token, int flags) { activation.add("hide"); return true; }
         @Implementation protected void updateExtractedText(View v, int token, ExtractedText text) {
             tokens.add(token); texts.add(text.text.toString());
         }
@@ -37,8 +47,11 @@ public class ImeStateMonitorTest {
     }
     @Before public void setup() {
         Imm.tokens=new ArrayList<>(); Imm.texts=new ArrayList<>(); Imm.selections=0;
-        Activity activity=Robolectric.buildActivity(Activity.class).setup().visible().get();
+        Imm.activation=new ArrayList<>(); Imm.onRestart=null; Imm.acceptShow=true;
+        org.robolectric.android.controller.ActivityController<Activity> controller=Robolectric.buildActivity(Activity.class).setup();
+        Activity activity=controller.get();
         view=new View(activity); activity.setContentView(view);
+        controller.visible().windowFocusChanged(true);
         EditorInfo info=new EditorInfo(); info.inputType=InputType.TYPE_CLASS_TEXT;
         connection=new com.google.androidgamesdk.gametextinput.InputConnection(activity,view,new Settings(info,false));
         connection.setListener(new Listener() {
@@ -83,7 +96,7 @@ public class ImeStateMonitorTest {
     @Test public void closeCancelsPendingNotificationsAndReopenDoesNotReuseTheToken() {
         extract(4,true); connection.commitText("a",1); connection.closeConnection(); idle();
         assertTrue(Imm.tokens.isEmpty()); assertNull(extract(4,true));
-        ImeStateMonitor.opened(connection); extract(8,true); connection.commitText("b",1); idle();
+        ImeStateMonitor.opened(connection, connection.getEditorInfo()); extract(8,true); connection.commitText("b",1); idle();
         assertEquals(Arrays.asList(8),Imm.tokens); assertEquals(Arrays.asList("ab"),Imm.texts);
     }
     @Test public void restartInvalidatesThePreviousMonitorUntilImeResubscribes() {
@@ -115,4 +128,73 @@ public class ImeStateMonitorTest {
         assertEquals("日本語",extract(2,true).text.toString());
         connection.commitText("入力",1); idle(); assertEquals(Arrays.asList("日本語入力"),Imm.texts);
     }
+    @Test public void showFollowsRestartAndTheActualConnectionCallbackExactlyOnce() {
+        Imm.onRestart=() -> ImeStateMonitor.opened(connection, connection.getEditorInfo());
+        connection.setSoftKeyboardActive(true,0);
+        assertEquals(Arrays.asList("restart"),Imm.activation);
+        idle(); assertEquals(Arrays.asList("restart","show"),Imm.activation);
+        ImeStateMonitor.opened(connection,connection.getEditorInfo()); idle();
+        assertEquals(Arrays.asList("restart","show"),Imm.activation);
+    }
+    @Test public void showWaitsForAnAsynchronousConnectionCallbackWithoutPolling() {
+        connection.setSoftKeyboardActive(true,0); idle();
+        assertEquals(Arrays.asList("restart"),Imm.activation);
+        ImeStateMonitor.opened(connection,connection.getEditorInfo()); idle();
+        assertEquals(Arrays.asList("restart","show"),Imm.activation);
+    }
+    @Test public void typeNullConnectionCannotTriggerTheShow() {
+        connection.setSoftKeyboardActive(true,0);
+        EditorInfo info=new EditorInfo(); info.inputType=0;
+        ImeStateMonitor.opened(connection,info); idle();
+        assertEquals(Arrays.asList("restart"),Imm.activation);
+        ImeStateMonitor.opened(connection,connection.getEditorInfo()); idle();
+        assertEquals(Arrays.asList("restart","show"),Imm.activation);
+    }
+    @Test public void hideCancelsAQueuedShowAndStillRestartsTheHiddenEditor() {
+        connection.setSoftKeyboardActive(true,0); connection.setSoftKeyboardActive(false,0);
+        ImeStateMonitor.opened(connection,connection.getEditorInfo()); idle();
+        assertEquals(Arrays.asList("restart","hide","restart"),Imm.activation);
+    }
+    @Test public void closeDuringRestartRetainsOnlyTheStillActiveShowIntent() {
+        connection.setSoftKeyboardActive(true,0); connection.closeConnection(); idle();
+        assertEquals(Arrays.asList("restart"),Imm.activation);
+        ImeStateMonitor.opened(connection,connection.getEditorInfo()); idle();
+        assertEquals(Arrays.asList("restart","show"),Imm.activation);
+    }
+    @Test public void activationReplacementDoesNotSendTheOldQueuedShow() {
+        Imm.onRestart=() -> ImeStateMonitor.opened(connection,connection.getEditorInfo());
+        connection.setSoftKeyboardActive(true,0); connection.setSoftKeyboardActive(true,0); idle();
+        assertEquals(Arrays.asList("restart","restart","show"),Imm.activation);
+    }
+    @Test public void missingConnectionExpiresWithoutAnUnconditionalDelayedShow() {
+        connection.setSoftKeyboardActive(true,0);
+        Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(2100));
+        ImeStateMonitor.opened(connection,connection.getEditorInfo()); idle();
+        assertEquals(Arrays.asList("restart"),Imm.activation);
+    }
+    @Test public void aRejectedShowIsNotRetriedByLaterCallbacks() {
+        Imm.acceptShow=false;
+        Imm.onRestart=() -> ImeStateMonitor.opened(connection,connection.getEditorInfo());
+        connection.setSoftKeyboardActive(true,0); idle();
+        ImeStateMonitor.opened(connection,connection.getEditorInfo()); idle();
+        assertEquals(Arrays.asList("restart","show"),Imm.activation);
+    }
+
+    @Test public void changedEditorMetadataRequiresANewConnectionCallback() {
+        Imm.onRestart=() -> ImeStateMonitor.opened(connection,connection.getEditorInfo());
+        connection.setSoftKeyboardActive(true,0);
+        EditorInfo changed=new EditorInfo(); changed.inputType=InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS;
+        connection.setEditorInfo(changed); idle();
+        assertEquals(Arrays.asList("restart"),Imm.activation);
+        connection.restartInput(); idle();
+        assertEquals(Arrays.asList("restart","restart","show"),Imm.activation);
+    }
+    @Test public void nullAttributesLookupIsNotAConnectionReadinessSignal() {
+        connection.setSoftKeyboardActive(true,0);
+        ImeStateMonitor.opened(connection,null); idle();
+        assertEquals(Arrays.asList("restart"),Imm.activation);
+        ImeStateMonitor.opened(connection,connection.getEditorInfo()); idle();
+        assertEquals(Arrays.asList("restart","show"),Imm.activation);
+    }
+
 }

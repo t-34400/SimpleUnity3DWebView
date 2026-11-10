@@ -622,5 +622,46 @@ class GameActivityCompatTests(unittest.TestCase):
         self.assertIn('ime_did_not_request_extracted_text_during_capture',r['unity_compat_notes'])
 
 
+class BrowserInputCompatTests(unittest.TestCase):
+    def rows(self):
+        return [
+            '11-10 11:00:00.000 123 124 I VRWebViewGameIme: event=connection_patch revision=2 google=4.4.0 sameConnection=true showOrder=connection_then_show',
+            '11-10 11:00:00.000 123 124 I Unity: [VRWebViewSample] BS1 event=ui_ready version=44',
+            '11-10 11:00:00.000 123 124 I VRWebViewRuntime: event=host_ready',
+            '11-10 11:00:00.000 123 124 I Unity: [VRWebViewSample] BS1 event=address_keyboard_request request=1',
+            '11-10 11:00:00.000 123 124 I VRWebViewGameIme: event=show_requested localInputType=524289',
+            '11-10 11:00:00.000 123 124 I VRWebViewGameIme: event=show_result issued=true accepted=true inputType=524289',
+            '11-10 11:00:00.000 123 124 I VRWebViewGameIme: event=extract_request monitor=true length=0',
+            '11-10 11:00:00.000 123 124 I VRWebViewGameIme: event=extract_update length=3']
+
+    def test_browser_uses_revision_two_without_requiring_the_u2_extra_show(self):
+        r=probe.analyze(self.rows(),'browser-input-compat')
+        self.assertEqual(r['issues'],[])
+        self.assertTrue(r['unity_compat_ready'])
+        self.assertEqual(r['unity_compat_show_requests'],1)
+        self.assertEqual(r['system_keyboard_text'],'requires_user_observation')
+
+    def test_wrong_revision_or_process_cannot_establish_the_browser_patch(self):
+        for rows in ([x.replace('revision=2','revision=1') for x in self.rows()],
+                     [x.replace('123 124','456 457') if 'VRWebViewGameIme' in x else x for x in self.rows()]):
+            r=probe.analyze(rows,'browser-input-compat')
+            self.assertIn('expected_gameactivity_order_patch_missing',r['issues'])
+
+    def test_stock_timeout_and_accidental_u2_retries_are_failures_for_browser_input(self):
+        rows=self.rows()+['Unity: Timeout while waiting for keyboard to become visible',
+                         'Unity: [VRWebViewUnityInput] U2 event=show_dispatch attempt=1']
+        r=probe.analyze(rows,'browser-input-compat')
+        self.assertIn('unity_keyboard_visibility_timeout',r['issues'])
+        self.assertIn('unexpected_u2_extra_show_probe',r['issues'])
+
+    def test_missing_address_attempt_or_rejected_expired_show_remains_observable(self):
+        r=probe.analyze([x for x in self.rows() if 'address_keyboard_request' not in x],'browser-input-compat')
+        self.assertIn('expected_address_keyboard_request_missing',r['issues'])
+        rows=[x.replace('accepted=true','accepted=false') for x in self.rows()]+['11-10 11:00:00.000 123 124 I VRWebViewGameIme: event=show_timeout']
+        r=probe.analyze(rows,'browser-input-compat')
+        self.assertIn('gameactivity_show_rejected',r['issues'])
+        self.assertIn('gameactivity_show_timeout',r['issues'])
+
+
 if __name__ == '__main__':
     unittest.main()

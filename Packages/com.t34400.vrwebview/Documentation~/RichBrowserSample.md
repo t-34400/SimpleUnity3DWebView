@@ -1,3 +1,5 @@
+preview.48のURL入力試験は[GameActivity IME互換修正](GameActivityImeCompatibility.md)を参照。既存BS1シーンを再利用し、U2の追加showを使わない。サンプル再Importは不要。
+
 # Rich Browser sample — preview.44
 
 利用者がpreview.43のヒット修正を確認した。preview.44は角の判定拡大と配置時の姿勢変更を追加する。URL IMEは未解決で、標準Unity入力を維持して[独立対照U1](UnityAddressInputInvestigation.md)を追加した。U1でも失敗したため、次は[U2の順序対照](UnityInputOrderProbe.md)へ進む。BS1のURL操作を何度も繰り返す段階ではない。
