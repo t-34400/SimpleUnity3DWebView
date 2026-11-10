@@ -1,0 +1,9 @@
+VRWebView
+Copyright (c) 2024 t-34400
+
+VRWebView project code is licensed under the Apache License, Version 2.0,
+starting with 0.1.0-preview.53, except for components with separate notices.
+Previously published MIT versions remain available under their original terms.
+
+Third-party components and existing GameActivity compatibility helpers keep
+those separate terms. See the core VRWebView package for bundled-component notices.

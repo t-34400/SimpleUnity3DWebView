@@ -1,13 +1,13 @@
 {
   "name": "com.t34400.vrwebview",
-  "version": "0.1.0-preview.52",
+  "version": "0.1.0-preview.53",
   "displayName": "VRWebView",
   "description": "Android WebView panels for Unity VR, with native text input and an optional multi-window browser sample.",
   "unity": "6000.4",
   "author": {
     "name": "t34400"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "dependencies": {
     "com.unity.ugui": "2.0.0",
     "com.unity.inputsystem": "1.19.0",

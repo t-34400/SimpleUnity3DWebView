@@ -1,6 +1,6 @@
 Diagnostic modification of Google Android Game Development Kit GameActivity 4.4.0.
 Original Google/Android Open Source Project code remains under Apache License 2.0.
 Original artifact: androidx.games:games-activity:4.4.0
-Added VRWebView ImeStateMonitor and maintainer patch tooling: MIT (repository LICENSE).
+Added VRWebView ImeStateMonitor and maintainer patch tooling: MIT (see ../../Licenses/VRWebView-GameActivity-MIT.txt and Android~/gameactivity-compat/LICENSE).
 Modified InputConnection and SurfaceView return path; native entries are unmodified.
-The package license has not been changed.
+This component retains its original terms independently of the VRWebView project license.

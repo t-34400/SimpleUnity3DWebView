@@ -6,7 +6,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = ROOT / 'Packages/com.t34400.vrwebview'
 DEVELOPMENT = ROOT / 'Development~/com.t34400.vrwebview.diagnostics'
 ALLOWED_TOP = {'Runtime', 'Editor', 'Samples~', 'Documentation~', 'Tests', 'Licenses',
-               'README.md', 'CHANGELOG.md', 'LICENSE', 'ThirdPartyNotices.md', 'package.json'}
+               'README.md', 'CHANGELOG.md', 'LICENSE', 'NOTICE', 'ThirdPartyNotices.md', 'package.json'}
 
 
 def entries(package):
@@ -43,9 +43,10 @@ def check(package=PACKAGE, development=DEVELOPMENT, project_manifest=ROOT/'Packa
     list(entries(package))
     metadata = json.loads((package/'package.json').read_text())
     if metadata['name'] != 'com.t34400.vrwebview': raise ValueError('Unexpected package identity')
+    if metadata.get('license') != 'Apache-2.0': raise ValueError('Unexpected project license')
     if any('diagnostic' in name for name in metadata.get('dependencies', {})): raise ValueError('Consumer package depends on diagnostics')
     if [s['path'] for s in metadata.get('samples', [])] != ['Samples~/Browser']: raise ValueError('Unexpected consumer samples')
-    for required in ('README.md','LICENSE','CHANGELOG.md','ThirdPartyNotices.md','Documentation~/GettingStarted.md','Documentation~/API.md'):
+    for required in ('README.md','LICENSE','NOTICE','CHANGELOG.md','ThirdPartyNotices.md','Documentation~/GettingStarted.md','Documentation~/API.md'):
         if not (package/required).is_file(): raise ValueError('Missing distribution document: '+required)
     for path in (package/'Runtime').rglob('*'):
         if path.name in {'vrwebview-probe.aar','AndroidImeProbe.cs','AndroidGpuProbe.cs','GpuWebViewProbe.cs','HostComparisonProbe.cs','UnityInputFieldProbe.cs'}:

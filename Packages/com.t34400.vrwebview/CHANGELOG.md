@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.0-preview.53
+
+- License the project and optional browser sample under Apache-2.0 from this preview.
+- Preserve copyright, earlier MIT grants and the existing terms of bundled components and GameActivity compatibility helpers.
+- Keep runtime, sample behaviour and native/IME binary payloads unchanged; the pending Quest UI check still targets UI revision 51.
+
 ## 0.1.0-preview.52
 
 - Add English quick starts for standalone web panels and the optional rich browser.

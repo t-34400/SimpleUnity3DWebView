@@ -45,7 +45,13 @@ THE SOFTWARE.
 
 The optional `Editor/GameActivityImeCompat` artifact contains modified Google
 GameActivity 4.4.0 code under Apache-2.0. Its complete license and modification
-notice are included in that directory. VRWebView's added helper code is MIT.
+notice are included in that directory. The existing VRWebView compatibility
+helper and patch tooling remain MIT; this is an explicit exception to the
+project's Apache-2.0 default. This includes `Android~/gameactivity-compat` and
+`Tools/build_gameactivity_compat.py` in the source repository, and the helper
+classes in the prebuilt AAR. Their MIT text is retained in
+[Licenses/VRWebView-GameActivity-MIT.txt](Licenses/VRWebView-GameActivity-MIT.txt).
+The already-tested AAR is unchanged by the project license transition.
 
 ## Android LLVM runtime
 
@@ -54,3 +60,13 @@ The upstream LLVM/libc++/libc++abi notice bundle is retained in
 [Licenses/Android-LLVM-NOTICE.txt](Licenses/Android-LLVM-NOTICE.txt). This upstream
 bundle also includes notices for toolchain components; it does not change the
 license of VRWebView's own code.
+
+## External Unity packages
+
+Meta XR Core SDK and Unity packages are installed as dependencies in the host
+project. Their code and licenses are not changed by VRWebView's Apache-2.0 license.
+
+## Earlier VRWebView releases
+
+The project license transition starts with 0.1.0-preview.53. Previously published
+MIT versions retain their original grant; the transition does not revoke it.

@@ -54,5 +54,5 @@ site permission UI and independent private profiles are not implemented.
 
 [Changelog](CHANGELOG.md) · [Troubleshooting](Documentation~/Troubleshooting.md)
 
-MIT for VRWebView code. See [LICENSE](LICENSE) and [third-party notices](ThirdPartyNotices.md)
+Apache-2.0 for VRWebView code. See [LICENSE](LICENSE) and [third-party notices](ThirdPartyNotices.md)
 for bundled components.

@@ -1,6 +1,6 @@
 # Distribution preparation
 
-Status: preview.52 prepared for review; no public release/tag is created by this work.
+Status: preview.53 prepared for review; no public release/tag is created by this work.
 The preview.51 browser UI is still awaiting Quest validation. Its runtime/sample
 behaviour is not rewritten as part of this packaging change.
 
@@ -56,17 +56,17 @@ consumer installation test.
 
 ## License decision
 
-Keep MIT for the current preview; retain the original copyright notice. MIT and
-Apache-2.0 both allow commercial use and modification. Apache-2.0 adds an explicit
-patent grant/termination and additional notice obligations, so it is not simply
-less restrictive or easier for every user.
+Apache-2.0 is the project default from **0.1.0-preview.53**, following the
+maintainer's decision. Root/core/development package LICENSE, NOTICE, metadata,
+README and changelog are updated together. Retain the original copyright notice.
+Previously published MIT versions keep their original grant.
 
-A future Apache-2.0 change should confirm rights for the project's contributions,
-choose a starting version, and update the root/package LICENSE, metadata and
-release notes together. It does not relicense Google GameActivity, Unity Native
-Plugin headers or LLVM runtime components. Their existing licenses/notices remain
-included. The compatibility artifact keeps Google's Apache-2.0 text and changes
-notice; the native plugin includes upstream Unity and Android/LLVM notices.
+Public source history was inspected: author names are t-34400, t34400 and
+Takumi Miyoshi. This history check is not a claim that bundled upstream code is
+owned by the project. Google GameActivity, the existing MIT compatibility helper
+and patch tooling, Unity headers, LLVM runtime and external SDKs keep their own
+licenses. The existing helper source retains its MIT SPDX notices and a separate
+LICENSE; its tested prebuilt AAR is unchanged. See the core ThirdPartyNotices.md.
 
 ## Images and demo video
 
@@ -88,8 +88,9 @@ part of this preparation.
 
 ## Draft release notes
 
-Title candidate: `VRWebView 0.1.0-preview.52`.
+Title candidate: `VRWebView 0.1.0-preview.53`.
 
+- Apache-2.0 project license with preserved upstream and legacy MIT notices.
 - Git UPM installation with separate web-panel and browser quick starts.
 - Consumer runtime separated from maintainer diagnostics.
 - Optional Browser sample with current menus, bookmark editing and yaw placement.
