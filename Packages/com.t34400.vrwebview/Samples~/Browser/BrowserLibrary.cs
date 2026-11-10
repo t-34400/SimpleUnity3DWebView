@@ -71,9 +71,10 @@ namespace T34400.VRWebView.Samples.Browser
             return true;
         }
         public void ForgetTab(long tab) { lastVisit.Remove(tab); }
-        public bool IsBookmarked(string address) => Data.bookmarks.Any(p => p.address == address);
+        public bool IsBookmarked(string address) => IsWebAddress(address) && Data.bookmarks.Any(p => p.address == NavigationPolicy.Parse(address).AbsoluteUri);
         public bool ToggleBookmark(string address, string title) {
             if (!IsWebAddress(address)) return false;
+            address = NavigationPolicy.Parse(address).AbsoluteUri;
             int existing = Data.bookmarks.FindIndex(p => p.address == address);
             if (existing >= 0) Data.bookmarks.RemoveAt(existing);
             else { Data.bookmarks.Insert(0, new BrowserSavedPage(address, title)); if (Data.bookmarks.Count > 200) Data.bookmarks.RemoveAt(200); }

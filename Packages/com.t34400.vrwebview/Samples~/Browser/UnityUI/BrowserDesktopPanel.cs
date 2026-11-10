@@ -299,7 +299,7 @@ namespace T34400.VRWebView.Samples.Browser
         public void ClearFindForTab(long tab) {
             if (closed || desktop?.FindTab(tab)?.State != BrowserState.Ready) return;
             var content = GetEntry(tab)?.Page.Content; var host = desktop.WindowOf(tab);
-            if (content != null && host != null) _ = Observe(content.ClearFindAsync(), host.Id);
+            if (content != null && host != null) { try { _ = Observe(content.ClearFindAsync(), host.Id); } catch (Exception error) { Failure(host.Id, error); } }
         }
         public void RecallWindows() {
             int index = 0;

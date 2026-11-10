@@ -75,7 +75,7 @@ namespace T34400.VRWebView.Samples.Browser
             return row.transform;
         }
         private Button Button(Transform parent, string label, Action action, float width) {
-            var button = BrowserSampleWidgets.Button(parent, label, label, font, width); button.onClick.AddListener(() => action()); return button;
+            var button = BrowserSampleWidgets.Button(parent, label, label, font, width); button.gameObject.AddComponent<BrowserWindowActivation>().Window = window; button.onClick.AddListener(() => action()); return button;
         }
         private void FillButton(Transform parent, string label, Action action) { var button = Button(parent, label, action, 0); button.GetComponent<LayoutElement>().flexibleWidth = 1; }
         private void ContentButton(Transform parent, string label, Action action) {

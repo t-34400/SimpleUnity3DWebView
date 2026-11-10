@@ -50,6 +50,8 @@ internal static class BrowserFeatureTests {
             Check(library.TakeClosed().address.EndsWith("/239") && library.TakeClosed().textZoom == 120, "Closed tab stack");
             Check(library.ToggleBookmark("https://example.org/239", "Entry") && !library.IsBookmarked("https://example.org/239"), "Remove bookmark");
             Check(!library.ToggleBookmark("data:invalid", "Invalid"), "Non-web bookmark");
+            library.ToggleBookmark("https://EXAMPLE.org:443/canonical", "Canonical");
+            Check(library.IsBookmarked("https://example.org/canonical"), "Bookmark address normalization");
         });
         yield return ("session sanitizer keeps valid windows, selected tab, text size and safe placement", () => {
             var saved = new BrowserSavedState();

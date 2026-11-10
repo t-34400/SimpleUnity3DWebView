@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "aarSha256": "a18792b01060292449cb82837d755ceb53d055eb1f555c11673edde2733daa66",
+  "aarSha256": "60b51ca193bb6847475a21b3dd0501852b9ef3e9e6b87b8467be8a6122d83d72",
   "sources": {
     "Android~/build.gradle.kts": "30319db7ac75762e50cc423c2245d8bc704df111839e5be6fd9393f906db67af",
     "Android~/gameactivity-compat/build-tools/PatchGameActivity.java": "d5816589edb405f64d34a4c2a4ad0bffc1882ebe29772dff59f6595d56cc275c",
@@ -23,12 +23,12 @@
     "Android~/runtime/consumer-rules.pro": "7d9905b09ba5b7d3315eb71aad8b6fcb29e27cf97d6b7063a189806dd3d7da66",
     "Android~/runtime/src/main/AndroidManifest.xml": "678647a824ef7ab16066708585790ab265135d32fdf84bcd918a4b050f8891b9",
     "Android~/runtime/src/main/assets/vrwebview-end-editing.js": "f3338013cb9f4f615d2b4409f9c095af331d8cae4442072480780404503d528f",
-    "Android~/runtime/src/main/java/com/t34400/vrwebview/BrowserContent.java": "eb19164a4346c069c5f044091d254fae966be4ae0b044da1151fc1d26c48d36a",
+    "Android~/runtime/src/main/java/com/t34400/vrwebview/BrowserContent.java": "a5e8d46660c94f5e86cd19bf5a199d09dc241fa8ebce0a74f68405efba08cec6",
     "Android~/runtime/src/main/java/com/t34400/vrwebview/BrowserHost.java": "c1d19431a285458158f51004addc46ad92d18724d42d1b1d9229ec4a5ac4d704",
     "Android~/runtime/src/main/java/com/t34400/vrwebview/BrowserWebView.java": "fc4a615ac7e84d5b346f40a10eb43e8c66e40dc106e5de270f2af43b8f1e6ad0",
     "Android~/runtime/src/main/java/com/t34400/vrwebview/GpuBridge.java": "7234ae5f178ecf37897c187703ad2424e9c94759671be0450e10fc6c7a3fca71",
     "Android~/runtime/src/main/java/com/t34400/vrwebview/ImeWindowFocusGuard.java": "9a690bd62919190e314a37a05ef40b45deaba84e8d641dd5c79c4b07aee4ec58",
-    "Android~/runtime/src/test/java/com/t34400/vrwebview/BrowserContentTest.java": "876916f427eaf7e009d32affdaf2eb5581a332f37d54c16add6cb8d4eb5dce32",
+    "Android~/runtime/src/test/java/com/t34400/vrwebview/BrowserContentTest.java": "83d535bb7f321db12e2b078cc9a1e28e7997b59b33b5ef4b6a5d3f622f98a4d7",
     "Android~/settings.gradle.kts": "7716531e91ee73a7f86b26e3d38de9a4d5a91f53b4aee144eabf844d804d1716",
     "Android~/webview/build.gradle.kts": "a7ef10ca9ab3b9dbc3b0eed6df96bfa492728ee72303e49afb3eb46cd6494402",
     "Android~/webview/consumer-rules.pro": "32806ffa7e5574d9f6dae30619eb2ea8653d92e7a3af325e5072813556e01fc0",

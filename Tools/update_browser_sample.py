@@ -71,9 +71,12 @@ def refresh(project, source, backup_root, target=None, apply=False):
     backup = backup_root / ('VRWebView-BrowserSampleBackup-' + datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S') + '-' + uuid.uuid4().hex[:8])
     shutil.copytree(target, backup)
     # Backup must succeed completely before the first mutation.
-    for source_file, destination in writes:
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(source_file, destination)
+    try:
+        for source_file, destination in writes:
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source_file, destination)
+    except OSError as error:
+        raise OSError('Sample update stopped; the complete original copy is preserved at ' + str(backup)) from error
     report.update(applied=True, backup=str(backup))
     return report
 

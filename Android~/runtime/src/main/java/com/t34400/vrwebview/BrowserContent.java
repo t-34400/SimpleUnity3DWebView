@@ -20,7 +20,11 @@ final class BrowserContent implements WebView.FindListener {
         String query = queued; revision = queuedRevision; queued = null; running = true;
         web.findAllAsync(query);
     }
-    void clear() { queued = null; revision = -1; web.clearMatches(); }
+    void clear() {
+        queued = null; revision = -1; running = false; web.clearMatches();
+        // A cleared/navigation-cancelled request may never send its final callback.
+        // The next findAllAsync cancels any previous native find request per WebView API.
+    }
     void next(boolean forward) { if (!running && !closed) web.findNext(forward); }
     @Override public void onFindResultReceived(int active, int count, boolean done) {
         if (closed) return;
