@@ -42,6 +42,10 @@ namespace T34400.VRWebView.Samples.Browser.Tests
                 Call(panel, "Start"); Settle(owner, () => factory.Pages[0].Navigations == 1 && panel.Model.Tabs[0].State == BrowserState.Ready);
                 Assert.AreEqual(2, factory.Pages.Count); Assert.AreEqual(0, factory.Pages[1].Initializations);
                 Assert.AreEqual(200, panel.WindowViews.Single().transform.localPosition.x);
+                Settle(owner, () => !panel.Model.Tabs[0].IsBusy);
+                panel.OpenSavedInCurrent(panel.Model.Windows[0].Id, new BrowserSavedPage("https://example.org/bookmark", "Bookmark"));
+                Settle(owner, () => factory.Pages[0].Navigations == 2 && !panel.Model.Tabs[0].IsBusy);
+                Assert.AreEqual(2, panel.Model.Tabs.Count, "Opening a bookmark must reuse the current tab");
                 var window = panel.Model.Windows[0]; long second = window.Tabs[1]; panel.Select(window.Id, second);
                 Settle(owner, () => factory.Pages[1].Navigations == 1 && !panel.Model.FindTab(second).IsBusy);
                 Call(panel, "SaveState"); Assert.AreEqual(1, store.Load().windows[0].active);

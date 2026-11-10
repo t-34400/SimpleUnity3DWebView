@@ -264,6 +264,13 @@ namespace T34400.VRWebView.Samples.Browser
         }
         private void RememberClosed(long id) { library.RememberClosed(SavePage(id)); library.ForgetTab(id); }
         public void OpenPage(long window, BrowserSavedPage saved) { CreatePage(window, saved); }
+        public void OpenSavedInCurrent(long window, BrowserSavedPage saved) {
+            var id = desktop.FindWindow(window)?.ActiveTabId; var tab = id.HasValue ? desktop.FindTab(id.Value) : null;
+            if (tab == null || tab.State != BrowserState.Ready || tab.IsBusy || saved == null || !BrowserLibrary.IsWebAddress(saved.address)) return;
+            var entry = GetEntry(tab.Id); entry.Draft.Edit(saved.address); entry.Dirty = true; entry.TextZoom = Mathf.Clamp(saved.textZoom, 50, 200);
+            try { if (entry.Page.Content != null) _ = Observe(entry.Page.Content.SetTextZoomAsync(entry.TextZoom), window); Navigate(window); }
+            catch (Exception error) { Failure(window, error); }
+        }
         public void ReopenClosed(long window) { if (desktop.FindWindow(window)?.Tabs.Count >= 32) return; var saved = library.TakeClosed(); if (saved != null) CreatePage(window, saved); }
         public void ToggleBookmark(long window) {
             var id = desktop.FindWindow(window)?.ActiveTabId; if (!id.HasValue) return; var saved = SavePage(id.Value);

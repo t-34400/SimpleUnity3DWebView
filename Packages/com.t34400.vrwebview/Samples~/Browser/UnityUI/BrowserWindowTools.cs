@@ -15,6 +15,7 @@ namespace T34400.VRWebView.Samples.Browser
         private Transform list;
         private Text heading, count;
         private readonly List<Button> contentButtons = new List<Button>();
+        private readonly List<Button> savedPageButtons = new List<Button>();
         private BrowserAddressInput findInput;
         private string section;
         private int offset;
@@ -77,7 +78,7 @@ namespace T34400.VRWebView.Samples.Browser
         private Button Button(Transform parent, string label, Action action, float width) {
             var button = BrowserSampleWidgets.Button(parent, label, label, font, width); button.gameObject.AddComponent<BrowserWindowActivation>().Window = window; button.onClick.AddListener(() => action()); return button;
         }
-        private void FillButton(Transform parent, string label, Action action) { var button = Button(parent, label, action, 0); button.GetComponent<LayoutElement>().flexibleWidth = 1; }
+        private Button FillButton(Transform parent, string label, Action action) { var button = Button(parent, label, action, 0); button.GetComponent<LayoutElement>().flexibleWidth = 1; return button; }
         private void ContentButton(Transform parent, string label, Action action) {
             var button = Button(parent, label, action, 0); button.GetComponent<LayoutElement>().flexibleWidth = 1; contentButtons.Add(button);
         }
@@ -87,7 +88,7 @@ namespace T34400.VRWebView.Samples.Browser
         public void ShowContext(BrowserContextTarget value) { context = value; section = value.IsImage ? "Image" : "Link"; overlay.SetActive(true); RenderList(); }
         private void RenderList() {
             for (int i = list.childCount - 1; i >= 0; i--) BrowserSampleWidgets.Remove(list.GetChild(i).gameObject);
-            heading.text = section;
+            heading.text = section; savedPageButtons.Clear();
             if (context != null) {
                 var target = context;
                 FillButton(Row(list, "Context actions", 52), "Open in new tab", () => { overlay.SetActive(false); app.OpenPage(window.WindowId, new BrowserSavedPage(target.Address, "")); });
@@ -106,7 +107,7 @@ namespace T34400.VRWebView.Samples.Browser
                 var saved = pages[index]; var row = Row(list, "Saved page", 52);
                 string title = string.IsNullOrWhiteSpace(saved.title) ? saved.address : saved.title;
                 if (title.Length > 60) title = title.Substring(0, 59) + "…";
-                FillButton(row, title, () => { overlay.SetActive(false); app.OpenPage(window.WindowId, saved); });
+                savedPageButtons.Add(FillButton(row, title, () => { overlay.SetActive(false); if (section == "Closed tabs") app.OpenPage(window.WindowId, saved); else app.OpenSavedInCurrent(window.WindowId, saved); }));
                 if (section != "Closed tabs") Button(row, "×", () => { app.RemoveSaved(section == "History", index); RenderList(); }, 44);
             }
             if (!string.IsNullOrEmpty(app.StorageWarning)) {
@@ -114,11 +115,14 @@ namespace T34400.VRWebView.Samples.Browser
             }
         }
         public void Render(long current, bool blank) {
-            bool capable = app.Model?.FindTab(current)?.State == BrowserState.Ready && app.GetEntry(current)?.Page.Content != null;
+            var active = app.Model?.FindTab(current);
+            bool ready = active?.State == BrowserState.Ready && !active.IsBusy;
+            bool capable = ready && app.GetEntry(current)?.Page.Content != null;
             foreach (var button in contentButtons) button.interactable = capable;
             if (tab != current) { CloseFind(); overlay.SetActive(false); context = null; tab = current; wasBlank = false; }
             if (!blank && wasBlank) overlay.SetActive(false);
             if (blank && !wasBlank) Show("Bookmarks"); wasBlank = blank;
+            foreach (var button in savedPageButtons) button.interactable = ready;
         }
         private async void SubmitFind() {
             findInput.DeactivateInputField(); count.text = "…"; long version = ++revision;
