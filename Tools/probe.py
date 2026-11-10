@@ -22,7 +22,7 @@ class ProbeError(Exception):
 
 def analyze(lines, expected='any'):
     """Summarize recorded metadata; do not infer HMD visibility or trial names from order."""
-    result = dict(unity_order_notes=[], unity_order_ready=False, unity_order_arms=0, unity_order_dispatches=0, unity_order_shows=[], unity_order_observations=[], unity_order_timeouts=0, unity_order_cancellations=[], unity_input_rows=0, unity_input_ready=False, unity_input_text_changes=0, unity_input_states=[], pointer_visual_failures=0, pointer_activations=[], address_edit_prepares=0, address_keyboard_requests=0, address_edit_aborts=0, address_keyboard_failures=0, unity_keyboard_timeouts=0, keyboard_configurations=[], rows=0, browser_ui_rows=0, browser_ui_ready=False, browser_ui_pid=None, browser_ui_android_ready=False, browser_ui_snapshots=[], runtime_rows=0, runtime_ready=False, runtime_connections=0, runtime_targets_retired=0, runtime_hover_enter=0, runtime_hover_exit=0, runtime_failures=0, runtime_window_events=[], host_rows=0, activity_rows=0, focus_rows=0, legacy_rows=0, trials=[],
+    result = dict(unity_value_probe_ready=False, unity_value_samples=[], unity_value_stable_mismatches=0, unity_value_final_mismatches=0, unity_value_label_mismatches=0, unity_value_font_missing_samples=0, unity_order_notes=[], unity_order_ready=False, unity_order_arms=0, unity_order_dispatches=0, unity_order_shows=[], unity_order_observations=[], unity_order_timeouts=0, unity_order_cancellations=[], unity_input_rows=0, unity_input_ready=False, unity_input_text_changes=0, unity_input_states=[], pointer_visual_failures=0, pointer_activations=[], address_edit_prepares=0, address_keyboard_requests=0, address_edit_aborts=0, address_keyboard_failures=0, unity_keyboard_timeouts=0, keyboard_configurations=[], rows=0, browser_ui_rows=0, browser_ui_ready=False, browser_ui_pid=None, browser_ui_android_ready=False, browser_ui_snapshots=[], runtime_rows=0, runtime_ready=False, runtime_connections=0, runtime_targets_retired=0, runtime_hover_enter=0, runtime_hover_exit=0, runtime_failures=0, runtime_window_events=[], host_rows=0, activity_rows=0, focus_rows=0, legacy_rows=0, trials=[],
                   setup_boot_values=[], boot_checks=[], editor_flags=[], xr_transitions=[],
                   pointer_states=[], proxy_rows=0, proxy_events=[], issues=[], keyboard_visibility='requires_user_observation',
                   ray_visibility='requires_user_observation', video_responses=0, video_samples=0,
@@ -40,6 +40,17 @@ def analyze(lines, expected='any'):
             result['unity_input_rows'] += 1
             result['unity_input_ready'] |= 'event=ready ' in line and 'stock=True' in line and 'webview=False' in line
             result['unity_input_text_changes'] += int('event=text_changed' in line)
+            result['unity_value_probe_ready'] |= 'event=ready ' in line and 'valueProbe=1' in line
+            if 'event=values ' in line:
+                fields = dict(re.findall(r'\b(phase|frames|keyboardSource|keyboardStatus|stable|fieldLength|keyboardLength|fieldEqualsKeyboard|labelLength|labelIsFieldSlice|emptyLabel|compositionLength|missingBmpGlyphs|surrogateUnits|fieldFocus|appFocus)=(\S+)', line))
+                result['unity_value_samples'].append(dict(line=number, **fields))
+                comparable = fields.get('stable') == 'True' and fields.get('keyboardSource') in ('live', 'end_snapshot')
+                mismatch = comparable and fields.get('fieldEqualsKeyboard') == 'False'
+                result['unity_value_stable_mismatches'] += int(mismatch)
+                result['unity_value_final_mismatches'] += int(mismatch and fields.get('phase') == 'closed' and fields.get('keyboardStatus') == 'Done')
+                result['unity_value_label_mismatches'] += int(fields.get('phase') in ('editing', 'closed') and fields.get('compositionLength') == '0' and fields.get('labelIsFieldSlice') == 'False')
+                result['unity_value_font_missing_samples'] += int(re.fullmatch(r'0*[1-9][0-9]*', fields.get('missingBmpGlyphs', '0')) is not None)
+
             if 'event=state ' in line:
                 result['unity_input_states'].append(dict(re.findall(r'\b(selected|fieldFocus|keyboard|visible|appFocus|active|status|frames)=(\w+)', line)))
         if 'VRWebViewUnityInput' in line and 'U2 ' in line:
@@ -168,7 +179,7 @@ def analyze(lines, expected='any'):
     if result['address_keyboard_failures']:
         result['issues'].append('browser_address_keyboard_failed')
     if result['unity_keyboard_timeouts']:
-        if expected == 'unity-input-order':
+        if expected in ('unity-input-order', 'unity-input-values'):
             result['unity_order_notes'].append('stock_open_timed_out_evaluate_extra_show_separately')
         else:
             result['issues'].append('unity_keyboard_visibility_timeout')
@@ -176,7 +187,7 @@ def analyze(lines, expected='any'):
         result['issues'].append('runtime_browser_failed')
     if expected == 'unity-input' and not result['unity_input_ready']:
         result['issues'].append('expected_stock_unity_input_missing')
-    if expected == 'unity-input-order':
+    if expected in ('unity-input-order', 'unity-input-values'):
         if not result['unity_input_ready']: result['issues'].append('expected_stock_unity_input_missing')
         if not result['unity_order_ready']: result['issues'].append('expected_unity_order_probe_missing')
         if not result['unity_order_arms']: result['issues'].append('expected_unity_order_attempt_missing')
@@ -185,6 +196,16 @@ def analyze(lines, expected='any'):
         if any(row.get('issued') == 'True' and row.get('accepted') == 'False' for row in result['unity_order_shows']):
             result['issues'].append('unity_order_show_rejected')
         if result['unity_order_timeouts']: result['issues'].append('unity_order_readiness_timeout')
+    if expected == 'unity-input-values':
+        if not result['unity_value_probe_ready']: result['issues'].append('expected_unity_value_probe_missing')
+        if not result['unity_value_samples']: result['issues'].append('expected_unity_value_samples_missing')
+        if not any(row.get('phase') == 'closed' for row in result['unity_value_samples']):
+            result['issues'].append('expected_unity_final_value_sample_missing')
+        if not any(row.get('phase') == 'closed' and row.get('keyboardStatus') == 'Done'
+                   and row.get('stable') == 'True' and row.get('keyboardSource') == 'end_snapshot'
+                   for row in result['unity_value_samples']):
+            result['issues'].append('expected_stable_done_value_snapshot_missing')
+        if result['unity_value_final_mismatches']: result['issues'].append('unity_final_field_keyboard_mismatch')
     if expected == 'browser-ui':
         if not result['browser_ui_ready']: result['issues'].append('expected_browser_ui_ready_missing')
         if not result['browser_ui_android_ready']: result['issues'].append('expected_browser_ui_android_host_missing')
@@ -308,8 +329,8 @@ def capture(args):
     print('Start the trial in another terminal. Ctrl+C ends capture; no log buffers are cleared.', flush=True)
     try:
         with log.open('xb') as output, errors.open('xb') as stderr:
-            buffers = ['-b', 'main', '-b', 'system', '-b', 'events'] if args.expect in ('window-ime', 'runtime', 'browser-ui', 'unity-input', 'unity-input-order') else []
-            extra_tags = list(SYSTEM_FOCUS_TAGS) if args.expect in ('window-ime', 'runtime', 'browser-ui', 'unity-input', 'unity-input-order') else []
+            buffers = ['-b', 'main', '-b', 'system', '-b', 'events'] if args.expect in ('window-ime', 'runtime', 'browser-ui', 'unity-input', 'unity-input-order', 'unity-input-values') else []
+            extra_tags = list(SYSTEM_FOCUS_TAGS) if args.expect in ('window-ime', 'runtime', 'browser-ui', 'unity-input', 'unity-input-order', 'unity-input-values') else []
             process = subprocess.Popen(command + ['logcat', *buffers, '-v', 'threadtime', '-T', '1', *extra_tags, *TAGS],
                                        stdout=subprocess.PIPE, stderr=stderr, start_new_session=os.name != 'nt')
             try:
@@ -339,7 +360,7 @@ def capture(args):
     report.update(log=log.name, adb_stderr=errors.name, capture_label=args.label,
                   label_is_not_a_verified_boot_setting=True, interrupted=stopped, adb_exit_code=code,
                   captured_at=started.isoformat())
-    if args.expect == 'unity-input-order':
+    if args.expect in ('unity-input-order', 'unity-input-values'):
         report['input_method_snapshot'] = input_method_snapshot(command, log.with_suffix('.input-method.txt'))
         if not report['input_method_snapshot']['valid']:
             report['issues'].append('input_method_snapshot_failed')
@@ -364,10 +385,10 @@ def main():
     cap = commands.add_parser('capture', help='Capture all probe families with the same tag list')
     cap.add_argument('--label', default='probe')
     cap.add_argument('--log-dir')
-    cap.add_argument('--expect', choices=('any', 'host', 'activity', 'proxy', 'video', 'ime-video', 'focus', 'window-ime', 'runtime', 'browser-ui', 'unity-input', 'unity-input-order'), default='any')
+    cap.add_argument('--expect', choices=('any', 'host', 'activity', 'proxy', 'video', 'ime-video', 'focus', 'window-ime', 'runtime', 'browser-ui', 'unity-input', 'unity-input-order', 'unity-input-values'), default='any')
     summary = commands.add_parser('summarize', help='Inspect an existing log offline; no device is needed')
     summary.add_argument('log', type=Path)
-    summary.add_argument('--expect', choices=('any', 'host', 'activity', 'proxy', 'video', 'ime-video', 'focus', 'window-ime', 'runtime', 'browser-ui', 'unity-input', 'unity-input-order'), default='any')
+    summary.add_argument('--expect', choices=('any', 'host', 'activity', 'proxy', 'video', 'ime-video', 'focus', 'window-ime', 'runtime', 'browser-ui', 'unity-input', 'unity-input-order', 'unity-input-values'), default='any')
     import probe_launch
     host = commands.add_parser('launch-host', help='Launch an installed HC2 probe; no build/install/capture')
     host.add_argument('case', nargs='?', choices=probe_launch.HOST_CASES, default='menu')

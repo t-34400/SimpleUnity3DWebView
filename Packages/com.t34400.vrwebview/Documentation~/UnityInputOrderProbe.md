@@ -1,4 +1,4 @@
-# U2: 標準InputFieldの表示順序対照 — preview.45
+# U2: 標準InputFieldの表示順序対照 — preview.46
 
 U1の4回とBS1の2回で、表示要求に記録されたtypeはTYPE_NULL(0)、その1–2ms後のrestartInputは0x80001だった。U1 logcatでもIMEの表示拒否の後に入力開始通知が来る。順序競合が有力だが、Questの拒否条件そのものや原因箇所は未確定。
 
@@ -42,7 +42,7 @@ ZIPと、実表示・日本語変換/確定・終了後のray・再編集の観�
 - 通常のInputFieldがkeyboard instanceを作った後だけ動く。新しいinstanceごとに一つの試行とし、同じinstanceをフォーカス復帰で再armしない。
 - Android UI threadで現在のFocus Viewを取得し、UnityがSurfaceへ割り当てるunitySurfaceView resource IDで対象を確認する。内部クラス名の難読化に依存しない。
 - GameActivityの公開getImeEditorInfoでlocal inputType/imeOptionsを読む。stock Openが返った後にだけ呼び、typeを自分で設定しない。Googleのgetterは未初期化ならdefault EditorInfoを生成する仕様なので、これはIME側EditorInfoの直接観測ではない。
-- 同一Viewのattached/View focus/Window focus/IMM activeとTYPE_CLASS_TEXTを確認する。50ms以上間隔を空けた二回のUI-thread観測で同じView/type/optionsだった場合だけ、showの権利を一度消費する。読取期限は2秒。固定待ち後に無条件でshowする方式ではないが、IMEが受信済みというACKでもない。
+- 同一Viewのattached/View focus/Window focus/IMM activeとTYPE_CLASS_TEXTを確認する。読取要求の開始間隔を50ms以上空け、二回のUI-thread観測で同じView/type/optionsだった場合だけ、showの権利を一度消費する。応答が遅れた場合、結果の受け取り間隔は50msより短くなることがある。読取期限は2秒。固定待ち後に無条件でshowする方式ではないが、IMEが受信済みというACKでもない。
 - 追加showのUI-thread実行直前にも同じ条件/identity/type/optionsとキャンセルを再確認する。changed/unavailableならその一回を見送り、それ以上showを繰り返さない。
 - 追加要求はInputMethodManager.showSoftInput(existingView, 0)。新規EditText、InputConnectionの代理、明示的restartInput、requestFocus、EditorInfo書換え、全文コピーを行わない。
 - フィールド編集終了、選択解除、フォーカス喪失、pause、disable/destroyで待機を取り消す。キーボード表示後にUnity入力フォーカスを奪い返さない。HMD実表示やIME終了をvisibleプロパティだけで判断しない。
@@ -62,3 +62,39 @@ U1 ready/state/text_changedはstock fieldの診断として残る。U2 ready/arm
 追加コードは診断assemblyに閉じたC#のみ。Google GameActivityの公開getter名をR8で保持するconsumer ruleをprobe AARへ追加した。GradleでAARとLintを実行し、Java class内容/asset/native.soが従来と同じであることを確認。native libraryは再ビルドせず同じものを保持した。
 
 pure C#で単発要求・安定観測・取消・古い応答・timeoutの試験、Pythonで採取/集計の試験を実行する。packaged consumer ruleはR8の合成ABI fixtureでも確認する。Unity型解決/Editor build/Quest実表示・IME動作はクラウドでは未確認。
+
+
+## preview.46: 文字列と表示の観測
+
+preview.45のU2では追加show4回すべてにIMEの表示開始があり、利用者も入力可能と確認した。一方、変換確定・Done後にもシステムキーボード欄とInputFieldの内容が違うと報告した。InputField変更イベント48回は受信の証拠であり、全文一致の証拠ではない。現時点で完全なIME対応とは扱わない。
+
+今回の追加は読み取り専用。U2の表示要求や入力接続、フィールドの文字列を変更しない。既存U2シーンとプラットフォーム設定をそのまま使い、sampleの再Importやシーン作り直しは不要。UnityInputFieldProbeは標準InputFieldのLateUpdate後に観測し、編集終了callback内でもキーボードが解放される前の値を採る。終了直後はその値を固定したsnapshotとfield/labelを比較し、非アクティブになったkeyboardへ再接続しない。
+
+Build And Run前の採取コマンドだけ次へ変更する。
+
+```bash
+cd /mnt/c/source/Unity/SimpleUnity3DWebView
+vrwebview_logs="/mnt/c/Users/tmiyoshi/Downloads/VRWebView-U2-values-$(date +%Y%m%d-%H%M%S)"
+python3 Tools/probe.py capture --expect unity-input-values --label U2-values --log-dir "$vrwebview_logs"
+```
+
+今のU2をBuild And Runし、これまでと同じ不一致を一回再現して、キーボードのDoneで閉じる。Backによるキャンセルは元の文字列へ戻す場合があるため、今回の最終一致の確認にはDoneを使う。表示が違ったままでも、こちらから値を書き戻したりForceLabelUpdateしたりしない。
+
+Ctrl+CでIME履歴も自動採取し、同じshellでZIPを作る。
+
+```bash
+python3 -m zipfile -c "${vrwebview_logs}.zip" "$vrwebview_logs"
+```
+
+`valueProbe=1`が新しい観測コードのmarker。`event=values`は次を記録する。
+
+- `fieldEqualsKeyboard`: InputField.textとTouchScreenKeyboard.textの一致。native getterを前後二回読んで値が違うサンプルはstable=Falseとして判定から外す。単一フレームの差を恒久的な同期不具合と断定しない。
+- `phase=editing/end_edit/closed`: 通常LateUpdate後、終了callback内、終了後を区別する。closedではkeyboardSource=end_snapshotを使い、その時点のライブIME文字列とは主張しない。
+- `keyboardStatus`: DoneとCanceled等を区別する。Canceledでfieldが元へ戻っても、Done後の不一致として自動集計しない。
+- `labelIsFieldSlice`: 表示ラベルは横スクロールで一部分になるため、単純な全文一致は要求しない。変換中のcompositionが挿入された表示差も分ける。
+- `fieldLength/keyboardLength/labelLength/compositionLength`: UTF-16単位の長さのみ。未取得は-1。
+- `missingBmpGlyphs/surrogateUnits/emptyLabel`: フォント描画を調べる手掛かり。HasCharacterの結果だけでHMDの表示不具合を確定しない。非BMP文字の字形有無はこの照会では判定しない。
+
+入力文字列・URL・文字列hashはログへ出さない。終了後の比較用文字列はメモリ内の診断snapshotに限り、次の編集や破棄時に解放する。フィールド・keyboard・label・compositionへのsetterは追加しない。
+
+fieldとkeyboardのデータが違えば、Unityの取得値からuGUIへ渡す経路を追う。データが一致してlabelだけ違えば表示処理を追う。両者が整合してもシステムキーボードの表示と違うなら、Android入力接続・IMEとの間を次に確認する。この診断だけでシステムキーボード内の実際の文字列を読めるわけではない。

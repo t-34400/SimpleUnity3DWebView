@@ -8,6 +8,9 @@
 
 preview.45: U1の標準InputFieldでも同じIME表示拒否を確認。BS1/U1の6回でTYPE_NULLのshowが文字入力type更新に先行した。原因確定とはせず、[U2](UnityInputOrderProbe.md)に同じ入力接続への単発追加show対照を実装した。標準入力を維持し、製品への回避策は追加していない。実Quest結果は未確認。
 
+
+preview.46: U2でキーボード表示・入力が可能になったが、確定/Done後の内容不一致が利用者から報告された（E23）。表示の順序対処と、文字列同期の成立を分ける。既存U2にreadonlyのfield/keyboard/label比較を追加し、[値の観測手順](UnityInputOrderProbe.md)で調べる。製品への入力方式切替や全文同期は追加していない。
+
 ## 現時点の判断
 
 製品用Android backendを実装し、Core/Unity/UIへ接続した。WF1はE15のログと報告、RT1基本動作はE16の利用者報告で確認。hoverはE17で利用者が確認。version条件の変更は実機観察と分けて扱う。

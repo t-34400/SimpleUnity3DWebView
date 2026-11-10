@@ -79,6 +79,43 @@ class AnalysisTests(unittest.TestCase):
         self.assertEqual(report['keyboard_visibility'], 'requires_user_observation')
 
 
+    def test_values_require_the_new_observer_and_a_closed_snapshot(self):
+        lines = ['Unity: [VRWebViewUnityInput] U1 event=ready stock=True webview=False valueProbe=1',
+            'Unity: [VRWebViewUnityInput] U2 event=ready stock=True maxExtraShows=1',
+            'Unity: [VRWebViewUnityInput] U2 event=armed attempt=1 ',
+            'Unity: [VRWebViewUnityInput] U2 event=show_result issued=True accepted=True reason=show_returned',
+            'Unity: [VRWebViewUnityInput] U1 event=values phase=closed keyboardSource=end_snapshot keyboardStatus=Done stable=True fieldLength=5 keyboardLength=5 fieldEqualsKeyboard=True labelIsFieldSlice=True compositionLength=0 missingBmpGlyphs=0']
+        report = probe.analyze(lines, 'unity-input-values')
+        self.assertEqual(report['issues'], [])
+        self.assertEqual(report['keyboard_visibility'], 'requires_user_observation')
+        report = probe.analyze(lines[:-1], 'unity-input-values')
+        self.assertIn('expected_unity_final_value_sample_missing', report['issues'])
+        report = probe.analyze([row.replace('valueProbe=1', '') for row in lines], 'unity-input-values')
+        self.assertIn('expected_unity_value_probe_missing', report['issues'])
+
+    def test_final_values_disagreement_is_distinct_from_composition_and_glyph_coverage(self):
+        lines = ['Unity: [VRWebViewUnityInput] U1 event=values phase=editing keyboardSource=live stable=True fieldEqualsKeyboard=False labelIsFieldSlice=False compositionLength=2 missingBmpGlyphs=0',
+            'Unity: [VRWebViewUnityInput] U1 event=values phase=closed keyboardSource=end_snapshot keyboardStatus=Done stable=True fieldEqualsKeyboard=False labelIsFieldSlice=False compositionLength=0 missingBmpGlyphs=3']
+        report = probe.analyze(lines, 'unity-input-values')
+        self.assertEqual(report['unity_value_stable_mismatches'], 2)
+        self.assertEqual(report['unity_value_final_mismatches'], 1)
+        self.assertEqual(report['unity_value_label_mismatches'], 1)
+        self.assertEqual(report['unity_value_font_missing_samples'], 1)
+        self.assertIn('unity_final_field_keyboard_mismatch', report['issues'])
+
+    def test_cancel_restore_is_not_reported_as_a_done_value_mismatch(self):
+        report = probe.analyze(['Unity: [VRWebViewUnityInput] U1 event=values phase=closed keyboardSource=end_snapshot keyboardStatus=Canceled stable=True fieldEqualsKeyboard=False'], 'unity-input-values')
+        self.assertEqual(report['unity_value_stable_mismatches'], 1)
+        self.assertEqual(report['unity_value_final_mismatches'], 0)
+        self.assertNotIn('unity_final_field_keyboard_mismatch', report['issues'])
+
+    def test_unstable_or_missing_keyboard_snapshots_are_not_final_value_failures(self):
+        report = probe.analyze([
+            'Unity: [VRWebViewUnityInput] U1 event=values phase=closed keyboardSource=end_snapshot keyboardStatus=Done stable=False fieldEqualsKeyboard=False',
+            'Unity: [VRWebViewUnityInput] U1 event=values phase=closed keyboardSource=missing stable=True fieldEqualsKeyboard=False'], 'unity-input-values')
+        self.assertEqual(report['unity_value_final_mismatches'], 0)
+        self.assertNotIn('unity_final_field_keyboard_mismatch', report['issues'])
+
     def test_u2_snapshot_keeps_history_and_does_not_clear_or_relaunch(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / 'input-method.txt'
