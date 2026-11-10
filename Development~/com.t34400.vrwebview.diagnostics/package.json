@@ -1,12 +1,12 @@
 {
   "name": "com.t34400.vrwebview.diagnostics",
-  "version": "0.1.0-preview.54",
+  "version": "0.1.0-preview.55",
   "displayName": "VRWebView Development Diagnostics",
   "description": "Maintainer-only historical Android, rendering and IME probes. Not needed to use VRWebView.",
   "unity": "6000.4",
   "license": "Apache-2.0",
   "dependencies": {
-    "com.t34400.vrwebview": "0.1.0-preview.54"
+    "com.t34400.vrwebview": "0.1.0-preview.55"
   },
   "samples": [
     {

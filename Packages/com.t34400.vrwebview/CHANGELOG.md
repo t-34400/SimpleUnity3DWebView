@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.0-preview.55
+
+- Add a saved, browser-wide Page display setting with Standard, Reduce shimmer and Improve angled views modes.
+- Generate mipmaps after native GPU copies in the same graphics command buffer for visible outputs only.
+- Preserve the loaded page and its logical size when output quality changes; reuse the same texture between filtered modes.
+- Expose optional display-quality capability and controller API without changing project-wide graphics settings.
+- Keep Standard as the legacy/default mode; Quest quality, softness and performance comparisons are pending.
+
 ## 0.1.0-preview.54
 
 - Dock the new-tab button outside the scrolling strip when tabs overflow; return it inline when they fit.

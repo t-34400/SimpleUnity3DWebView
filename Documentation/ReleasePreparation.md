@@ -1,9 +1,9 @@
 # Distribution preparation
 
-Status: preview.54 prepared for review; no public release/tag is created by this work.
+Status: preview.55 prepared for review; no public release/tag is created by this work.
 The maintainer reported the preview.51 UI issues resolved on Quest 3 on
-2026-11-10. The preview.54 pinned-tab, favicon and home-bookmark additions still
-need device validation. Fresh-project distribution checks are also pending.
+2026-11-10. The maintainer also reported the preview.54 additions working. The preview.55
+Page display modes still need a Quest quality/performance comparison. Fresh-project distribution checks are also pending.
 
 ## Delivery
 
@@ -89,11 +89,12 @@ part of this preparation.
 
 ## Draft release notes
 
-Title candidate: `VRWebView 0.1.0-preview.54`.
+Title candidate: `VRWebView 0.1.0-preview.55`.
 
 - Apache-2.0 project license with preserved upstream and legacy MIT notices.
 - Git UPM installation with separate web-panel and browser quick starts.
 - Consumer runtime separated from maintainer diagnostics.
+- Optional saved page-display modes for head-motion text shimmer.
 - Overflow keeps the add-tab button visible; tabs and saved pages share cached
   WebView icons; home bookmarks have explicit edit/delete controls.
 - Optional Browser sample with current menus, bookmark editing and yaw placement.

@@ -27,6 +27,8 @@ namespace T34400.VRWebView.Samples.Browser
         private bool savePending;
         private bool persistSession = true;
         public BrowserLibrary Library => library;
+        public BrowserDisplayQuality DisplayQuality => BrowserDisplayQualityPolicy.FromSavedValue(library?.Data.displayQuality ?? 0);
+        public bool SupportsDisplayQuality => entries.Values.Any(entry => entry.Page.Display != null);
         internal string StorageWarning => stateStore?.Warning;
         private BrowserDispatcher owner;
         private Action<Action> schedule;
@@ -74,7 +76,7 @@ namespace T34400.VRWebView.Samples.Browser
             if (restorePreviousSession && library.Data.poseVersion == 1) fixedTiltDegrees = library.Data.fixedTiltDegrees;
             fixedTiltDegrees = Mathf.Clamp(fixedTiltDegrees, 0, 10);
             if (!restorePreviousSession || !RestoreWindows()) CreateWindow();
-            if (diagnostics) Debug.Log("[VRWebViewSample] BS1 event=ui_ready version=54 multiWindow=true features=pinned_add_favicons");
+            if (diagnostics) Debug.Log("[VRWebViewSample] BS1 event=ui_ready version=55 multiWindow=true features=display_quality");
         }
         public void CreateWindow() {
             if (closed || desktop == null) return;
@@ -90,6 +92,7 @@ namespace T34400.VRWebView.Samples.Browser
             try {
                 var tab = desktop.CreateTab(window); result = tab; var entry = new Entry(pending); entries.Add(tab.Id, entry); pending = null;
                 entry.TextZoom = saved?.textZoom ?? 100; entry.RestorePage = saved;
+                entry.Page.Display?.SetDisplayQuality(DisplayQuality);
                 if (saved != null) { entry.LastAddress = saved.address; entry.Draft.Edit(saved.address); }
                 if (entry.Page.Icons != null) {
                     entry.IconHandler = icon => {
@@ -310,6 +313,32 @@ namespace T34400.VRWebView.Samples.Browser
             if (closed || desktop.FindWindow(window)?.Tabs.Count >= 32 || !library.Data.recentlyClosed.Contains(saved)) return;
             library.Data.recentlyClosed.Remove(saved); CreatePage(window, saved);
         }
+        public bool SetDisplayQuality(BrowserDisplayQuality value) {
+            BrowserDisplayQualityPolicy.Validate(value);
+            if (closed || library == null) return false;
+            if (DisplayQuality == value) return true;
+            var changed = new List<(IBrowserDisplayQualityBackend target, BrowserDisplayQuality previous)>();
+            try {
+                foreach (var pair in entries.ToArray()) {
+                    var target = pair.Value.Page.Display; var state = desktop.FindTab(pair.Key)?.State;
+                    if (target == null || state == BrowserState.Faulted || state == BrowserState.Disposed) continue;
+                    var previous = target.DisplayQuality;
+                    changed.Add((target, previous));
+                    try { target.SetDisplayQuality(value); }
+                    catch (ObjectDisposedException) { changed.RemoveAt(changed.Count - 1); } // A fatal page may be awaiting its model notification.
+                }
+            } catch (Exception error) {
+                foreach (var item in changed) {
+                    try { item.target.SetDisplayQuality(item.previous); }
+                    catch (Exception rollback) { Debug.LogWarning("[VRWebViewSample] event=display_quality_rollback type=" + rollback.GetType().Name); }
+                }
+                foreach (var view in views.Values) view.ShowMessage("This display setting could not be applied.");
+                Debug.LogWarning("[VRWebViewSample] event=display_quality_failed type=" + error.GetType().Name); return false;
+            }
+            library.Data.displayQuality = (int)value; Refresh();
+            if (diagnostics) Debug.Log("[VRWebViewSample] BS1 event=display_quality mode=" + value + " windows=" + views.Count);
+            return true;
+        }
         public void ChangeTilt(float delta) {
             fixedTiltDegrees = Mathf.Clamp(fixedTiltDegrees + delta, 0, 10);
             foreach (var view in views.Values) view.NormalizePose(); Refresh();
@@ -327,7 +356,7 @@ namespace T34400.VRWebView.Samples.Browser
             try { stateStore.Forget(); persistSession = false; library.Data.windows.Clear(); library.Data.recentlyClosed.Clear(); savePending = false;
                 // Disable automatic restoration until the next launch; future explicit edits save a new session.
                 foreach (var view in views.Values) view.ShowMessage("Saved session forgotten. Bookmarks and history are retained.");
-                stateStore.Save(new BrowserSavedState { bookmarks = library.Data.bookmarks, history = library.Data.history, poseVersion = 1, fixedTiltDegrees = fixedTiltDegrees });
+                stateStore.Save(new BrowserSavedState { bookmarks = library.Data.bookmarks, history = library.Data.history, poseVersion = 1, fixedTiltDegrees = fixedTiltDegrees, displayQuality = library.Data.displayQuality });
             } catch (Exception error) when (error is IOException || error is UnauthorizedAccessException) { foreach (var view in views.Values) view.ShowMessage("Saved data could not be removed."); }
         }
         public void Zoom(long window, int delta) {

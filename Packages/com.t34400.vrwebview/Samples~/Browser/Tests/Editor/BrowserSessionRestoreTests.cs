@@ -17,8 +17,15 @@ namespace T34400.VRWebView.Samples.Browser.Tests
             return new BrowserPage(backend, surface, connectionLifetime: surface);
         }
     }
-    public sealed class RestoreTestBackend : IBrowserBackend, IBrowserNavigationBackend, IBrowserIconSource {
-        public int Initializations, Navigations;
+    public sealed class RestoreTestBackend : IBrowserBackend, IBrowserNavigationBackend, IBrowserIconSource, IBrowserDisplayQualityBackend {
+        public int Initializations, Navigations, QualityChanges;
+        public bool RejectQuality;
+        public BrowserDisplayQuality DisplayQuality { get; private set; }
+        public void SetDisplayQuality(BrowserDisplayQuality value) {
+            BrowserDisplayQualityPolicy.Validate(value);
+            if (RejectQuality && value != BrowserDisplayQuality.Standard) throw new NotSupportedException("Fixture rejects this mode");
+            if (DisplayQuality != value) { DisplayQuality = value; QualityChanges++; }
+        }
         public BrowserPageIcon PageIcon { get; private set; }
         public event Action<BrowserPageIcon> PageIconChanged;
         public void ReceiveIcon(BrowserPageIcon value) { PageIcon = value; PageIconChanged?.Invoke(value); }
@@ -35,7 +42,7 @@ namespace T34400.VRWebView.Samples.Browser.Tests
         [Test] public void RestoredHiddenTabsStayColdUntilSelectedAndClosedTabsCanReopen() {
             string directory = Path.Combine(Path.GetTempPath(), "vrwebview-unity-session-" + Guid.NewGuid().ToString("N"));
             var store = new BrowserStateStore(Path.Combine(directory, "session.json"), text => JsonUtility.FromJson<BrowserSavedState>(text), state => JsonUtility.ToJson(state));
-            var saved = new BrowserSavedState(); var first = new BrowserSavedWindow { active = 0, hasPlacement = true, x = 200 };
+            var saved = new BrowserSavedState { displayQuality = 2 }; var first = new BrowserSavedWindow { active = 0, hasPlacement = true, x = 200 };
             first.tabs.Add(new BrowserSavedPage("https://example.org/one", "One")); first.tabs.Add(new BrowserSavedPage("https://example.org/two", "Two")); saved.windows.Add(first); Assert.IsTrue(store.Save(saved));
             var root = new GameObject("Restore fixture", typeof(RectTransform), typeof(Canvas), typeof(BrowserDispatcher), typeof(BrowserDesktopPanel), typeof(RestoreTestFactory));
             var owner = root.GetComponent<BrowserDispatcher>(); owner.InitializeOnOwnerThread();
@@ -44,6 +51,7 @@ namespace T34400.VRWebView.Samples.Browser.Tests
                 panel.diagnostics = false; panel.SetStorage(store); panel.SetFactory(factory);
                 Call(panel, "Start"); Settle(owner, () => factory.Pages[0].Navigations == 1 && panel.Model.Tabs[0].State == BrowserState.Ready);
                 Assert.AreEqual(2, factory.Pages.Count); Assert.AreEqual(0, factory.Pages[1].Initializations);
+                Assert.IsTrue(factory.Pages.All(page => page.DisplayQuality == BrowserDisplayQuality.ImproveObliqueViews));
                 Assert.AreEqual(200, panel.WindowViews.Single().transform.localPosition.x);
                 Settle(owner, () => !panel.Model.Tabs[0].IsBusy);
                 panel.OpenSavedInCurrent(panel.Model.Windows[0].Id, new BrowserSavedPage("https://example.org/bookmark", "Bookmark"));

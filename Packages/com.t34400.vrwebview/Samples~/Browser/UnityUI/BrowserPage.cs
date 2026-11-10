@@ -16,6 +16,7 @@ namespace T34400.VRWebView.Samples.Browser
         public IBrowserEditingSink Editing { get; }
         public IBrowserContentBackend Content { get; }
         public IBrowserIconSource Icons { get; }
+        public IBrowserDisplayQualityBackend Display { get; }
         private readonly Action<bool, int, int> presentation;
         public void SetPresentation(bool visible, int width, int height) { presentation?.Invoke(visible, width, height); }
         public Task EndEditingAsync() => Editing is IBrowserAsyncEditingSink asyncSink ? asyncSink.EndEditingAsync(CancellationToken.None) : EndSync();
@@ -26,6 +27,7 @@ namespace T34400.VRWebView.Samples.Browser
             if (backend == null) throw new ArgumentNullException(nameof(backend));
             Content = backend as IBrowserContentBackend;
             Icons = backend as IBrowserIconSource;
+            Display = backend as IBrowserDisplayQualityBackend;
             Surface = surface ?? throw new ArgumentNullException(nameof(surface));
             this.presentation = presentation; Input = input; Editing = editing ?? backend as IBrowserEditingSink ?? input as IBrowserEditingSink;
             Backend = new BrowserBackendLease(backend, connectionLifetime);

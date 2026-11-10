@@ -81,9 +81,22 @@ namespace T34400.VRWebView.Samples.Browser
             Button(tilt, "Less tilt", "−", () => app.ChangeTilt(-1), 44);
             tiltLabel = Label(tilt, "Tilt value", app.fixedTiltDegrees.ToString("0") + "°", 32); tiltLabel.alignment = TextAnchor.MiddleCenter;
             Button(tilt, "More tilt", "+", () => app.ChangeTilt(1), 44); Separator(body);
+            Item(body, "Page display  ›", ShowDisplayQuality, app.SupportsDisplayQuality); Separator(body);
             Item(body, "Clear browsing history…", () => Confirm("Clear browsing history?", app.ClearHistory));
             Item(body, "Forget saved session…", () => Confirm("Forget saved tabs and placement?", app.ForgetSession));
             if (!string.IsNullOrEmpty(app.StorageWarning)) Label(body, "Storage warning", app.StorageWarning, 84, 18);
+            popup.Reflow();
+        }
+        private void ShowDisplayQuality() {
+            var body = popup.Open("Page display", menuAnchor, 410); Heading(body, "Page display");
+            void Choice(BrowserDisplayQuality mode, string label) {
+                string marker = app.DisplayQuality == mode ? "●  " : "○  ";
+                Item(body, marker + label, () => { app.SetDisplayQuality(mode); ShowDisplayQuality(); });
+            }
+            Choice(BrowserDisplayQuality.Standard, "Standard");
+            Choice(BrowserDisplayQuality.ReduceShimmer, "Reduce shimmer");
+            Choice(BrowserDisplayQuality.ImproveObliqueViews, "Improve angled views");
+            Label(body, "Display quality hint", "Reduce flicker while moving. May soften text and affect performance. Applies to all windows.", 76, 18);
             popup.Reflow();
         }
         private void Confirm(string question, Action action) {

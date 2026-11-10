@@ -12,7 +12,7 @@ namespace T34400.VRWebView
     /// <summary>One Android WebView, direct native IME and a borrowed GPU surface.
     /// Public operations/Dispose run on the supplied Unity dispatcher owner thread.</summary>
     public sealed class AndroidBrowserBackend : IBrowserBackend, IBrowserHtmlBackend,
-        IBrowserPointerSink, IBrowserScrollSink, IBrowserHoverSink, IBrowserAsyncEditingSink, IBrowserFailureSource, IBrowserNavigationBackend, IBrowserContentBackend, IBrowserIconSource
+        IBrowserPointerSink, IBrowserScrollSink, IBrowserHoverSink, IBrowserAsyncEditingSink, IBrowserFailureSource, IBrowserNavigationBackend, IBrowserContentBackend, IBrowserIconSource, IBrowserDisplayQualityBackend
     {
         private readonly BrowserDispatcher owner;
         private readonly Action<Action> schedule;
@@ -20,6 +20,7 @@ namespace T34400.VRWebView
         private static long nextPageId = 1L << 40;
         private long pageId, presentationVersion;
         private bool presentationWanted;
+        public BrowserDisplayQuality DisplayQuality { get; private set; }
         private BrowserPageState pageSignal;
         private BrowserPageIcon iconSignal;
         public BrowserPageIcon PageIcon { get; private set; }
@@ -265,6 +266,32 @@ namespace T34400.VRWebView
             presentationWanted = visible; long version = ++presentationVersion;
             if (ready) _ = ApplyPresentationAsync(version);
         }
+        public void SetDisplayQuality(BrowserDisplayQuality value) {
+            Verify(); BrowserDisplayQualityPolicy.Validate(value);
+            if (DisplayQuality == value) return;
+            bool rebuild = BrowserDisplayQualityPolicy.UsesMipmaps(DisplayQuality) != BrowserDisplayQualityPolicy.UsesMipmaps(value);
+            DisplayQuality = value;
+            if (rebuild) {
+                long version = ++presentationVersion;
+                if (ready && presentationWanted) _ = ApplyPresentationAsync(version);
+            } else if (texture != null) ApplySampling(texture);
+            LogDisplayQuality();
+        }
+        private void ApplySampling(RenderTexture target) {
+            target.filterMode = BrowserDisplayQualityPolicy.UsesMipmaps(DisplayQuality) ? FilterMode.Trilinear : FilterMode.Bilinear;
+            target.anisoLevel = BrowserDisplayQualityPolicy.Anisotropy(DisplayQuality);
+            if (target.useMipMap) target.wrapMode = TextureWrapMode.Clamp;
+        }
+        private void LogDisplayQuality() {
+            if (!diagnostics) return;
+            Debug.Log("[VRWebViewRuntime] event=display_quality page=" + pageId + " mode=" + DisplayQuality
+                + " visible=" + (id != 0) + " generation=" + presentationVersion + " width=" + width + " height=" + height
+                + " mips=" + (texture != null ? texture.mipmapCount : 0)
+                + " filter=" + (texture != null ? texture.filterMode.ToString() : "none")
+                + " aniso=" + (texture != null ? texture.anisoLevel : 0)
+                + " mipTargets=" + (pump != null ? pump.MipTargetCount : 0)
+                + " globalAniso=" + QualitySettings.anisotropicFiltering + " qualityLevel=" + QualitySettings.GetQualityLevel());
+        }
         private async Task ApplyPresentationAsync(long version) {
             try {
                 if (disposed || version != presentationVersion) return;
@@ -273,16 +300,21 @@ namespace T34400.VRWebView
                 Surface.Withdraw();
                 if (disposed || version != presentationVersion) return;
                 if (!presentationWanted) { await Submit("present", CancellationToken.None, 0L, width, height); return; }
+                bool mipmaps = BrowserDisplayQualityPolicy.UsesMipmaps(DisplayQuality);
                 var descriptor = new RenderTextureDescriptor(width, height) {
                     graphicsFormat = QualitySettings.activeColorSpace == ColorSpace.Linear ? GraphicsFormat.R8G8B8A8_SRGB : GraphicsFormat.R8G8B8A8_UNorm,
-                    depthBufferBits = 0, msaaSamples = 1, useMipMap = false, autoGenerateMips = false,
+                    depthBufferBits = 0, msaaSamples = 1, useMipMap = mipmaps, autoGenerateMips = false,
+                    mipCount = mipmaps ? Texture.GenerateAllMips : 1,
                     volumeDepth = 1, dimension = TextureDimension.Tex2D
                 };
-                texture = new RenderTexture(descriptor) { name = "VRWebView visible target", filterMode = FilterMode.Bilinear };
+                texture = new RenderTexture(descriptor) { name = "VRWebView visible target" };
+                ApplySampling(texture);
                 if (!texture.Create()) throw new InvalidOperationException("Browser target allocation failed");
                 Graphics.Blit(Texture2D.blackTexture, texture);
                 id = BrowserGpuNative.VrCreate(width, height, texture.GetNativeTexturePtr());
                 if (id == 0) throw new InvalidOperationException(BrowserGpuNative.Status(0));
+                pump.RegisterMipTarget(id, texture);
+                LogDisplayQuality();
                 var target = texture;
                 // Completion resumes on the supplied owner context explicitly, never a worker.
                 var task = Submit("present", CancellationToken.None, (long)id, width, height);

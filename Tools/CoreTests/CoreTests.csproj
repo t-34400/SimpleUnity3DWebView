@@ -7,6 +7,7 @@
   <ItemGroup>
     <Compile Include="../../Packages/com.t34400.vrwebview/Runtime/Core/*.cs" />
     <Compile Include="../../Packages/com.t34400.vrwebview/Runtime/Presentation/*.cs" />
+    <Compile Include="../../Packages/com.t34400.vrwebview/Runtime/Rendering/BrowserMipCommandPlan.cs" />
     <Compile Include="../../Packages/com.t34400.vrwebview/Samples~/Browser/*.cs" />
     <Compile Include="../../Development~/com.t34400.vrwebview.diagnostics/Editor/HostEntryManifest.cs" />
     <Compile Include="../../Packages/com.t34400.vrwebview/Runtime/XR/ActivityProbeInputPolicy.cs" />
@@ -25,6 +26,7 @@
     <Compile Include="BrowserFeatureTests.cs" />
     <Compile Include="BrowserChromeTests.cs" />
     <Compile Include="BrowserFaviconTests.cs" />
+    <Compile Include="BrowserDisplayQualityTests.cs" />
     <Compile Include="BackendCapabilityTests.cs" />
     <Compile Include="HoverTests.cs" />
     <Compile Include="Program.cs" />

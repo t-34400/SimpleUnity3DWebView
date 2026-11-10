@@ -85,3 +85,34 @@ a current page; late page metadata may refer to a previous navigation.
 Core defines this metadata capability only. Download/cache policy, default icons
 and Unity texture lifetime belong to the host UI; the Browser sample supplies
 those roles. Observing icons does not allocate a page GPU presentation.
+
+## Display quality
+
+`BrowserController` exposes an Inspector setting and
+`SetDisplayQuality(BrowserDisplayQuality)` for a single panel. The Android backend
+also implements optional `IBrowserDisplayQualityBackend` for custom composition.
+Call it on the Unity owner thread; it may be selected before initialization.
+
+```csharp
+browser.SetDisplayQuality(BrowserDisplayQuality.ReduceShimmer);
+```
+
+| Mode | Output sampling |
+| --- | --- |
+| `Standard` | Bilinear, one mip level; default |
+| `ReduceShimmer` | Mipmaps and Trilinear |
+| `ImproveObliqueViews` | Mipmaps, Trilinear and anisotropy 4 |
+
+Changing between Standard and a filtered mode recreates the GPU output, retaining
+the same WebView/session and pixel dimensions. Changing between filtered modes
+updates sampling on the existing output. Hidden pages do not allocate outputs.
+The render pump records native copies followed by mip generation on the graphics
+queue before UI sampling. Retiring a generation immediately removes its mip work.
+Mipmaps are generated every rendered frame while enabled; this is not a
+content-change detector.
+
+The API does not change text zoom, page layout, IME ownership or global
+QualitySettings. Anisotropy respects the application's quality settings. Full mip
+chains add about 33% memory to a typical 2D output texture, plus generation and
+sampling work. Compare readability, softness and frame time on the target device.
+The Browser sample owns preference persistence and its Settings menu.

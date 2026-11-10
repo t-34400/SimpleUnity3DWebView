@@ -61,3 +61,15 @@ The cache keeps up to 256 page/origin entries and 256 shared Unity textures.
 Icons remain optional: missing, invalid or evicted images use a placeholder;
 cache write failures keep new icons in memory. Cached icons can be displayed
 after restarting without initializing hidden/restored tabs.
+
+## Page display
+
+Open **Menu > Settings > Page display** to compare **Standard**, **Reduce shimmer**
+and **Improve angled views** without reloading the page. The selection applies to
+all windows and is saved for future tabs and restarts. Older saved data defaults
+to Standard. Forget saved session retains this preference.
+
+Filtered modes may reduce small-text flicker during head motion, at the cost of
+some softness, GPU work and memory. Their effect is still awaiting Quest
+validation. Standard remains the initial setting. The angled-view option honors
+the host project's anisotropic-filtering setting.

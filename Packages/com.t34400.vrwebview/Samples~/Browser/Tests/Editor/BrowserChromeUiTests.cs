@@ -33,6 +33,36 @@ namespace T34400.VRWebView.Samples.Browser.Tests
             Assert.Fail("Owner queue did not settle");
         }
         private Button Button(string name) => view.GetComponentsInChildren<Button>(true).Single(b => b.gameObject.activeInHierarchy && b.name == name);
+        [Test] public void DisplayQualityIsGlobalAndDoesNotNavigateOrWarmHiddenPages() {
+            var factory = root.GetComponent<RestoreTestFactory>();
+            panel.NewTab(view.WindowId); panel.NewTab(view.WindowId);
+            Settle(() => panel.Model.Tabs.Last().State == BrowserState.Ready);
+            Assert.AreEqual(0, factory.Pages[1].Initializations);
+            var counts = factory.Pages.Select(p => (p.Initializations, p.Navigations)).ToArray();
+            view.Tools.ShowMenu(); Button("Settings  ›").onClick.Invoke(); Button("Page display  ›").onClick.Invoke();
+            view.GetComponentsInChildren<Button>().Single(b => b.name.EndsWith("Reduce shimmer")).onClick.Invoke();
+            Assert.AreEqual(BrowserDisplayQuality.ReduceShimmer, panel.DisplayQuality);
+            Assert.IsTrue(factory.Pages.All(p => p.DisplayQuality == panel.DisplayQuality));
+            CollectionAssert.AreEqual(counts, factory.Pages.Select(p => (p.Initializations, p.Navigations)).ToArray());
+            Assert.AreEqual(0, factory.Pages[1].Initializations);
+            Call("SaveState");
+            var store = new BrowserStateStore(Path.Combine(directory, "session.json"), t => JsonUtility.FromJson<BrowserSavedState>(t), data => JsonUtility.ToJson(data));
+            Assert.AreEqual(1, store.Load().displayQuality);
+            panel.NewTab(view.WindowId); Assert.AreEqual(BrowserDisplayQuality.ReduceShimmer, factory.Pages.Last().DisplayQuality);
+            Assert.IsTrue(view.Tools.MenuOpen == false, "Tab switching should close the menu");
+        }
+        [Test] public void RejectedQualityDoesNotPersistOrLeaveEarlierPagesInAnotherMode() {
+            panel.NewTab(view.WindowId); Settle(() => panel.Model.Tabs.Last().State == BrowserState.Ready);
+            var pages = root.GetComponent<RestoreTestFactory>().Pages; pages.Last().RejectQuality = true;
+            Assert.IsFalse(panel.SetDisplayQuality(BrowserDisplayQuality.ReduceShimmer));
+            Assert.AreEqual(BrowserDisplayQuality.Standard, panel.DisplayQuality);
+            Assert.IsTrue(pages.All(p => p.DisplayQuality == BrowserDisplayQuality.Standard));
+        }
+        [Test] public void ForgetSessionKeepsTheDisplayPreference() {
+            Assert.IsTrue(panel.SetDisplayQuality(BrowserDisplayQuality.ImproveObliqueViews)); panel.ForgetSession();
+            var store = new BrowserStateStore(Path.Combine(directory, "session.json"), t => JsonUtility.FromJson<BrowserSavedState>(t), data => JsonUtility.ToJson(data));
+            Assert.AreEqual(2, store.Load().displayQuality); Assert.AreEqual(0, store.Load().windows.Count);
+        }
         [Test] public void AddTabDocksAtOverflowAndReturnsInlineAfterResizeOrClosing() {
             Assert.IsFalse(view.NewTabDocked);
             for (int i = 0; i < 5; i++) panel.NewTab(view.WindowId);

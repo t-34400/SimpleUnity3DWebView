@@ -11,6 +11,8 @@ namespace T34400.VRWebView
     {
         private static BrowserGpuPump instance;
         private readonly List<(ulong id, RenderTexture texture, bool diagnostics)> retired = new List<(ulong, RenderTexture, bool)>();
+        private readonly BrowserMipCommandPlan<RenderTexture> mipTargets = new BrowserMipCommandPlan<RenderTexture>();
+        internal int MipTargetCount => mipTargets.Count;
         internal event Action Tick;
         internal event Action<bool> FocusChanged;
         internal event Action<bool> PauseChanged;
@@ -29,6 +31,8 @@ namespace T34400.VRWebView
         private IntPtr callback;
         private int eventId;
         private CommandBuffer renderEvents;
+        private Action copyCommand;
+        private Action<RenderTexture> mipCommand;
         internal static BrowserGpuPump Ensure()
         {
             if (instance != null) return instance;
@@ -40,15 +44,26 @@ namespace T34400.VRWebView
             if (instance.callback != IntPtr.Zero)
             {
                 instance.renderEvents = new CommandBuffer { name = "VRWebView GPU render event" };
-                instance.renderEvents.IssuePluginEventAndData(instance.callback, instance.eventId, IntPtr.Zero);
+                instance.copyCommand = instance.RecordCopy;
+                instance.mipCommand = instance.RecordMips;
             }
             return instance;
         }
-        internal void Retire(ulong id, RenderTexture texture, bool diagnostics = false) { retired.Add((id, texture, diagnostics)); }
+        internal void RegisterMipTarget(ulong id, RenderTexture texture) {
+            if (texture != null && texture.useMipMap) mipTargets.Add(id, texture);
+        }
+        internal void Retire(ulong id, RenderTexture texture, bool diagnostics = false) {
+            mipTargets.Remove(id); // Withdraw before another frame can record work for this generation.
+            retired.Add((id, texture, diagnostics));
+        }
+        private void RecordCopy() { renderEvents.IssuePluginEventAndData(callback, eventId, IntPtr.Zero); }
+        private void RecordMips(RenderTexture target) { renderEvents.GenerateMips(target); }
         private void Update()
         {
             Notify(Tick);
             if (Application.platform != RuntimePlatform.Android || renderEvents == null) return;
+            renderEvents.Clear(); // Never replay commands referencing a retired generation.
+            mipTargets.Record(copyCommand, mipCommand);
             Graphics.ExecuteCommandBuffer(renderEvents);
             for (int i = retired.Count - 1; i >= 0; --i)
             {
@@ -62,6 +77,7 @@ namespace T34400.VRWebView
         {
             renderEvents?.Release();
             renderEvents = null;
+            mipTargets.Clear();
             if (instance == this) instance = null;
         }
     }

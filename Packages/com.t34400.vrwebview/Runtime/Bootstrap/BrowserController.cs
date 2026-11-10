@@ -13,6 +13,8 @@ namespace T34400.VRWebView
         [SerializeField] private string initialUrl = "https://example.com/";
         [SerializeField] private bool enableKnownProviderImeWorkaround = true;
         [SerializeField] private bool enableDiagnostics;
+        [SerializeField] private BrowserDisplayQuality displayQuality;
+        public BrowserDisplayQuality DisplayQuality => displayQuality;
         private BrowserDispatcher dispatcher;
         private AndroidBrowserBackend backend;
         private BrowserSession session;
@@ -31,6 +33,7 @@ namespace T34400.VRWebView
             try {
                 dispatcher = GetComponent<BrowserDispatcher>(); dispatcher.InitializeOnOwnerThread();
                 backend = new AndroidBrowserBackend(dispatcher, width, height, enableKnownProviderImeWorkaround, enableDiagnostics);
+                backend.SetDisplayQuality(displayQuality);
                 session = new BrowserSession(backend, dispatcher.Scheduler);
                 if (view != null) view.Bind(backend.Surface, backend, dispatcher);
                 var created = session;
@@ -45,6 +48,9 @@ namespace T34400.VRWebView
         public Task NavigateAsync(string address) => session != null ? session.NavigateAsync(address)
             : throw new InvalidOperationException("Enable and initialize BrowserController first");
         public void EndEditing() { backend?.EndEditing(); }
+        public void SetDisplayQuality(BrowserDisplayQuality value) {
+            BrowserDisplayQualityPolicy.Validate(value); backend?.SetDisplayQuality(value); displayQuality = value;
+        }
         private void OnDisable() { Close(); }
         private void OnDestroy() { Close(); }
         private void Close()
