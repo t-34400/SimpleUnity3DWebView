@@ -74,7 +74,7 @@ namespace T34400.VRWebView.Samples.Browser
                 rect.position = startPosition + localToWorld.MultiplyVector(new Vector3(resized.OffsetX, resized.OffsetY, 0));
             }
         }
-        public void OnEndDrag(PointerEventData data) { active = false; Paint(); }
+        public void OnEndDrag(PointerEventData data) { active = false; window.PlacementChanged(); Paint(); }
         public void OnCancel(BaseEventData data) {
             if (!active) return; active = false;
             var rect = (RectTransform)window.transform; rect.SetPositionAndRotation(startPosition, startRotation); rect.sizeDelta = startSize; Paint();

@@ -12,6 +12,8 @@ namespace T34400.VRWebView.Samples.Browser
         private BrowserDesktopPanel application;
         private BrowserDispatcher owner;
         private BrowserView page;
+        private BrowserWindowTools tools;
+        private Button bookmark;
         private BrowserAddressInput address;
         private Text message, placeholder;
         private Button back, forward, reload, go, newTabButton;
@@ -81,13 +83,17 @@ namespace T34400.VRWebView.Samples.Browser
             input.GetComponent<Image>().color = new Color(.11f, .14f, .2f, 1); input.GetComponent<LayoutElement>().flexibleWidth = 1; input.GetComponent<LayoutElement>().minWidth = 160;
             address = input.GetComponent<BrowserAddressInput>(); address.targetGraphic = input.GetComponent<Image>();
             address.textComponent = BrowserSampleWidgets.Label(input.transform, "Text", "", font); BrowserSampleWidgets.Stretch(address.textComponent.rectTransform, 10);
-            var hint = BrowserSampleWidgets.Label(input.transform, "Hint", "Enter a web address", font); hint.color = Color.gray; BrowserSampleWidgets.Stretch(hint.rectTransform, 10); address.placeholder = hint;
+            var hint = BrowserSampleWidgets.Label(input.transform, "Hint", "Search or enter address", font); hint.color = Color.gray; BrowserSampleWidgets.Stretch(hint.rectTransform, 10); address.placeholder = hint;
             address.lineType = InputField.LineType.SingleLine; address.keyboardType = TouchScreenKeyboardType.Default; address.shouldHideMobileInput = false;
             address.PrepareEditing = () => application.PrepareAddress(WindowId); address.EditingFailed += ShowMessage;
             address.onValueChanged.AddListener(value => { notice = null; application.EditAddress(WindowId, value); });
             address.onEndEdit.AddListener(_ => application.RequestRefresh());
             address.Submitted += () => { address.DeactivateInputField(); application.Navigate(WindowId); };
             go = AddButton(nav, "Go", "Go", 65, () => { address.DeactivateInputField(); application.Navigate(WindowId); });
+            bookmark = AddButton(nav, "Bookmark page", "☆", 52, () => application.ToggleBookmark(WindowId));
+            AddButton(nav, "Browser menu", "☰", 52, () => tools.Toggle());
+            var toolContainer = BrowserSampleWidgets.Node(root.transform, "Tool bars", typeof(VerticalLayoutGroup));
+            var toolLayout = toolContainer.GetComponent<VerticalLayoutGroup>(); toolLayout.childControlHeight = toolLayout.childControlWidth = true; toolLayout.childForceExpandHeight = false;
             var content = BrowserSampleWidgets.Node(root.transform, "Page area", typeof(Image), typeof(LayoutElement));
             content.GetComponent<Image>().color = new Color(.025f, .03f, .045f); var contentSize = content.GetComponent<LayoutElement>(); contentSize.minHeight = contentSize.preferredHeight = 120; contentSize.flexibleHeight = 1;
             pageRect = (RectTransform)content.transform;
@@ -95,10 +101,15 @@ namespace T34400.VRWebView.Samples.Browser
             BrowserSampleWidgets.Stretch((RectTransform)display.transform); page = display.GetComponent<BrowserView>();
             display.AddComponent<BrowserWindowActivation>().Window = this;
             placeholder = BrowserSampleWidgets.Label(content.transform, "New tab page", "New tab\nEnter an address above to begin.", font, 28); placeholder.alignment = TextAnchor.MiddleCenter; BrowserSampleWidgets.Stretch(placeholder.rectTransform);
+            tools = gameObject.AddComponent<BrowserWindowTools>(); tools.Build(application, this, content.transform, toolContainer.transform, font);
             var footer = Row(root.transform, "Status bar", 24);
             message = BrowserSampleWidgets.Label(footer, "Status", "", font, 18); message.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1;
             foreach (int x in new[] { -1, 1 }) foreach (int y in new[] { -1, 1 }) BuildCorner(x, y);
         }
+        public void NavigationStarted() { tools?.NavigationStarted(); }
+        public void FindUpdated(long tab, BrowserFindResult result) { tools?.Found(tab, result); }
+        public void ShowContext(BrowserContextTarget target) { tools?.ShowContext(target); }
+        public void PlacementChanged() { application.MarkSave(); }
         public void BringToFront() { application.BringToFront(this); }
         private Scrollbar BuildTabScrollbar(Transform parent) {
             var node = BrowserSampleWidgets.Node(parent, "Tab scrollbar", typeof(Image), typeof(Scrollbar), typeof(LayoutElement));
@@ -168,7 +179,9 @@ namespace T34400.VRWebView.Samples.Browser
                 }
                 var tab = application.Model.FindTab(id); var state = tab.PageState;
                 string label = state.Title;
-                if (string.IsNullOrWhiteSpace(label) && Uri.TryCreate(state.Address, UriKind.Absolute, out var uri)) label = uri.Host;
+                var savedEntry = application.GetEntry(id);
+                if (string.IsNullOrWhiteSpace(label)) label = savedEntry?.RestorePage?.title;
+                if (string.IsNullOrWhiteSpace(label) && Uri.TryCreate(string.IsNullOrEmpty(state.Address) ? savedEntry?.LastAddress : state.Address, UriKind.Absolute, out var uri)) label = uri.Host;
                 if (string.IsNullOrWhiteSpace(label)) label = "New tab";
                 if (label.Length > 22) label = label.Substring(0, 21) + "…";
                 button.GetComponentInChildren<Text>().text = (state.IsLoading ? "… " : "") + label;
@@ -196,7 +209,11 @@ namespace T34400.VRWebView.Samples.Browser
             back.interactable = ready && observed.CanGoBack; forward.interactable = ready && observed.CanGoForward;
             reload.interactable = ready && !string.IsNullOrEmpty(observed.Address); reload.GetComponentInChildren<Text>().text = observed.IsLoading ? "×" : "↻";
             go.interactable = ready && !active.IsBusy;
-            placeholder.gameObject.SetActive(active == null || string.IsNullOrEmpty(observed.Address) || observed.Address == "about:blank");
+            bool blank = active == null || string.IsNullOrEmpty(observed.Address) || observed.Address == "about:blank";
+            placeholder.gameObject.SetActive(blank);
+            tools.Render(active?.Id ?? -1, blank);
+            bookmark.interactable = ready && BrowserLibrary.IsWebAddress(observed.Address);
+            bookmark.GetComponentInChildren<Text>().text = application.Library.IsBookmarked(observed.Address) ? "★" : "☆";
             message.text = notice ?? (observed.ErrorCode != 0 ? "Page failed to load. Reload to retry."
                 : observed.IsLoading ? "Loading " + observed.Progress + "%" : active != null && active.State == BrowserState.Faulted ? "Browser failed." : "");
         }

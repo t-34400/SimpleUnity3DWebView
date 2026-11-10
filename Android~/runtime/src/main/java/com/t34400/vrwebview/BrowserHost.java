@@ -35,6 +35,9 @@ public final class BrowserHost {
         void ready();
         void completed(long operation, boolean success, String code);
         void failed(String code);
+        void evaluated(long operation, String result, boolean success);
+        void found(long revision, int active, int count, boolean complete);
+        void context(String address, boolean image);
         void pageState(String address, String title, boolean back, boolean forward, boolean loading, int progress, int error);
     }
     private static final Handler UI = new Handler(Looper.getMainLooper());
@@ -102,6 +105,30 @@ public final class BrowserHost {
             } catch (RuntimeException error) { h.callback.completed(operation, false, "command_failed"); }
         });
     }
+    public static void evaluate(long id, long operation, String script) {
+        UI.post(() -> {
+            Host h = HOSTS.get(id); if (h == null) return;
+            if (script == null || script.length() > 1024 * 1024) { h.callback.evaluated(operation, "null", false); return; }
+            try { h.web.evaluateJavascript(script, result -> {
+                if (!h.closed) h.callback.evaluated(operation, result != null && result.length() <= 1024 * 1024 ? result : "null", result != null && result.length() <= 1024 * 1024);
+            }); } catch (RuntimeException error) { h.callback.evaluated(operation, "null", false); }
+        });
+    }
+    private interface ContentAction { void run(Host host); }
+    private static void content(long id, long operation, ContentAction action) {
+        UI.post(() -> { Host h = HOSTS.get(id); if (h == null) return;
+            try { action.run(h); h.callback.completed(operation, true, "content_submitted"); }
+            catch (RuntimeException error) { h.callback.completed(operation, false, "content_failed"); }
+        });
+    }
+    public static void textZoom(long id, long operation, int percent) {
+        content(id, operation, h -> { if (percent < 50 || percent > 200) throw new IllegalArgumentException("Invalid zoom"); h.web.getSettings().setTextZoom(percent); });
+    }
+    public static void find(long id, long operation, String query, long revision) {
+        content(id, operation, h -> { if (query == null || query.length() > 4096 || revision < 0) throw new IllegalArgumentException("Invalid query"); h.content.find(query, revision); });
+    }
+    public static void findNext(long id, long operation, boolean forward) { content(id, operation, h -> h.content.next(forward)); }
+    public static void clearFind(long id, long operation) { content(id, operation, h -> h.content.clear()); }
     public static void endEditingAsync(long id, long operation) {
         UI.post(() -> { Host h = HOSTS.get(id); if (h == null) return;
             Host editor = EDITORS.get(h.owner);
@@ -201,7 +228,7 @@ public final class BrowserHost {
 
     private static final class Host implements Application.ActivityLifecycleCallbacks {
         final Activity owner; final long id; int width, height; long output; final Callback callback; final boolean diagnostics;
-        FrameLayout panel; BrowserWebView web; Surface surface; View previousFocus;
+        FrameLayout panel; BrowserWebView web; BrowserContent content; Surface surface; View previousFocus;
         boolean closed, paused, touching, hovering, registered, loading; int progress, pageError;
         float hoverX, hoverY;
         long downTime;
@@ -241,8 +268,27 @@ public final class BrowserHost {
                 } catch (Exception ignored) { }
                 trace("event=keyboard_configuration bootKeyboard=" + boot + " overlayDeclared=" + declaresKeyboard(owner));
             }
+            content = new BrowserContent(web, (revision, active, count, done) -> { if (!closed) callback.found(revision, active, count, done); });
+            web.setOnLongClickListener(view -> {
+                WebView.HitTestResult hit = web.getHitTestResult();
+                if (hit == null) return true;
+                int type = hit.getType(); String address = hit.getExtra();
+                if (type == WebView.HitTestResult.SRC_IMAGE_ANCHOR_TYPE) {
+                    android.os.Message message = android.os.Message.obtain(new Handler(Looper.getMainLooper()) {
+                        @Override public void handleMessage(android.os.Message msg) {
+                            String link = msg.getData().getString("url");
+                            if (!closed && allowed(link)) callback.context(link, false);
+                        }
+                    });
+                    web.requestFocusNodeHref(message);
+                } else if ((type == WebView.HitTestResult.SRC_ANCHOR_TYPE || type == WebView.HitTestResult.IMAGE_TYPE) && allowed(address))
+                    callback.context(address, type == WebView.HitTestResult.IMAGE_TYPE);
+                // Retain standard text-selection behavior for editable/text targets.
+                else return false;
+                return true;
+            });
             web.setWebViewClient(new WebViewClient() {
-                @Override public void onPageStarted(WebView view, String url, android.graphics.Bitmap icon) { loading = true; pageError = 0; progress = 0; publishState(); }
+                @Override public void onPageStarted(WebView view, String url, android.graphics.Bitmap icon) { content.clear(); loading = true; pageError = 0; progress = 0; publishState(); }
                 @Override public void onPageFinished(WebView view, String url) { loading = false; publishState(); }
                 @Override public void doUpdateVisitedHistory(WebView view, String url, boolean reload) { publishState(); }
                 @Override public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
@@ -271,7 +317,7 @@ public final class BrowserHost {
         void detachOutput() {
             UI.removeCallbacks(draw); cancelTouch(); exitHover();
             if (surface != null) { surface.release(); surface = null; }
-            if (output != 0) { GpuBridge.nativeStop(output); output = 0; }
+            if (output != 0) { if (output != 0) GpuBridge.nativeStop(output); output = 0; }
         }
         void clearCompletedEditor() {
             exitHover();
@@ -345,7 +391,7 @@ public final class BrowserHost {
                         try { web.stopLoading(); web.onPause(); }
                         finally {
                             if (panel != null) panel.removeView(web);
-                            web.destroy(); web = null;
+                            if (content != null) content.close(); web.destroy(); web = null;
                         }
                     }
                 } finally {
@@ -354,7 +400,7 @@ public final class BrowserHost {
                     } finally {
                         // No future callback can draw to this Surface. Acknowledge only after its release.
                         if (surface != null) { surface.release(); surface = null; }
-                        GpuBridge.nativeStop(output); output = 0;
+                        if (output != 0) GpuBridge.nativeStop(output); output = 0;
                     }
                 }
             }

@@ -19,6 +19,22 @@ namespace T34400.VRWebView.Samples.Browser.Tests
                 window.GetComponent<RectTransform>().sizeDelta = new Vector2(1280, 700); AssertSizes(window, 508);
             } finally { Object.DestroyImmediate(window); owner.Close(); Object.DestroyImmediate(root); Object.DestroyImmediate(texture); }
         }
+        [Test] public void FindToolbarOnlyConsumesHeightWhileOpenAndLibraryScrollsInsideThePage() {
+            var root = new GameObject("Application", typeof(RectTransform), typeof(Canvas), typeof(BrowserDispatcher), typeof(BrowserDesktopPanel));
+            var window = new GameObject("Window", typeof(RectTransform), typeof(Canvas), typeof(BrowserWindowView)); window.transform.SetParent(root.transform, false);
+            var owner = root.GetComponent<BrowserDispatcher>(); owner.InitializeOnOwnerThread();
+            try {
+                window.GetComponent<BrowserWindowView>().Build(root.GetComponent<BrowserDesktopPanel>(), 1, owner);
+                AssertSizes(window, 808);
+                var find = window.GetComponentsInChildren<Button>(true).Single(b => b.name == "Find" && b.transform.parent.name == "Page tools");
+                find.onClick.Invoke(); AssertSizes(window, 748);
+                var close = window.GetComponentsInChildren<Button>(true).Single(b => b.name == "×" && b.transform.parent.name == "Find in page");
+                close.onClick.Invoke(); AssertSizes(window, 808);
+                var viewport = window.GetComponentsInChildren<RectTransform>(true).Single(r => r.name == "Library viewport");
+                Assert.IsNotNull(viewport.GetComponent<RectMask2D>());
+                Assert.IsTrue(viewport.GetComponent<ScrollRect>().vertical);
+            } finally { Object.DestroyImmediate(window); owner.Close(); Object.DestroyImmediate(root); }
+        }
         [TestCase(-1, -1)] [TestCase(-1, 1)] [TestCase(1, -1)] [TestCase(1, 1)]
         public void CornerResizeKeepsTheOppositeWorldCornerAndCancelRestores(int x, int y) {
             var root = new GameObject("Application", typeof(RectTransform), typeof(Canvas), typeof(BrowserDispatcher), typeof(BrowserDesktopPanel));

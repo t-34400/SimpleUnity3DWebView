@@ -1,21 +1,16 @@
-# VRWebView preview
+# VRWebView
 
-現在は情報整理・設計見直し・技術的負債の解消フェーズです。追加の実機試験は停止しています。
+Unity内にAndroid WebViewを表示する開発中のパッケージです。Quest 3・Unity 6000.4.5f1・OpenXRを主な検証環境としています。
 
-現在の状態は`Documentation~/CurrentStatus.md`を入口に、同じフォルダーのEvidenceLedger.md、ArchitectureReview.md、TechnicalDebt.mdを参照してください。unitypackage版ではフォルダー名が`Documentation`になります。
+- **Core / Runtime**: WebViewの生成、HTTP(S)ナビゲーション、GPU表示、ポインター入力、ネイティブIME、JavaScript実行、文字サイズ、ページ内検索。
+- **任意のBrowserサンプル**: タブと複数ウィンドウ、検索、ブックマーク、履歴、ローカルのセッション・配置復元。
 
-CoreはUnity/Metaから独立した基礎実装です。GPU/IME/XRプローブは製品用Android backendへ接続されていません。Vulkanの描画、別ActivityのIME等の個別成功を製品全体の成功とは扱いません。
+Package Managerの **Browser UI and Model** をImportし、**VRWebView > Create Rich Browser Sample Scene** で試せます。既存サンプルを更新する場合は[更新・実機確認手順](Documentation~/BrowserFeaturesQuestCheck.md)を参照してください。
 
-ログ取得と起動はリポジトリの`Tools/probe.py`へ集約しました。Diagnostics.mdに旧capture/runコマンドの互換動作と失敗の扱いをまとめています。過去の検証ページは経緯を残す資料であり、現在の実行依頼ではありません。
+[現在の確認状況](Documentation~/CurrentStatus.md) · [APIと設計](Documentation~/BrowserFeatures.md)
 
-配布UPM内に検証実装が混在している点は負債として記録しています。この整理では既存のUnity参照・GUID・JNIとAndroid/nativeバイナリを保持し、ファイル移動は行っていません。HC2の判定/観測と自動開始/keyboard timeoutの時間条件をUnity依存のない処理へ切り出し、既存条件を維持しています。Editor検証の入口はEditorValidation.mdです。
+Questの入力にはoverlay keyboard設定が必要です。Unity/GameActivityの既知の入力問題には、バージョン照合付きの[任意の互換修正](Documentation~/GameActivityImeCompatibility.md)を用意しています。
 
-GpuRetirementLedgerは複数世代の退役と一度だけの破棄権を表す純C#の状態処理です。現在のProbe/Pumpには未接続で、実際のTexture破棄やnativeの動作は変えていません。契約と未確認事項はDocumentation~/GpuLifetime.mdを参照してください。
+ネイティブ全画面動画、ダウンロード/ファイル選択、サイト権限UI、独立したプライベートプロファイルは未対応です。新機能の実機確認と配布パッケージからの検証コード分離は継続中です。
 
-Runtime/Presentationに非所有のsurface bindingを追加し、Samples~/BrowserにUI非依存のtab modelを用意しました。サンプルは既存BrowserSessionを使いますが、製品Android backend/factoryとGPU targetを供給するadapterは未実装です。Package Managerから任意importでき、ブラウザーUIの完成シーンは含みません。具体設計と実装範囲はDocumentation~/UpperLayers.md、移行目標はLayeredArchitecture.mdを参照してください。
-
-preview.24ではBrowserDispatcher、BrowserTextureSource、RawImage用BrowserViewを実装しました。Texture公開と標準pointer/scrollの接続部品で、Android producer/factory/sinkではありません。Unity Editorのcompile/import/testは未確認です。契約と残作業はDocumentation~/UnityView.mdを参照してください。
-
-preview.25の任意Browser UI and Model sampleには、既存Canvas配下へタブ/URL/Go/New/Closeとページ枠を生成するbuilderを追加しました。モデルと表示を接続しますが、製品factoryは未実装で、未設定時は操作を無効にします。構成と残作業はDocumentation~/BrowserUI.mdを参照してください。
-
-次のAndroid方式検証は[WF1](Documentation~/WindowImeGuard.md)。既知providerのWindow喪失時IME終了を回避する直接WebView実装。IP1/IP2の借用は不採用で、製品backendの成立は未確認。任意Browser UI sampleの確認は前提にしない。
+MIT License。互換AAR内のGoogleコードは元のApache-2.0ライセンスを保持します。

@@ -12,7 +12,7 @@ namespace T34400.VRWebView
     /// <summary>One Android WebView, direct native IME and a borrowed GPU surface.
     /// Public operations/Dispose run on the supplied Unity dispatcher owner thread.</summary>
     public sealed class AndroidBrowserBackend : IBrowserBackend, IBrowserHtmlBackend,
-        IBrowserPointerSink, IBrowserScrollSink, IBrowserHoverSink, IBrowserAsyncEditingSink, IBrowserFailureSource, IBrowserNavigationBackend
+        IBrowserPointerSink, IBrowserScrollSink, IBrowserHoverSink, IBrowserAsyncEditingSink, IBrowserFailureSource, IBrowserNavigationBackend, IBrowserContentBackend
     {
         private readonly BrowserDispatcher owner;
         private readonly Action<Action> schedule;
@@ -21,6 +21,11 @@ namespace T34400.VRWebView
         private long pageId, presentationVersion;
         private bool presentationWanted;
         private BrowserPageState pageSignal;
+        private BrowserFindResult findSignal;
+        private BrowserContextTarget contextSignal;
+        private readonly Dictionary<long, TaskCompletionSource<string>> scripts = new Dictionary<long, TaskCompletionSource<string>>();
+        public event Action<BrowserFindResult> FindResultChanged;
+        public event Action<BrowserContextTarget> ContextRequested;
         public BrowserPageState PageState { get; private set; } = BrowserPageState.Empty;
         public event Action<BrowserPageState> PageStateChanged;
         private readonly bool providerWorkaround, diagnostics;
@@ -103,6 +108,10 @@ namespace T34400.VRWebView
                 int operations; lock (pendingGate) operations = pending.Count;
                 Debug.Log("[VRWebViewRuntime] event=presentation_stats page=" + pageId + " target=" + id + " visible=" + (id != 0) + " pendingOperations=" + operations + counters);
             }
+            var find = Interlocked.Exchange(ref findSignal, null);
+            if (find != null) Notify(FindResultChanged, find);
+            var context = Interlocked.Exchange(ref contextSignal, null);
+            if (context != null) Notify(ContextRequested, context);
             var observed = Interlocked.Exchange(ref pageSignal, null);
             if (observed != null) {
                 PageState = observed;
@@ -111,6 +120,41 @@ namespace T34400.VRWebView
                     try { handler(observed); } catch (Exception error) { Debug.LogException(error); }
             }
         }
+        private static void Notify<T>(Action<T> handlers, T value) {
+            if (handlers == null) return;
+            foreach (Action<T> handler in handlers.GetInvocationList()) try { handler(value); } catch (Exception error) { Debug.LogException(error); }
+        }
+        public async Task<string> EvaluateJavaScriptAsync(string script, CancellationToken token = default) {
+            VerifyReady(); token.ThrowIfCancellationRequested();
+            BrowserContentPolicy.ValidateScript(script);
+            var completion = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously); long operation;
+            lock (pendingGate) { if (scripts.Count >= 32) throw new InvalidOperationException("Too many scripts pending"); operation = checked(++nextOperation); scripts.Add(operation, completion); }
+            using (var timeout = CancellationTokenSource.CreateLinkedTokenSource(token)) {
+                timeout.CancelAfter(TimeSpan.FromSeconds(10));
+                using (timeout.Token.Register(() => CompleteScript(operation, null, new OperationCanceledException(timeout.Token)))) {
+                    try { bridge.CallStatic("evaluate", pageId, operation, script); }
+                    catch (Exception error) { CompleteScript(operation, null, error); }
+                    return await completion.Task.ConfigureAwait(false);
+                }
+            }
+        }
+        private void CompleteScript(long operation, string result, Exception error) {
+            TaskCompletionSource<string> completion;
+            lock (pendingGate) { if (!scripts.TryGetValue(operation, out completion)) return; scripts.Remove(operation); }
+            if (error is OperationCanceledException) completion.TrySetCanceled();
+            else if (error != null) completion.TrySetException(error);
+            else completion.TrySetResult(result ?? "null");
+        }
+        public Task SetTextZoomAsync(int percent, CancellationToken token = default) {
+            VerifyReady(); BrowserContentPolicy.ValidateTextZoom(percent);
+            return Submit("textZoom", token, percent);
+        }
+        public Task FindAsync(string query, long revision, CancellationToken token = default) {
+            VerifyReady(); BrowserContentPolicy.ValidateFind(query, revision);
+            return Submit("find", token, query, revision);
+        }
+        public Task FindNextAsync(bool forward, CancellationToken token = default) { VerifyReady(); return Submit("findNext", token, forward); }
+        public Task ClearFindAsync(CancellationToken token = default) { VerifyReady(); return Submit("clearFind", token); }
         public Task NavigateAsync(Uri url, CancellationToken token)
         {
             VerifyReady(); token.ThrowIfCancellationRequested();
@@ -128,6 +172,7 @@ namespace T34400.VRWebView
         }
         private Task Submit(string method, CancellationToken token, params object[] arguments)
         {
+            token.ThrowIfCancellationRequested();
             var completion = NewCompletion(); long operation;
             lock (pendingGate) {
                 if (pending.Count >= 256) throw new InvalidOperationException("Too many browser operations");
@@ -275,6 +320,10 @@ namespace T34400.VRWebView
             TaskCompletionSource<bool>[] operations;
             lock (pendingGate) { operations = new TaskCompletionSource<bool>[pending.Count]; pending.Values.CopyTo(operations, 0); pending.Clear(); }
             foreach (var operation in operations) operation.TrySetCanceled();
+            TaskCompletionSource<string>[] evaluations;
+            lock (pendingGate) { evaluations = new TaskCompletionSource<string>[scripts.Count]; scripts.Values.CopyTo(evaluations, 0); scripts.Clear(); }
+            foreach (var evaluation in evaluations) evaluation.TrySetCanceled();
+            FindResultChanged = null; ContextRequested = null;
             try { capture.Cancel(); }
             catch (Exception error) { Debug.LogException(error); }
             try { hover.Exit(); }
@@ -298,6 +347,13 @@ namespace T34400.VRWebView
             internal Callback(AndroidBrowserBackend backend) : base("com.t34400.vrwebview.BrowserHost$Callback") { this.backend = backend; }
             [UnityEngine.Scripting.Preserve] public void pageState(string address, string title, bool back, bool forward, bool loading, int progress, int error) {
                 Interlocked.Exchange(ref backend.pageSignal, new BrowserPageState(address, title, back, forward, loading, progress, error));
+            }
+            [UnityEngine.Scripting.Preserve] public void evaluated(long operation, string result, bool success) {
+                backend.CompleteScript(operation, result, success ? null : new InvalidOperationException("Script evaluation failed"));
+            }
+            [UnityEngine.Scripting.Preserve] public void found(long revision, int active, int count, bool complete) { Interlocked.Exchange(ref backend.findSignal, new BrowserFindResult(revision, active, count, complete)); }
+            [UnityEngine.Scripting.Preserve] public void context(string address, bool image) {
+                try { Interlocked.Exchange(ref backend.contextSignal, new BrowserContextTarget(address, image)); } catch (ArgumentException) { }
             }
             [UnityEngine.Scripting.Preserve] public void ready() { Interlocked.Exchange(ref backend.readySignal, 1); }
             [UnityEngine.Scripting.Preserve] public void completed(long operation, bool success, string code) {

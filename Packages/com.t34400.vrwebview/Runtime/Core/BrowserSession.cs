@@ -26,6 +26,15 @@ namespace T34400.VRWebView
         private int generation;
         public BrowserPageState PageState => (backend as IBrowserNavigationBackend)?.PageState ?? BrowserPageState.Empty;
         public event Action<BrowserPageState> PageStateChanged;
+        public event Action<BrowserFindResult> FindResultChanged;
+        public event Action<BrowserContextTarget> ContextRequested;
+        private void FindChanged(BrowserFindResult value) { ContentChanged(() => FindResultChanged?.Invoke(value)); }
+        private void ContextChanged(BrowserContextTarget value) { ContentChanged(() => ContextRequested?.Invoke(value)); }
+        private void ContentChanged(Action notify) {
+            int version = generation;
+            try { dispatch(() => { if (version != generation || State == BrowserState.Disposed) return; try { notify(); } catch (Exception error) { LastNotificationError = error; } }); }
+            catch (Exception error) { LastNotificationError = error; }
+        }
         private void PageChanged(BrowserPageState value) {
             int version = generation;
             try { dispatch(() => {
@@ -48,6 +57,7 @@ namespace T34400.VRWebView
             dispatch = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
             if (backend is IBrowserFailureSource failures) failures.Failed += BackendFailed;
             if (backend is IBrowserNavigationBackend page) page.PageStateChanged += PageChanged;
+            if (backend is IBrowserContentBackend content) { content.FindResultChanged += FindChanged; content.ContextRequested += ContextChanged; }
         }
 
         public Task InitializeAsync()
@@ -121,6 +131,24 @@ namespace T34400.VRWebView
                 linked.Token.ThrowIfCancellationRequested(); await page.ExecuteAsync(command, linked.Token); linked.Token.ThrowIfCancellationRequested();
             }
         }
+        private IBrowserContentBackend Content() {
+            ThrowIfDisposed(); if (State != BrowserState.Ready) throw new InvalidOperationException("Initialize the browser first");
+            return backend as IBrowserContentBackend ?? throw new NotSupportedException("Backend has no content capability");
+        }
+        public async Task<string> EvaluateJavaScriptAsync(string script, CancellationToken token = default) {
+            var content = Content(); BrowserContentPolicy.ValidateScript(script); using (var linked = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token, token)) {
+                linked.Token.ThrowIfCancellationRequested(); var result = await content.EvaluateJavaScriptAsync(script, linked.Token); linked.Token.ThrowIfCancellationRequested(); return result;
+            }
+        }
+        private async Task ContentOperation(Func<IBrowserContentBackend, CancellationToken, Task> operation, CancellationToken token) {
+            var content = Content(); using (var linked = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token, token)) {
+                linked.Token.ThrowIfCancellationRequested(); await operation(content, linked.Token); linked.Token.ThrowIfCancellationRequested();
+            }
+        }
+        public Task SetTextZoomAsync(int percent, CancellationToken token = default) { BrowserContentPolicy.ValidateTextZoom(percent); return ContentOperation((content, ct) => content.SetTextZoomAsync(percent, ct), token); }
+        public Task FindAsync(string query, long revision, CancellationToken token = default) { BrowserContentPolicy.ValidateFind(query, revision); return ContentOperation((content, ct) => content.FindAsync(query, revision, ct), token); }
+        public Task FindNextAsync(bool forward, CancellationToken token = default) => ContentOperation((content, ct) => content.FindNextAsync(forward, ct), token);
+        public Task ClearFindAsync(CancellationToken token = default) => ContentOperation((content, ct) => content.ClearFindAsync(ct), token);
         private void BackendFailed(Exception error)
         {
             int version = generation;
@@ -166,6 +194,7 @@ namespace T34400.VRWebView
             generation++;
             if (backend is IBrowserFailureSource failures) failures.Failed -= BackendFailed;
             if (backend is IBrowserNavigationBackend page) page.PageStateChanged -= PageChanged;
+            if (backend is IBrowserContentBackend content) { content.FindResultChanged -= FindChanged; content.ContextRequested -= ContextChanged; }
             State = BrowserState.Disposed;
             initializationCompletion?.TrySetCanceled();
             try { lifetime.Cancel(); }

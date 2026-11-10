@@ -1,3 +1,5 @@
+preview.50の現行入口は[ブラウザ機能と実機確認](BrowserFeaturesQuestCheck.md)。以下のpreview.44〜49記録は経緯として残す。今回はSamples側も変更したため、Browser UI and Modelを今回版へ更新する。既存のRichBrowserシーンは再利用できる。preview.49のURL IME同期は利用者が確認済み。
+
 preview.49は既存URLの再編集・上書き時の通知停止を修正した。空欄だけでなくURLが入った状態で検証する。既存BS1を再ビルドし、サンプル再Importは不要。[手順](GameActivityImeCompatibility.md)。
 
 preview.48のURL入力試験は[GameActivity IME互換修正](GameActivityImeCompatibility.md)を参照。既存BS1シーンを再利用し、U2の追加showを使わない。サンプル再Importは不要。
@@ -61,7 +63,7 @@ python3 -m zipfile -c "${vrwebview_logs}.zip" "$vrwebview_logs"
 - 表示中tabだけにproducer Surface/AImageReader/Unity textureを割り当てる。非表示tabに出力queueを常設しない。入力focusを失っても、表示中なら転送は継続する。
 - 切替/resizeは新しい出力世代を作り、古いproducerの停止確認後にGPU完了まで回収する。出力textureをタブ間で直接上書きして使い回さない。定常時は表示tab数に応じた出力数、切替中は退役待ちの旧世代が一時的に残る。世代単位のpool再利用は未実装。
 - event=presentation_statsにpage/target/visibleとGPU copies等、event=window_layoutに実ページ領域の寸法を出す。UI/host readyだけでキーボード・動画や転送最適化の成功と判断しない。
-- pageのURL/title/history/loading/errorは正式なCore capabilityを通す。コマンドのTaskは要求受理であり、ページ読込完了ではない。検索サービス、favicon、履歴UI、bookmarks、window.open/popups、OS window.openとUnity windowの自動接続は未実装。[配置仕様](SpatialWindowInteraction.md)のFaceViewer/FollowHand/TranslateOnlyを選べる。
+- pageのURL/title/history/loading/errorは正式なCore capabilityを通す。コマンドのTaskは要求受理であり、ページ読込完了ではない。preview.50で検索・履歴UI・bookmarksを追加した。favicon、window.open/popups、OS window.openとUnity windowの自動接続は未実装。[配置仕様](SpatialWindowInteraction.md)のFaceViewer/FollowHand/TranslateOnlyを選べる。
 
 クラウドでは純モデルの所有/移動/API、C#構文、依存境界、Python採取、Android build/Lint/R8と配布物を確認する。新規の実uGUI寸法テストは同梱しているが、実Unity実行済みではない。QuestではURL欄の修正効果を最初に判断し、失敗時は以降の統合結果を合格にしない。
 

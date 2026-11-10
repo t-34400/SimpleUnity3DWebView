@@ -22,6 +22,7 @@
     <Compile Include="UnityBridgeTests.cs" />
     <Compile Include="BrowserSampleTests.cs" />
     <Compile Include="BrowserDesktopTests.cs" />
+    <Compile Include="BrowserFeatureTests.cs" />
     <Compile Include="BackendCapabilityTests.cs" />
     <Compile Include="HoverTests.cs" />
     <Compile Include="Program.cs" />

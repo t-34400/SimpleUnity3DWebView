@@ -1,3 +1,5 @@
+preview.50: 検索・ブックマーク・履歴・セッション復元・閉じたタブの再開・文字サイズ・ページ内検索・リンク長押しを追加。[設計と範囲](BrowserFeatures.md)、[一回の実機確認](BrowserFeaturesQuestCheck.md)。CoreのJavaScript実行APIも追加。新機能のUnity Editor/Quest動作は未確認。preview.49の既存URL上書き・追加入力の同期は利用者が成功を確認（2026-11-10）；互換AARは変更していない。
+
 preview.49: BS1で初回表示のtimeoutは0になったが、非空URLの再編集で同期が途切れるとの報告（E26）。Google setState/onKeyによる不要なrestartを再現し、編集中で入力属性が同じ場合は既存通知へ置き換えた。[同じBS1での手順](GameActivityImeCompatibility.md)。今回の実機効果は未確認。
 
 preview.48: P47のキーボード内表示更新を利用者が確認（E25）。初回showをrestart/入力接続取得後へ移し、[BS1のURL欄](GameActivityImeCompatibility.md)で追加showなしの表示を試す。新経路の実機効果は未確認。既存BS1を使い、サンプル再Importは不要。
