@@ -179,3 +179,10 @@ preview.47は既存接続の全文取得/監視通知を補う診断。post proc
 raw522575bytes、SHA256fe0317c22adb1a48f33823a8f59d11dce1b7db274f4aab56230d594ca310c4b7。PID16389、revision1/Google4.4.0/sameConnection marker。IMEのmonitor=true抽出要求3回、extract_update16回。98stable観測とDone3回でUnity値が一致し、利用者がキーボード側にも正しく反映されたと確認した。Meta IMEが当該APIを要求する点も実測できた。
 
 一方、stock Openのtimeout3回とU2の追加show3回は残る。P48では初回showを先行restartとSurfaceViewの入力接続取得後へ移す。BS1の通常URL欄で初回表示・日本語・再編集を確認する。新しい実機成功はまだ記録していない。
+
+
+## E26 — BS1 P48: 初回表示改善、非空URL編集で通知停止
+
+raw926225bytes、SHA256515104eb14465e5410abeb08844bcdca32038c53df8b53b8337ed851f1aae1cc。PID21350、native revision2。URL prepare/request各5回、show5回受理、Unity timeout0、runtime failure0。全文抽出要求は各試行1回、更新通知は順に16/0/0/0/11回。初期文字数は0/20/11/13/0だった。2–4回目は接続取得直後にcloseが続き、StartInput履歴もAPP_CALLED_RESTART_INPUT_API。
+
+利用者はURL欄で同期しないと明示し、動画再生は正常と報告した。初回表示成功を編集同期の完全成功と扱わない。Google setState/onKeyの不要なrestartが監視を切るケースを、旧AARの非空URL上書き/選択更新/キー入力の3再現テストで確認し、すべて全文通知が0となった。実機ログだけではrestartの呼び出し元を一意に特定できないため、両方を修正して新ログで区別する。P49は編集中・属性不変の場合を通知へ変更する。新しい実機成功はまだ記録していない。

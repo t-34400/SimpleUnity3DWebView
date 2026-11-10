@@ -197,4 +197,103 @@ public class ImeStateMonitorTest {
         assertEquals(Arrays.asList("restart","show"),Imm.activation);
     }
 
+    void activatePopulatedEditor() {
+        connection.setState(new State("https://example.com/",20,20,-1,-1));
+        Imm.onRestart=() -> ImeStateMonitor.opened(connection,connection.getEditorInfo());
+        connection.setSoftKeyboardActive(true,0); idle();
+        extract(42,true);
+        // Model Android creating the new binding and then closing its old remote
+        // wrapper around Google's SAME retained connection on a later restart.
+        Imm.onRestart=() -> {
+            ImeStateMonitor.opened(connection,connection.getEditorInfo());
+            connection.closeConnection();
+        };
+    }
+    @Test public void activeStateKeepsTheImeMonitorWhenReplacingAnExistingUrl() {
+        activatePopulatedEditor(); int before=Imm.activation.size();
+        String url="www.wikipedia.org";
+        connection.setState(new State(url,url.length(),url.length(),-1,-1)); idle();
+        assertEquals(Arrays.asList(url),Imm.texts);
+        assertEquals(before,Imm.activation.size());
+        assertEquals(url,connection.getEditable().toString());
+    }
+    @Test public void activeSelectionStateKeepsMonitoringWithoutRestarting() {
+        activatePopulatedEditor(); int before=Imm.activation.size();
+        String text=connection.getEditable().toString();
+        connection.setState(new State(text,0,text.length(),-1,-1)); idle();
+        assertEquals(Arrays.asList(text),Imm.texts);
+        assertEquals(before,Imm.activation.size());
+        connection.commitText("日本語",1); idle();
+        assertEquals("日本語",Imm.texts.get(Imm.texts.size()-1));
+    }
+    @Test public void changedInputAttributesStillRestartAndInvalidateTheOldMonitor() {
+        activatePopulatedEditor(); Imm.onRestart=null; int before=Imm.activation.size();
+        EditorInfo changed=new EditorInfo(); changed.inputType=InputType.TYPE_CLASS_NUMBER;
+        connection.setEditorInfo(changed);
+        connection.setState(new State("123",3,3,-1,-1)); idle();
+        assertEquals(before+1,Imm.activation.size());
+        assertTrue(Imm.tokens.isEmpty());
+    }
+    @Test public void deactivationStillDiscardsTheMonitorBeforeTheNextEditor() {
+        activatePopulatedEditor(); connection.setSoftKeyboardActive(false,0);
+        connection.setState(new State("later",5,5,-1,-1)); idle();
+        assertTrue(Imm.tokens.isEmpty());
+    }
+    @Test public void unchangedActiveStateDoesNotLoopOrRestart() {
+        activatePopulatedEditor(); int before=Imm.activation.size();
+        String text=connection.getEditable().toString();
+        for(int i=0;i<4;i++) { connection.setState(new State(text,text.length(),text.length(),-1,-1)); idle(); }
+        assertEquals(before,Imm.activation.size());
+        assertTrue(Imm.tokens.isEmpty());
+    }
+
+    @Test public void activeCompositionStatePreservesTheComposingRangeAndMonitor() {
+        activatePopulatedEditor(); int before=Imm.activation.size();
+        String text="日本語入力";
+        connection.setState(new State(text,text.length(),text.length(),3,5)); idle();
+        assertEquals(Arrays.asList(text),Imm.texts);
+        assertEquals(3,BaseInputConnection.getComposingSpanStart(connection.getEditable()));
+        assertEquals(5,BaseInputConnection.getComposingSpanEnd(connection.getEditable()));
+        assertEquals(before,Imm.activation.size());
+    }
+    @Test public void changedEditorActionStillRequiresRestart() {
+        activatePopulatedEditor(); Imm.onRestart=null; int before=Imm.activation.size();
+        EditorInfo changed=new EditorInfo(); changed.inputType=InputType.TYPE_CLASS_TEXT; changed.actionId=77;
+        connection.setEditorInfo(changed);
+        connection.setState(new State("next",4,4,-1,-1)); idle();
+        assertEquals(before+1,Imm.activation.size());
+        assertTrue(Imm.tokens.isEmpty());
+    }
+
+    @Test public void activeKeyEventKeepsTheImeMonitorWithoutRestarting() {
+        activatePopulatedEditor();
+        connection.setSelection(0,connection.getEditable().length()); idle();
+        Imm.texts.clear(); Imm.tokens.clear(); extract(42,true);
+        int before=Imm.activation.size();
+        assertTrue(connection.onKey(view,android.view.KeyEvent.KEYCODE_W,
+            new android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN,android.view.KeyEvent.KEYCODE_W)));
+        idle();
+        String current=connection.getEditable().toString();
+        assertNotEquals("https://example.com/",current);
+        assertEquals(Arrays.asList(current),Imm.texts);
+        assertEquals(before,Imm.activation.size());
+    }
+
+    @Test public void realGoogleAttributeCopyDoesNotBreakANonzeroLocalAction() {
+        EditorInfo local=new EditorInfo(); local.inputType=InputType.TYPE_CLASS_TEXT; local.actionId=77;
+        connection.setEditorInfo(local);
+        Imm.onRestart=() -> {
+            EditorInfo returned=new EditorInfo();
+            com.google.androidgamesdk.gametextinput.GameTextInput.copyEditorInfo(connection.getEditorInfo(),returned);
+            assertEquals(0,returned.actionId);
+            ImeStateMonitor.opened(connection,returned);
+        };
+        connection.setSoftKeyboardActive(true,0); idle();
+        assertEquals(Arrays.asList("restart","show"),Imm.activation);
+        extract(42,true);
+        connection.setState(new State("abc",3,3,-1,-1)); idle();
+        assertEquals(Arrays.asList("restart","show"),Imm.activation);
+        assertEquals(Arrays.asList("abc"),Imm.texts);
+    }
+
 }

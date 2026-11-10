@@ -1,20 +1,20 @@
 {
   "schemaVersion": 1,
-  "revision": 2,
+  "revision": 3,
   "googleCoordinate": "androidx.games:games-activity:4.4.0",
   "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/games/games-activity/4.4.0/games-activity-4.4.0.aar",
   "originalAarSha256": "3a8b0887ac55a0a6ab56021ced7353a250539eac811278b74bccd8a5b678d9c9",
-  "aarSha256": "5143c4c0cb90656a4053846b67fc20bcd2f7180c03fac5271ec23f03b5688a86",
+  "aarSha256": "366a55b4ad15946395bb3894eb7ecf7d273fdd7cdd60493fcad13a20876c40dc",
   "sources": {
-    "Tools/build_gameactivity_compat.py": "f88cfdd3fe17051555eb0374539054615f0301decc83ad115eb81cc635413b69",
-    "Android~/gameactivity-compat/build-tools/PatchGameActivity.java": "590af5e8cd080842ba74cd109d5b09b5b6cb1ef3b7a0dc16ed119ee0689bf852",
-    "Android~/gameactivity-compat/checks/src/test/java/com/t34400/vrwebview/gameime/ImeStateMonitorTest.java": "bf7997ce17199064a16171ab2e2281a4a32ab619cad6e65e89b37852aa158015",
-    "Android~/gameactivity-compat/src/com/t34400/vrwebview/gameime/ImeStateMonitor.java": "ee34a8cecd5c5e37a27b517437f3cbb4a5e449bc0c14ce6d6abf9032aa0a605f"
+    "Tools/build_gameactivity_compat.py": "b36d08aa160f2abc4a7473bb03ea4b1e65abb1d97d1b435b9fcaba9a07b9da86",
+    "Android~/gameactivity-compat/build-tools/PatchGameActivity.java": "d5816589edb405f64d34a4c2a4ad0bffc1882ebe29772dff59f6595d56cc275c",
+    "Android~/gameactivity-compat/checks/src/test/java/com/t34400/vrwebview/gameime/ImeStateMonitorTest.java": "15a79bd035ecfc42ab1a951dae032fcff9ca18733b3b78b866c49fcb01570f20",
+    "Android~/gameactivity-compat/src/com/t34400/vrwebview/gameime/ImeStateMonitor.java": "7f49ce259e3f4889865a0f70a7136521e0b5d16fa143047c5a028cfb0b1d079b"
   },
   "changedGoogleClasses": {
     "com/google/androidgamesdk/gametextinput/InputConnection.class": {
       "before": "56689dabd6edf7ea80a4ed69bfc58b9b4454017497f18cd1c82fce06a1e3424c",
-      "after": "cc7887c6499b3dfce2b0ba23ff47269039ba8cc913ce803a32215aa9ee5a3358"
+      "after": "51b14a7c6b54f61bf8e09f3be1a601536b75b5cf981646d4f53c58dd9b5c9b2a"
     },
     "com/google/androidgamesdk/GameActivity$InputEnabledSurfaceView.class": {
       "before": "2e9f3968d489976994819d29032c6268a6689e53f362c44a73899554bbd84b5f",

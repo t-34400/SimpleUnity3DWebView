@@ -1,3 +1,5 @@
+preview.49は既存URLの再編集・上書き時の通知停止を修正した。空欄だけでなくURLが入った状態で検証する。既存BS1を再ビルドし、サンプル再Importは不要。[手順](GameActivityImeCompatibility.md)。
+
 preview.48のURL入力試験は[GameActivity IME互換修正](GameActivityImeCompatibility.md)を参照。既存BS1シーンを再利用し、U2の追加showを使わない。サンプル再Importは不要。
 
 # Rich Browser sample — preview.44

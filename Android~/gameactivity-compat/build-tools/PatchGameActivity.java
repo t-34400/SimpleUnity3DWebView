@@ -56,6 +56,12 @@ public final class PatchGameActivity implements Opcodes {
                         }
                     }
                     @Override public void visitMethodInsn(int opcode, String owner, String method, String signature, boolean itf) {
+                        if (connection && (name.equals("setState") || name.equals("onKey")) && owner.equals(IC) && method.equals("restartInput")) {
+                            mv.visitInsn(name.equals("setState") ? ICONST_0 : ICONST_1);
+                            super.visitMethodInsn(INVOKESTATIC, MON, "stateApplied", "(L" + IC + ";I)V", false);
+                            seen.add(name.equals("setState") ? "stateNotifyGate" : "keyNotifyGate");
+                            return;
+                        }
                         if (connection && name.equals("setSoftKeyboardActive")) {
                             if (owner.equals("android/view/inputmethod/InputMethodManager") && method.equals("showSoftInput")) {
                                 // Leave the original IMM/view/flags stack intact while
@@ -109,7 +115,7 @@ public final class PatchGameActivity implements Opcodes {
             }
         }, ClassReader.EXPAND_FRAMES);
         Set<String> required = new HashSet<>();
-        if (connection) { required.addAll(MUTATIONS); required.addAll(Arrays.asList("<init>", "getExtractedText", "endBatchEdit", "setState", "orderedShow", "hideRestart")); }
+        if (connection) { required.addAll(MUTATIONS); required.addAll(Arrays.asList("<init>", "getExtractedText", "endBatchEdit", "setState", "orderedShow", "hideRestart", "stateNotifyGate", "keyNotifyGate")); }
         else required.add("onCreateInputConnection");
         if (!seen.equals(required)) throw new IllegalStateException("Unexpected pinned class structure: " + seen);
         Files.write(Paths.get(args[2]), writer.toByteArray());

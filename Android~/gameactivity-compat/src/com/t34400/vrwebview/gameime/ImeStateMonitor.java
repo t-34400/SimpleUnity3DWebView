@@ -27,7 +27,7 @@ public final class ImeStateMonitor {
     private int token, requestFlags, batchDepth, generation;
     private Snapshot previous;
     private boolean showPending, showPosted, connectionReady;
-    private int showFlags, showSerial, connectedType, connectedOptions;
+    private int showFlags, showSerial, connectedType, connectedOptions, connectedAction;
     private final Runnable show = this::showOnUiThread;
     private Runnable showDeadline;
 
@@ -35,7 +35,7 @@ public final class ImeStateMonitor {
         this.connection = connection;
         this.view = view;
         imm = (InputMethodManager) view.getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
-        Log.i(TAG, "event=connection_patch revision=2 google=4.4.0 sameConnection=true showOrder=connection_then_show");
+        Log.i(TAG, "event=connection_patch revision=3 google=4.4.0 sameConnection=true showOrder=connection_then_show stateUpdates=notify");
     }
 
     /** Called only after the original SurfaceView has populated Android's EditorInfo. */
@@ -58,10 +58,42 @@ public final class ImeStateMonitor {
         if (!connection.getSoftKeyboardActive()) connection.restartInput();
     }
 
+    /** Native state or key edits do not require recreating the same editor. */
+    public static void stateApplied(com.google.androidgamesdk.gametextinput.InputConnection connection, int source) {
+        ((Owner) connection).vrwebviewImeMonitor().applyEditorState(source);
+    }
+
+    private void applyEditorState(int source) {
+        String origin = source == 0 ? "native" : "key";
+        synchronized (this) {
+            if (!closed && connection.getSoftKeyboardActive() && connectionReady && sameEditorAttributes()) {
+                // setState is inside a batch; onKey has already delivered its native
+                // state. The same queued notifications cover both paths without
+                // recreating the editor or discarding this IME's monitoring token.
+                dirty = true;
+                schedule();
+                Log.i(TAG, "event=state_applied restart=false source=" + origin + " monitored=" + monitoring);
+                return;
+            }
+            Log.i(TAG, "event=state_applied restart=true source=" + origin + " monitored=" + monitoring);
+        }
+        // Cold editor, a closed binding or changed input attributes still need
+        // Android's regular restart and monitoring-token invalidation.
+        connection.restartInput();
+    }
+
+    private boolean sameEditorAttributes() {
+        EditorInfo info = connection.getEditorInfo();
+        return info.inputType == connectedType && info.imeOptions == connectedOptions && info.actionId == connectedAction;
+    }
+
     private synchronized void connectionOpened(EditorInfo info) {
         if (info == null) return; // A local null-attributes lookup is not Android's binding callback.
         connectedType = info.inputType;
         connectedOptions = info.imeOptions;
+        // Google copyEditorInfo copies type/options but not actionId. Keep the
+        // local action snapshot alongside the attributes actually returned to Android.
+        connectedAction = connection.getEditorInfo().actionId;
         connectionReady = (connectedType & InputType.TYPE_MASK_CLASS) != InputType.TYPE_NULL;
         Log.i(TAG, "event=connection_ready inputType=" + connectedType + " imeOptions=" + connectedOptions);
         scheduleShow();
@@ -106,8 +138,7 @@ public final class ImeStateMonitor {
             if (!showPending || closed || !connection.getSoftKeyboardActive()) return;
             if (!view.isAttachedToWindow() || !view.hasFocus() || !view.hasWindowFocus()
                 || imm == null || !imm.isActive(view)) return;
-            EditorInfo info = connection.getEditorInfo();
-            if (!connectionReady || info.inputType != connectedType || info.imeOptions != connectedOptions) return;
+            if (!connectionReady || !sameEditorAttributes()) return;
             int flags = showFlags;
             cancelShow(); // Claim before entering the framework; never retry on a callback/rejection.
             try {

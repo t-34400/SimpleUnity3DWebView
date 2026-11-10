@@ -625,7 +625,7 @@ class GameActivityCompatTests(unittest.TestCase):
 class BrowserInputCompatTests(unittest.TestCase):
     def rows(self):
         return [
-            '11-10 11:00:00.000 123 124 I VRWebViewGameIme: event=connection_patch revision=2 google=4.4.0 sameConnection=true showOrder=connection_then_show',
+            '11-10 11:00:00.000 123 124 I VRWebViewGameIme: event=connection_patch revision=3 google=4.4.0 sameConnection=true showOrder=connection_then_show stateUpdates=notify',
             '11-10 11:00:00.000 123 124 I Unity: [VRWebViewSample] BS1 event=ui_ready version=44',
             '11-10 11:00:00.000 123 124 I VRWebViewRuntime: event=host_ready',
             '11-10 11:00:00.000 123 124 I Unity: [VRWebViewSample] BS1 event=address_keyboard_request request=1',
@@ -634,7 +634,7 @@ class BrowserInputCompatTests(unittest.TestCase):
             '11-10 11:00:00.000 123 124 I VRWebViewGameIme: event=extract_request monitor=true length=0',
             '11-10 11:00:00.000 123 124 I VRWebViewGameIme: event=extract_update length=3']
 
-    def test_browser_uses_revision_two_without_requiring_the_u2_extra_show(self):
+    def test_browser_uses_the_state_notify_revision_without_requiring_the_u2_extra_show(self):
         r=probe.analyze(self.rows(),'browser-input-compat')
         self.assertEqual(r['issues'],[])
         self.assertTrue(r['unity_compat_ready'])
@@ -642,7 +642,7 @@ class BrowserInputCompatTests(unittest.TestCase):
         self.assertEqual(r['system_keyboard_text'],'requires_user_observation')
 
     def test_wrong_revision_or_process_cannot_establish_the_browser_patch(self):
-        for rows in ([x.replace('revision=2','revision=1') for x in self.rows()],
+        for rows in ([x.replace('revision=3','revision=1') for x in self.rows()],
                      [x.replace('123 124','456 457') if 'VRWebViewGameIme' in x else x for x in self.rows()]):
             r=probe.analyze(rows,'browser-input-compat')
             self.assertIn('expected_gameactivity_order_patch_missing',r['issues'])
@@ -662,6 +662,19 @@ class BrowserInputCompatTests(unittest.TestCase):
         self.assertIn('gameactivity_show_rejected',r['issues'])
         self.assertIn('gameactivity_show_timeout',r['issues'])
 
+
+    def test_state_notify_marker_and_native_apply_results_are_distinct_from_editor_restart(self):
+        rows=self.rows()+[
+            '11-10 11:00:00.000 123 124 I VRWebViewGameIme: event=state_applied restart=false source=native monitored=true',
+            '11-10 11:00:00.000 123 124 I VRWebViewGameIme: event=state_applied restart=false source=key monitored=true',
+            '11-10 11:00:00.000 123 124 I VRWebViewGameIme: event=state_applied restart=true monitored=false']
+        r=probe.analyze(rows,'browser-input-compat')
+        self.assertEqual(r['unity_compat_state_notifications'],2)
+        self.assertEqual(r['unity_compat_native_notifications'],1)
+        self.assertEqual(r['unity_compat_key_notifications'],1)
+        self.assertEqual(r['unity_compat_state_restarts'],1)
+        r=probe.analyze([x.replace('revision=3','revision=2').replace('stateUpdates=notify','') for x in rows],'browser-input-compat')
+        self.assertIn('expected_gameactivity_state_notify_patch_missing',r['issues'])
 
 if __name__ == '__main__':
     unittest.main()
