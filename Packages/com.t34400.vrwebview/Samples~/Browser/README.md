@@ -70,6 +70,6 @@ all windows and is saved for future tabs and restarts. Older saved data defaults
 to Standard. Forget saved session retains this preference.
 
 Filtered modes may reduce small-text flicker during head motion, at the cost of
-some softness, GPU work and memory. Their effect is still awaiting Quest
-validation. Standard remains the initial setting. The angled-view option honors
+some softness, GPU work and memory. On Quest 3, Reduce shimmer was reported to reduce flicker with some
+softness. GPU cost and the angled-view option still need device comparison. Standard remains the initial setting. The angled-view option honors
 the host project's anisotropic-filtering setting.

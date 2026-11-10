@@ -6,7 +6,8 @@
     "Unity.XR.OpenXR.Editor",
     "T34400.VRWebView.Diagnostics",
     "T34400.VRWebView.VulkanProbe",
-    "T34400.VRWebView.Editor"
+    "T34400.VRWebView.Editor",
+    "T34400.VRWebView.Bootstrap"
   ],
   "includePlatforms": [
     "Editor"

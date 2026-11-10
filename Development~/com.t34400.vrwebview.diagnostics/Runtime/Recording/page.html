@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VRWebView · A window into the web</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f2f5fa;color:#192b44;font:22px/1.6 system-ui,sans-serif}
+main{max-width:900px;margin:auto;padding:48px}header{border-bottom:2px solid #cedbe9;padding-bottom:30px}
+.label{font-size:16px;letter-spacing:.16em;text-transform:uppercase;color:#2c6898}h1{font-size:48px;line-height:1.15;letter-spacing:-.04em;margin:16px 0}
+h2{font-size:30px;margin:0 0 12px}p{margin:12px 0}.muted{color:#50647e}section{margin-top:32px;padding:28px;background:white;border-radius:20px;border:1px solid #d6e0ec}
+video{width:100%;display:block;background:#10243a;border-radius:12px}label{display:block;font-weight:600;margin-top:20px}
+input,textarea{font:inherit;width:100%;padding:14px;border:2px solid #a1b6ce;border-radius:10px;color:#192b44;background:#fbfdff}
+input:focus,textarea:focus{outline:3px solid #64b8f0;border-color:#246fa8}textarea{min-height:120px}footer{padding:40px 0;font-size:17px;color:#50647e}
+</style>
+<main><header><div class="label">VRWebView / Unity on Meta Quest</div>
+<h1>A window into the web.</h1><p>Bring web content into your Unity scene.</p>
+<p class="muted">Scroll, play inline video and enter text with the system keyboard.</p></header>
+<section><h2>Keep the page in view</h2><p class="muted">A short, locally bundled video. Tap play to begin.</p>
+<video controls playsinline loop muted preload="metadata" src="data:video/mp4;base64,__VIDEO_BASE64__"></video></section>
+<section><div class="label">Native text input</div><h2>Write in your language.</h2>
+<p>Tap the field and try Japanese conversion, then confirm your text.</p>
+<label for="message">Your message</label><input id="message" placeholder="こんにちは、VRWebView" autocomplete="off">
+<label for="notes">A little more room</label><textarea id="notes" placeholder="Type a short note…"></textarea></section>
+<section><h2>Your application, your interface.</h2><p>Use a single web panel, or import the optional browser sample for tabs, movable windows, bookmarks and history.</p>
+<p class="muted">The core owns the page. The sample owns the browser interface.</p></section>
+<footer>VRWebView · Recording page · Original synthetic video · No account or network connection required</footer></main></html>
