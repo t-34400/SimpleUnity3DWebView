@@ -18,6 +18,8 @@ namespace T34400.VRWebView.Samples.Browser
     }
     [Serializable] public sealed class BrowserSavedState {
         public int schema = 1;
+        public int poseVersion;
+        public float fixedTiltDegrees = 5;
         public List<BrowserSavedPage> bookmarks = new List<BrowserSavedPage>();
         public List<BrowserSavedPage> history = new List<BrowserSavedPage>();
         public List<BrowserSavedPage> recentlyClosed = new List<BrowserSavedPage>();
@@ -38,7 +40,8 @@ namespace T34400.VRWebView.Samples.Browser
         private static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
         public static BrowserSavedState Sanitize(BrowserSavedState source) {
             if (source == null || source.schema != 1) throw new NotSupportedException("Unknown browser data schema");
-            var clean = new BrowserSavedState { bookmarks = Clean(source.bookmarks, 200), history = Clean(source.history, 200), recentlyClosed = Clean(source.recentlyClosed, 10) };
+            var clean = new BrowserSavedState { bookmarks = Clean(source.bookmarks, 200), history = Clean(source.history, 200), recentlyClosed = Clean(source.recentlyClosed, 10),
+                poseVersion = source.poseVersion == 1 ? 1 : 0, fixedTiltDegrees = source.poseVersion == 1 && Finite(source.fixedTiltDegrees) ? Math.Max(0, Math.Min(10, source.fixedTiltDegrees)) : 5 };
             foreach (var window in (source.windows ?? new List<BrowserSavedWindow>()).Take(8)) {
                 if (window == null) continue;
                 var saved = new BrowserSavedWindow(); int active = 0, originalIndex = -1;
@@ -72,6 +75,19 @@ namespace T34400.VRWebView.Samples.Browser
         }
         public void ForgetTab(long tab) { lastVisit.Remove(tab); }
         public bool IsBookmarked(string address) => IsWebAddress(address) && Data.bookmarks.Any(p => p.address == NavigationPolicy.Parse(address).AbsoluteUri);
+        public BrowserSavedPage FindBookmark(string address) => IsWebAddress(address) ? Data.bookmarks.FirstOrDefault(p => p.address == NavigationPolicy.Parse(address).AbsoluteUri) : null;
+        public bool SaveBookmark(string address, string title) {
+            if (!IsWebAddress(address)) return false;
+            address = NavigationPolicy.Parse(address).AbsoluteUri;
+            string label = (title ?? "").Trim(); if (label.Length > 256) label = label.Substring(0, 256);
+            var saved = FindBookmark(address);
+            if (saved == null) { Data.bookmarks.Insert(0, new BrowserSavedPage(address, label)); if (Data.bookmarks.Count > 200) Data.bookmarks.RemoveAt(200); }
+            else saved.title = label;
+            return true;
+        }
+        public bool RemoveBookmark(string address) {
+            var saved = FindBookmark(address); return saved != null && Data.bookmarks.Remove(saved);
+        }
         public bool ToggleBookmark(string address, string title) {
             if (!IsWebAddress(address)) return false;
             address = NavigationPolicy.Parse(address).AbsoluteUri;

@@ -13,7 +13,9 @@ namespace T34400.VRWebView.Samples.Browser
     {
         [SerializeField] private BrowserPageFactory factory;
         public Camera worldCamera;
-        public BrowserWindowPlacementMode placementMode = BrowserWindowPlacementMode.FaceViewer;
+        public BrowserWindowPlacementMode placementMode = BrowserWindowPlacementMode.YawOnly;
+        [Range(0, 10)] public float fixedTiltDegrees = 5;
+        [SerializeField, HideInInspector] private int placementSchemaVersion;
         [Range(64, 160)] public float cornerHitSize = 96;
         public bool diagnostics = true;
         public bool restorePreviousSession = true;
@@ -63,8 +65,13 @@ namespace T34400.VRWebView.Samples.Browser
             if (stateStore == null) stateStore = new BrowserStateStore(Path.Combine(Application.persistentDataPath, "vrwebview-browser-v1.json"),
                 text => JsonUtility.FromJson<BrowserSavedState>(text), state => JsonUtility.ToJson(state));
             library = new BrowserLibrary(stateStore.Load());
+            // Existing BS1 scenes serialized the old default (FaceViewer=0).
+            if (placementSchemaVersion == 0 && placementMode == BrowserWindowPlacementMode.FaceViewer) placementMode = BrowserWindowPlacementMode.YawOnly;
+            placementSchemaVersion = 1;
+            if (restorePreviousSession && library.Data.poseVersion == 1) fixedTiltDegrees = library.Data.fixedTiltDegrees;
+            fixedTiltDegrees = Mathf.Clamp(fixedTiltDegrees, 0, 10);
             if (!restorePreviousSession || !RestoreWindows()) CreateWindow();
-            if (diagnostics) Debug.Log("[VRWebViewSample] BS1 event=ui_ready version=50 multiWindow=true features=library_session_find_context");
+            if (diagnostics) Debug.Log("[VRWebViewSample] BS1 event=ui_ready version=51 multiWindow=true features=anchored_menus_yaw");
         }
         public void CreateWindow() {
             if (closed || desktop == null) return;
@@ -95,7 +102,10 @@ namespace T34400.VRWebView.Samples.Browser
             if (views.TryGetValue(window, out var view)) BringToFront(view);
             desktop.Select(window, tab);
         }
-        internal void BringToFront(BrowserWindowView view) { view.GetComponent<Canvas>().sortingOrder = ++sortingOrder; }
+        internal void BringToFront(BrowserWindowView view) {
+            foreach (var other in views.Values) if (other != view) other.CloseMenu();
+            view.GetComponent<Canvas>().sortingOrder = ++sortingOrder;
+        }
         public void CloseTab(long tab) {
             if (closed) return; var previous = desktop.WindowOf(tab); if (previous == null) return;
             entries.TryGetValue(tab, out var entry); RememberClosed(tab); Unsubscribe(entry); entry?.Page.Editing?.EndEditing();
@@ -143,6 +153,7 @@ namespace T34400.VRWebView.Samples.Browser
                 var tab = desktop.FindTab(id.Value); var entry = GetEntry(id.Value);
                 entry.Dirty = false;
                 if (!string.IsNullOrEmpty(tab.PageState.Address) && tab.PageState.Address != "about:blank") entry.Draft.Edit(tab.PageState.Address);
+                if (command != BrowserPageCommand.Stop && views.TryGetValue(window, out var view)) view.NavigationStarted();
                 _ = Observe(tab.ExecuteAsync(command), window);
             } }
             catch (Exception error) { Failure(window, error); }
@@ -175,7 +186,7 @@ namespace T34400.VRWebView.Samples.Browser
                     var canvas = node.GetComponent<Canvas>(); canvas.renderMode = RenderMode.WorldSpace; canvas.worldCamera = worldCamera; canvas.overrideSorting = true;
                     view = node.GetComponent<BrowserWindowView>(); views.Add(window.Id, view);
                     view.Build(this, window.Id, owner); BringToFront(view);
-                    node.GetComponent<RectTransform>().anchoredPosition = new Vector2((views.Count - 1) * 1350, 0);
+                    node.GetComponent<RectTransform>().anchoredPosition = new Vector2((views.Count - 1) * 1350, 0); view.FaceViewer();
                 }
                 view.Render(window);
                 var active = window.ActiveTabId.HasValue ? desktop.FindTab(window.ActiveTabId.Value) : null;
@@ -234,7 +245,7 @@ namespace T34400.VRWebView.Samples.Browser
             // Cancel before membership changes can destroy the original drag component.
             if (target >= 0) desktop.MoveTab(tab, target, index);
             else {
-                var window = desktop.DetachTab(tab); if (window != null && views.TryGetValue(window.Id, out var view)) view.transform.position = position;
+                var window = desktop.DetachTab(tab); if (window != null && views.TryGetValue(window.Id, out var view)) { view.transform.position = position; view.FaceViewer(); }
             }
         }
         public void CancelTabDrag() {
@@ -272,6 +283,23 @@ namespace T34400.VRWebView.Samples.Browser
             catch (Exception error) { Failure(window, error); }
         }
         public void ReopenClosed(long window) { if (desktop.FindWindow(window)?.Tabs.Count >= 32) return; var saved = library.TakeClosed(); if (saved != null) CreatePage(window, saved); }
+        public BrowserSavedPage CurrentSavedPage(long window) {
+            var id = desktop?.FindWindow(window)?.ActiveTabId; return id.HasValue ? SavePage(id.Value) : null;
+        }
+        public int TextZoom(long window) {
+            var id = desktop?.FindWindow(window)?.ActiveTabId; return id.HasValue ? GetEntry(id.Value)?.TextZoom ?? 100 : 100;
+        }
+        public void SaveBookmark(string address, string title) { if (library.SaveBookmark(address, title)) Refresh(); }
+        public void RemoveBookmark(string address) { if (library.RemoveBookmark(address)) Refresh(); }
+        public void RemoveHistory(BrowserSavedPage saved) { if (library.Data.history.Remove(saved)) MarkSave(); }
+        public void ReopenSavedClosed(long window, BrowserSavedPage saved) {
+            if (closed || desktop.FindWindow(window)?.Tabs.Count >= 32 || !library.Data.recentlyClosed.Contains(saved)) return;
+            library.Data.recentlyClosed.Remove(saved); CreatePage(window, saved);
+        }
+        public void ChangeTilt(float delta) {
+            fixedTiltDegrees = Mathf.Clamp(fixedTiltDegrees + delta, 0, 10);
+            foreach (var view in views.Values) view.NormalizePose(); Refresh();
+        }
         public void ToggleBookmark(long window) {
             var id = desktop.FindWindow(window)?.ActiveTabId; if (!id.HasValue) return; var saved = SavePage(id.Value);
             library.ToggleBookmark(saved.address, saved.title); Refresh();
@@ -285,15 +313,17 @@ namespace T34400.VRWebView.Samples.Browser
             try { stateStore.Forget(); persistSession = false; library.Data.windows.Clear(); library.Data.recentlyClosed.Clear(); savePending = false;
                 // Disable automatic restoration until the next launch; future explicit edits save a new session.
                 foreach (var view in views.Values) view.ShowMessage("Saved session forgotten. Bookmarks and history are retained.");
-                stateStore.Save(new BrowserSavedState { bookmarks = library.Data.bookmarks, history = library.Data.history });
+                stateStore.Save(new BrowserSavedState { bookmarks = library.Data.bookmarks, history = library.Data.history, poseVersion = 1, fixedTiltDegrees = fixedTiltDegrees });
             } catch (Exception error) when (error is IOException || error is UnauthorizedAccessException) { foreach (var view in views.Values) view.ShowMessage("Saved data could not be removed."); }
         }
         public void Zoom(long window, int delta) {
             var id = desktop.FindWindow(window)?.ActiveTabId; if (!id.HasValue) return; var entry = GetEntry(id.Value);
             if (entry?.Page.Content == null || desktop.FindTab(id.Value)?.State != BrowserState.Ready) return;
-            entry.TextZoom = Mathf.Clamp(entry.TextZoom + delta, 50, 200);
-            _ = Observe(entry.Page.Content.SetTextZoomAsync(entry.TextZoom), window); MarkSave();
-            if (views.TryGetValue(window, out var view)) view.ShowMessage("Text size " + entry.TextZoom + "%");
+            try {
+                entry.TextZoom = Mathf.Clamp(entry.TextZoom + delta, 50, 200);
+                _ = Observe(entry.Page.Content.SetTextZoomAsync(entry.TextZoom), window); MarkSave();
+                if (views.TryGetValue(window, out var view)) view.ShowMessage("Text size " + entry.TextZoom + "%");
+            } catch (Exception error) { Failure(window, error); }
         }
         public Task Find(long window, string query, long revision) {
             var id = desktop.FindWindow(window)?.ActiveTabId; var content = id.HasValue ? GetEntry(id.Value)?.Page.Content : null;
@@ -314,14 +344,17 @@ namespace T34400.VRWebView.Samples.Browser
                 var rect = (RectTransform)view.transform;
                 if (worldCamera != null) {
                     var viewer = worldCamera.transform; int slot = index++;
-                    rect.SetPositionAndRotation(viewer.position + viewer.forward * (1.8f + slot * .05f) + viewer.right * (slot * .08f), viewer.rotation);
-                } else { rect.anchoredPosition3D = new Vector3(index++ * 100, 0, 0); rect.localRotation = Quaternion.identity; }
+                    var yaw = BrowserWindowPose.Yaw(viewer.forward, Quaternion.identity);
+                    Vector3 forward = yaw * Vector3.forward, right = yaw * Vector3.right;
+                    rect.SetPositionAndRotation(viewer.position + forward * (1.8f + slot * .05f) + right * (slot * .08f) - Vector3.up * .15f, yaw);
+                    view.NormalizePose();
+                } else { rect.anchoredPosition3D = new Vector3(index++ * 100, 0, 0); rect.localRotation = Quaternion.identity; view.NormalizePose(); }
             }
             MarkSave();
         }
         internal void MarkSave() { if (!savePending) { savePending = true; saveAfter = Time.unscaledTime + 2; } }
         private BrowserSavedState Snapshot() {
-            library.Data.windows.Clear();
+            library.Data.windows.Clear(); library.Data.poseVersion = 1; library.Data.fixedTiltDegrees = fixedTiltDegrees;
             if (!persistSession) return library.Data;
             foreach (var window in desktop.Windows) {
                 var saved = new BrowserSavedWindow(); saved.tabs.AddRange(window.Tabs.Select(SavePage));
@@ -352,7 +385,7 @@ namespace T34400.VRWebView.Samples.Browser
             for (int i = 0; i < savedWindows.Length && i < desktop.Windows.Count; i++) {
                 var saved = savedWindows[i]; if (!saved.hasPlacement || !views.TryGetValue(desktop.Windows[i].Id, out var view)) continue;
                 var rect = (RectTransform)view.transform; rect.localPosition = new Vector3(saved.x, saved.y, saved.z);
-                rect.localRotation = new Quaternion(saved.qx, saved.qy, saved.qz, saved.qw).normalized; rect.sizeDelta = new Vector2(saved.width, saved.height);
+                rect.localRotation = new Quaternion(saved.qx, saved.qy, saved.qz, saved.qw).normalized; view.NormalizePose(); rect.sizeDelta = new Vector2(saved.width, saved.height);
             }
             return true;
         }

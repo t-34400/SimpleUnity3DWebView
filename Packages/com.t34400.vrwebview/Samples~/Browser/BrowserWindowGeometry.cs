@@ -1,7 +1,7 @@
 using System;
 namespace T34400.VRWebView.Samples.Browser
 {
-    public enum BrowserWindowPlacementMode { FaceViewer, FollowHand, TranslateOnly }
+    public enum BrowserWindowPlacementMode { FaceViewer, FollowHand, TranslateOnly, YawOnly }
     public readonly struct BrowserWindowResize
     {
         public readonly float Width, Height, OffsetX, OffsetY;

@@ -13,9 +13,10 @@ namespace T34400.VRWebView.Samples.Browser
         private BrowserDispatcher owner;
         private BrowserView page;
         private BrowserWindowTools tools;
+        private BrowserPagePressAnchor pagePress;
         private Button bookmark;
         private BrowserAddressInput address;
-        private Text message, placeholder;
+        private Text message;
         private Button back, forward, reload, go, newTabButton;
         private RectTransform freeHeader;
         private RectTransform tabs, viewport, pageRect, tabsRowRect, navigationRect;
@@ -32,6 +33,8 @@ namespace T34400.VRWebView.Samples.Browser
         public Camera Viewer => application.worldCamera;
         public BrowserWindowPlacementMode PlacementMode => application.placementMode;
         public bool AddressFocused => address != null && address.isFocused;
+        public float FixedTilt => application.fixedTiltDegrees;
+        public BrowserWindowTools Tools => tools;
         public void Build(BrowserDesktopPanel app, long id, BrowserDispatcher dispatcher) {
             application = app; WindowId = id; owner = dispatcher;
             var rect = (RectTransform)transform; rect.sizeDelta = new Vector2(1280, 1000);
@@ -79,34 +82,34 @@ namespace T34400.VRWebView.Samples.Browser
             reload = AddButton(nav, "Reload", "↻", 52, () => {
                 var tab = CurrentTab(); if (tab != null) application.Command(WindowId, tab.PageState.IsLoading ? BrowserPageCommand.Stop : BrowserPageCommand.Reload);
             });
-            var input = BrowserSampleWidgets.Node(nav, "Address", typeof(Image), typeof(BrowserAddressInput), typeof(LayoutElement));
-            input.GetComponent<Image>().color = new Color(.11f, .14f, .2f, 1); input.GetComponent<LayoutElement>().flexibleWidth = 1; input.GetComponent<LayoutElement>().minWidth = 160;
-            address = input.GetComponent<BrowserAddressInput>(); address.targetGraphic = input.GetComponent<Image>();
-            address.textComponent = BrowserSampleWidgets.Label(input.transform, "Text", "", font); BrowserSampleWidgets.Stretch(address.textComponent.rectTransform, 10);
-            var hint = BrowserSampleWidgets.Label(input.transform, "Hint", "Search or enter address", font); hint.color = Color.gray; BrowserSampleWidgets.Stretch(hint.rectTransform, 10); address.placeholder = hint;
-            address.lineType = InputField.LineType.SingleLine; address.keyboardType = TouchScreenKeyboardType.Default; address.shouldHideMobileInput = false;
+            address = BrowserSampleWidgets.Input(nav, "Address", font, "Search or enter address", 160);
             address.PrepareEditing = () => application.PrepareAddress(WindowId); address.EditingFailed += ShowMessage;
             address.onValueChanged.AddListener(value => { notice = null; application.EditAddress(WindowId, value); });
             address.onEndEdit.AddListener(_ => application.RequestRefresh());
             address.Submitted += () => { address.DeactivateInputField(); application.Navigate(WindowId); };
             go = AddButton(nav, "Go", "Go", 65, () => { address.DeactivateInputField(); application.Navigate(WindowId); });
-            bookmark = AddButton(nav, "Bookmark page", "☆", 52, () => application.ToggleBookmark(WindowId));
-            AddButton(nav, "Browser menu", "☰", 52, () => tools.Toggle());
-            var toolContainer = BrowserSampleWidgets.Node(root.transform, "Tool bars", typeof(VerticalLayoutGroup));
-            var toolLayout = toolContainer.GetComponent<VerticalLayoutGroup>(); toolLayout.childControlHeight = toolLayout.childControlWidth = true; toolLayout.childForceExpandHeight = false;
+            bookmark = AddButton(nav, "Bookmark page", "☆", 52, () => tools.BookmarkCurrent());
+            var menu = AddButton(nav, "Browser menu", "☰", 52, () => tools.Toggle());
             var content = BrowserSampleWidgets.Node(root.transform, "Page area", typeof(Image), typeof(LayoutElement));
             content.GetComponent<Image>().color = new Color(.025f, .03f, .045f); var contentSize = content.GetComponent<LayoutElement>(); contentSize.minHeight = contentSize.preferredHeight = 120; contentSize.flexibleHeight = 1;
             pageRect = (RectTransform)content.transform;
-            var display = BrowserSampleWidgets.Node(content.transform, "Web page", typeof(RawImage), typeof(BrowserPointerSource), typeof(BrowserView));
+            var display = BrowserSampleWidgets.Node(content.transform, "Web page", typeof(RawImage), typeof(BrowserPointerSource), typeof(BrowserView), typeof(BrowserPagePressAnchor));
             BrowserSampleWidgets.Stretch((RectTransform)display.transform); page = display.GetComponent<BrowserView>();
             display.AddComponent<BrowserWindowActivation>().Window = this;
-            placeholder = BrowserSampleWidgets.Label(content.transform, "New tab page", "New tab\nEnter an address above to begin.", font, 28); placeholder.alignment = TextAnchor.MiddleCenter; BrowserSampleWidgets.Stretch(placeholder.rectTransform);
-            tools = gameObject.AddComponent<BrowserWindowTools>(); tools.Build(application, this, content.transform, toolContainer.transform, font);
+            pagePress = display.GetComponent<BrowserPagePressAnchor>();
+            tools = gameObject.AddComponent<BrowserWindowTools>(); tools.Build(application, this, pageRect, (RectTransform)menu.transform, (RectTransform)bookmark.transform, pagePress, font);
             var footer = Row(root.transform, "Status bar", 24);
             message = BrowserSampleWidgets.Label(footer, "Status", "", font, 18); message.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1;
             foreach (int x in new[] { -1, 1 }) foreach (int y in new[] { -1, 1 }) BuildCorner(x, y);
         }
-        public void NavigationStarted() { tools?.NavigationStarted(); }
+        public void NormalizePose() {
+            if (PlacementMode == BrowserWindowPlacementMode.YawOnly) transform.rotation = BrowserWindowPose.Normalize(transform.rotation, FixedTilt);
+        }
+        public void FaceViewer() {
+            if (PlacementMode == BrowserWindowPlacementMode.YawOnly) transform.rotation = BrowserWindowPose.WithTilt(Viewer != null ? transform.position - Viewer.transform.position : transform.forward, FixedTilt, transform.rotation);
+        }
+        public void CloseMenu() { tools?.CloseMenu(); }
+        public void NavigationStarted() { notice = null; tools?.NavigationStarted(); }
         public void FindUpdated(long tab, BrowserFindResult result) { tools?.Found(tab, result); }
         public void ShowContext(BrowserContextTarget target) { tools?.ShowContext(target); }
         public void PlacementChanged() { application.MarkSave(); }
@@ -151,10 +154,11 @@ namespace T34400.VRWebView.Samples.Browser
         }
         public void WithdrawIfChanged(long? active) {
             if (bound >= 0 && bound != (active ?? -1)) {
-                application.GetEntry(bound)?.Page.Editing?.EndEditing(); page.Unbind(); address.DeactivateInputField(); bound = -1;
+                tools?.NavigationStarted(); application.GetEntry(bound)?.Page.Editing?.EndEditing(); page.Unbind(); address.DeactivateInputField(); bound = -1;
             }
         }
         public void Unbind() {
+            tools?.NavigationStarted();
             if (page != null) page.Unbind();
             if (address != null) address.DeactivateInputField(); bound = -1;
         }
@@ -210,8 +214,7 @@ namespace T34400.VRWebView.Samples.Browser
             reload.interactable = ready && !string.IsNullOrEmpty(observed.Address); reload.GetComponentInChildren<Text>().text = observed.IsLoading ? "×" : "↻";
             go.interactable = ready && !active.IsBusy;
             bool blank = active == null || string.IsNullOrEmpty(observed.Address) || observed.Address == "about:blank";
-            placeholder.gameObject.SetActive(blank);
-            tools.Render(active?.Id ?? -1, blank);
+            tools.Render(active?.Id ?? -1, blank, observed.IsLoading, observed.Address);
             bookmark.interactable = ready && BrowserLibrary.IsWebAddress(observed.Address);
             bookmark.GetComponentInChildren<Text>().text = application.Library.IsBookmarked(observed.Address) ? "★" : "☆";
             message.text = notice ?? (observed.ErrorCode != 0 ? "Page failed to load. Reload to retry."

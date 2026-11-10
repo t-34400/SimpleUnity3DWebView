@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.0-preview.51
+
+- Keep navigation buttons at fixed usable widths when the address is long; clip and scroll field text.
+- Replace the full-page library overlay with anchored browser, link and bookmark menus.
+- Show bookmark title/domain lists with scrolling and explicit edit/delete actions; keep new-tab shortcuts separate.
+- Overlay the find bar without resizing the WebView viewport.
+- Use yaw-only placement by default, with a configurable fixed tilt (initially 5 degrees) and consistent restore/recall.
+- Retain the device-tested input, rendering and browser feature APIs. Audio investigation is deferred at the user's request.
+- Cloud policy and package checks are available; Unity/Quest verification of this UI revision is pending.
+
 ## 0.1.0-preview.50
 
 - Add address/search resolution, bookmarks, visit history and new-tab library to the rich sample.

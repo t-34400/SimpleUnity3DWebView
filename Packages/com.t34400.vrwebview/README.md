@@ -5,7 +5,7 @@ Unity内にAndroid WebViewを表示する開発中のパッケージです。Que
 - **Core / Runtime**: WebViewの生成、HTTP(S)ナビゲーション、GPU表示、ポインター入力、ネイティブIME、JavaScript実行、文字サイズ、ページ内検索。
 - **任意のBrowserサンプル**: タブと複数ウィンドウ、検索、ブックマーク、履歴、ローカルのセッション・配置復元。
 
-Package Managerの **Browser UI and Model** をImportし、**VRWebView > Create Rich Browser Sample Scene** で試せます。既存サンプルを更新する場合は[更新・実機確認手順](Documentation~/BrowserFeaturesQuestCheck.md)を参照してください。
+Package Managerの **Browser UI and Model** をImportし、**VRWebView > Create Rich Browser Sample Scene** で試せます。既存サンプルを更新する場合は[更新・実機確認手順](Documentation~/BrowserChrome.md)を参照してください。
 
 [現在の確認状況](Documentation~/CurrentStatus.md) · [APIと設計](Documentation~/BrowserFeatures.md)
 

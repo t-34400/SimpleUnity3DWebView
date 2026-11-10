@@ -1,3 +1,5 @@
+preview.51の現行入口は[UI改訂と実機確認](BrowserChrome.md)。既存Import先をTools/update_browser_sample.pyで更新し、既存RichBrowserシーンを使用する。古い版の手順は経緯として以下へ残す。
+
 preview.50の現行入口は[ブラウザ機能と実機確認](BrowserFeaturesQuestCheck.md)。以下のpreview.44〜49記録は経緯として残す。今回はSamples側も変更したため、Browser UI and Modelを今回版へ更新する。既存のRichBrowserシーンは再利用できる。preview.49のURL IME同期は利用者が確認済み。
 
 preview.49は既存URLの再編集・上書き時の通知停止を修正した。空欄だけでなくURLが入った状態で検証する。既存BS1を再ビルドし、サンプル再Importは不要。[手順](GameActivityImeCompatibility.md)。

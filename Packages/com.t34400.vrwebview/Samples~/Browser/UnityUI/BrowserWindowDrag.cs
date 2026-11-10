@@ -26,6 +26,7 @@ namespace T34400.VRWebView.Samples.Browser
             foreach (var image in strokes) if (image != null) image.color = active || hovered ? Color.cyan : new Color(.3f, .4f, .5f, .6f);
         }
         public void OnBeginDrag(PointerEventData data) {
+            window.CloseMenu();
             var rect = (RectTransform)window.transform; startPosition = rect.position; startSize = rect.sizeDelta;
             startRotation = rect.rotation;
             localToWorld = rect.localToWorldMatrix; worldToLocal = rect.worldToLocalMatrix;
@@ -34,7 +35,8 @@ namespace T34400.VRWebView.Samples.Browser
             if (data is BrowserRayPointerEventData ray && ray.HasWorldRay)
                 grabDistance = Mathf.Max(.1f, Vector3.Dot(startPointer - ray.WorldRay.origin, ray.WorldRay.direction));
             grabOffset = Quaternion.Inverse(startRotation) * (startPointer - startPosition);
-            startFacing = window.Viewer != null ? Facing(startPosition - window.Viewer.transform.position, startRotation) : startRotation;
+            startFacing = window.Viewer != null ? (window.PlacementMode == BrowserWindowPlacementMode.YawOnly
+                ? BrowserWindowPose.Yaw(startPosition - window.Viewer.transform.position, startRotation) : Facing(startPosition - window.Viewer.transform.position, startRotation)) : startRotation;
             startGrip = data is BrowserRayPointerEventData pose && pose.HasWorldRotation ? pose.WorldRotation
                 : data is BrowserRayPointerEventData direction && direction.HasWorldRay ? Quaternion.LookRotation(direction.WorldRay.direction, Vector3.up) : startRotation;
             window.BringToFront(); Paint();
@@ -58,7 +60,10 @@ namespace T34400.VRWebView.Samples.Browser
             var rect = (RectTransform)window.transform;
             if (cornerX == 0) {
                 Quaternion rotation = startRotation;
-                if (window.PlacementMode == BrowserWindowPlacementMode.FaceViewer && window.Viewer != null) {
+                if (window.PlacementMode == BrowserWindowPlacementMode.YawOnly && window.Viewer != null) {
+                    Vector3 center = startPosition + world - startPointer;
+                    rotation = BrowserWindowPose.Yaw(center - window.Viewer.transform.position, startFacing) * Quaternion.Inverse(startFacing) * startRotation;
+                } else if (window.PlacementMode == BrowserWindowPlacementMode.FaceViewer && window.Viewer != null) {
                     Vector3 translatedCenter = startPosition + world - startPointer;
                     rotation = Facing(translatedCenter - window.Viewer.transform.position, startFacing) * Quaternion.Inverse(startFacing) * startRotation;
                 } else if (window.PlacementMode == BrowserWindowPlacementMode.FollowHand && data is BrowserRayPointerEventData pose && pose.HasWorldRay) {

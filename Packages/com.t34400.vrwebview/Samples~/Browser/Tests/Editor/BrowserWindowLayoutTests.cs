@@ -19,20 +19,19 @@ namespace T34400.VRWebView.Samples.Browser.Tests
                 window.GetComponent<RectTransform>().sizeDelta = new Vector2(1280, 700); AssertSizes(window, 508);
             } finally { Object.DestroyImmediate(window); owner.Close(); Object.DestroyImmediate(root); Object.DestroyImmediate(texture); }
         }
-        [Test] public void FindToolbarOnlyConsumesHeightWhileOpenAndLibraryScrollsInsideThePage() {
+        [Test] public void FindAndMenusDoNotResizeThePage() {
             var root = new GameObject("Application", typeof(RectTransform), typeof(Canvas), typeof(BrowserDispatcher), typeof(BrowserDesktopPanel));
             var window = new GameObject("Window", typeof(RectTransform), typeof(Canvas), typeof(BrowserWindowView)); window.transform.SetParent(root.transform, false);
             var owner = root.GetComponent<BrowserDispatcher>(); owner.InitializeOnOwnerThread();
             try {
-                window.GetComponent<BrowserWindowView>().Build(root.GetComponent<BrowserDesktopPanel>(), 1, owner);
-                AssertSizes(window, 808);
-                var find = window.GetComponentsInChildren<Button>(true).Single(b => b.name == "Find" && b.transform.parent.name == "Page tools");
-                find.onClick.Invoke(); AssertSizes(window, 748);
-                var close = window.GetComponentsInChildren<Button>(true).Single(b => b.name == "×" && b.transform.parent.name == "Find in page");
-                close.onClick.Invoke(); AssertSizes(window, 808);
-                var viewport = window.GetComponentsInChildren<RectTransform>(true).Single(r => r.name == "Library viewport");
-                Assert.IsNotNull(viewport.GetComponent<RectMask2D>());
-                Assert.IsTrue(viewport.GetComponent<ScrollRect>().vertical);
+                var view = window.GetComponent<BrowserWindowView>(); view.Build(root.GetComponent<BrowserDesktopPanel>(), 1, owner);
+                AssertSizes(window, 808); view.Tools.ShowFind(); AssertSizes(window, 808);
+                window.GetComponentsInChildren<Button>(true).Single(b => b.name == "Close find").onClick.Invoke(); AssertSizes(window, 808);
+                view.Tools.ShowMenu(); AssertSizes(window, 808);
+                Assert.IsTrue(view.Tools.MenuOpen);
+                Assert.Less(view.Tools.Popups.Card.rect.width, window.GetComponent<RectTransform>().rect.width * .5f);
+                Assert.IsNotNull(view.Tools.Popups.Card.GetComponent<RectMask2D>());
+                view.CloseMenu(); Assert.IsFalse(view.Tools.MenuOpen);
             } finally { Object.DestroyImmediate(window); owner.Close(); Object.DestroyImmediate(root); }
         }
         [TestCase(-1, -1)] [TestCase(-1, 1)] [TestCase(1, -1)] [TestCase(1, 1)]
@@ -90,6 +89,7 @@ namespace T34400.VRWebView.Samples.Browser.Tests
         [TestCase(BrowserWindowPlacementMode.FaceViewer)]
         [TestCase(BrowserWindowPlacementMode.FollowHand)]
         [TestCase(BrowserWindowPlacementMode.TranslateOnly)]
+        [TestCase(BrowserWindowPlacementMode.YawOnly)]
         public void PlacementKeepsGrabPointAndCancelRestoresPose(BrowserWindowPlacementMode mode) {
             var root = new GameObject("Application", typeof(RectTransform), typeof(Canvas), typeof(BrowserDispatcher), typeof(BrowserDesktopPanel));
             var window = new GameObject("Window", typeof(RectTransform), typeof(Canvas), typeof(BrowserWindowView)); window.transform.SetParent(root.transform, false);
@@ -99,6 +99,7 @@ namespace T34400.VRWebView.Samples.Browser.Tests
                 var app = root.GetComponent<BrowserDesktopPanel>(); app.worldCamera = camera.GetComponent<Camera>(); app.placementMode = mode;
                 var view = window.GetComponent<BrowserWindowView>(); view.Build(app, 1, owner);
                 var rect = window.GetComponent<RectTransform>(); rect.position = new Vector3(0, 0, 2); rect.localScale = Vector3.one * .0012f;
+                if (mode == BrowserWindowPlacementMode.YawOnly) rect.rotation = Quaternion.Euler(app.fixedTiltDegrees, 0, 0);
                 var original = rect.position; var originalRotation = rect.rotation;
                 var localGrab = new Vector3(200, 450, 0); var point = rect.TransformPoint(localGrab);
                 var grip = window.GetComponentsInChildren<BrowserWindowDrag>().Single(d => d.name == "Reserved title drag space");
@@ -111,6 +112,7 @@ namespace T34400.VRWebView.Samples.Browser.Tests
                 Assert.Less(Vector3.Distance(data.WorldRay.GetPoint(2), rect.TransformPoint(localGrab)), .0001f);
                 if (mode == BrowserWindowPlacementMode.TranslateOnly) Assert.Less(Quaternion.Angle(originalRotation, rect.rotation), .001f);
                 else Assert.Greater(Quaternion.Angle(originalRotation, rect.rotation), 1);
+                if (mode == BrowserWindowPlacementMode.YawOnly) Assert.Less(Quaternion.Angle(BrowserWindowPose.Normalize(rect.rotation, app.fixedTiltDegrees), rect.rotation), .001f);
                 if (mode == BrowserWindowPlacementMode.FollowHand) Assert.Less(Quaternion.Angle(data.WorldRotation, rect.rotation), .001f);
                 grip.OnCancel(null); Assert.Less(Vector3.Distance(original, rect.position), .0001f);
                 Assert.Less(Quaternion.Angle(originalRotation, rect.rotation), .001f);

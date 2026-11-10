@@ -1,3 +1,7 @@
+preview.51の標準は **YawOnly + 固定傾斜**。移動は上下/左右/奥行き、回転の変更は世界の鉛直軸回りのみ。roll=0、初期pitch=5度（上端を少し奥へ倒す）で、サンプルのSettingsから0〜10度へ調整できる。配置後にheadへ追随しない。旧シーンの既定FaceViewerは実行時にYawOnlyへ移行し、古い保存poseのpitch/rollも固定傾斜へ正規化する。新規作成・移動・Recall・Restoreで同じ規則を使う。FaceViewer/FollowHand/TranslateOnlyのenum値は従来のまま保持する。新しい操作感はQuest未確認。[詳細](BrowserChrome.md)。
+
+以下はpreview.44時点の調査・実装記録。
+
 # 空間ウィンドウ操作の公開資料調査 — 2026-11-10 JST
 
 Meta公式[Meta-Spatial-SDK-Samples](https://github.com/meta-quest/Meta-Spatial-SDK-Samples/tree/822f4d1ec967d4975ae8db386502b60cda5218c0)を調査した。Horizon OS本体の非公開実装と同一とは主張しない。一般向けOS更新ページはこの環境で取得できず、OSのgrab/resizeアルゴリズムを直接確認したわけでもない。

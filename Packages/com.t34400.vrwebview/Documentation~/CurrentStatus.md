@@ -1,3 +1,5 @@
+preview.51: [ブラウザUI改訂](BrowserChrome.md)。長いURLでもボタン幅を維持し、右上/リンク/ブックマークを小さなメニューへ分離。文字サイズと検索は本文を見ながら使い、検索バー開閉でviewportを変えない。標準配置は水平回転＋固定傾斜5度（設定で0〜10度）。今回のUnity/Quest効果は未確認。preview.50の検索・ブックマーク・文字サイズ・Find・リンク・window操作・再起動復元は利用者が成功を報告。音声は比較条件が未確認で、利用者指示により調査保留。
+
 preview.50: 検索・ブックマーク・履歴・セッション復元・閉じたタブの再開・文字サイズ・ページ内検索・リンク長押しを追加。[設計と範囲](BrowserFeatures.md)、[一回の実機確認](BrowserFeaturesQuestCheck.md)。CoreのJavaScript実行APIも追加。新機能のUnity Editor/Quest動作は未確認。preview.49の既存URL上書き・追加入力の同期は利用者が成功を確認（2026-11-10）；互換AARは変更していない。
 
 preview.49: BS1で初回表示のtimeoutは0になったが、非空URLの再編集で同期が途切れるとの報告（E26）。Google setState/onKeyによる不要なrestartを再現し、編集中で入力属性が同じ場合は既存通知へ置き換えた。[同じBS1での手順](GameActivityImeCompatibility.md)。今回の実機効果は未確認。

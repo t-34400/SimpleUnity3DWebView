@@ -1,5 +1,5 @@
 {
-  "updated_jst": "2026-11-09",
+  "updated_jst": "2026-11-10",
   "policy": "Observations, logs, source references and hypotheses are distinct; hashes identify supplied logs, not reproduced runs",
   "entries": [
     {
@@ -251,6 +251,36 @@
         "新しい実行ログは添付されていない",
         "全サイト・desktop mouse button/hover menu・全lifecycleの保証ではない",
         "preview.39のバージョン条件変更はこの実機観察後の実装変更"
+      ]
+    },
+    {
+      "id": "E27",
+      "configuration": "BS1 preview.49 existing URL overwrite and append",
+      "source_kind": "user_report",
+      "source_log_sha256": null,
+      "observed": [
+        "利用者が既存URLの上書き・追加入力でシステムキーボードとURL欄の同期成功を確認"
+      ],
+      "limits": [
+        "全IME/全OS/lifecycleの保証ではない"
+      ]
+    },
+    {
+      "id": "E28",
+      "configuration": "BS1 preview.50 browser features",
+      "source_kind": "user_report_and_log",
+      "source_log_sha256": "e06e2fc015cac6f0610351e5f6eb7036c5c179735444e0ab927dc58003cd1ec5",
+      "observed": [
+        "検索・ブックマーク・文字サイズ・Find・window操作・再起動時復元を利用者が確認",
+        "リンク操作も成功との利用者報告。ただし操作は今回ログ外",
+        "動画の音声が聞こえないとの利用者報告",
+        "長いURLが他のボタンを圧迫し、メニュー/ブックマークUIと姿勢に改善要望"
+      ],
+      "limits": [
+        "AudioTrack/Chromium等の音声情報を採取していない",
+        "以前音が出た同じ動画との比較は未確認",
+        "利用者の指示で音声調査は保留",
+        "preview.51のUI変更・傾斜の操作感は未確認"
       ]
     }
   ]
