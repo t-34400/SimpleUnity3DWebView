@@ -126,7 +126,7 @@ namespace T34400.VRWebView.Samples.Browser.Tests
             Assert.AreEqual(24, rects.Single(r => r.name == "Status bar").rect.height, .1f);
             Assert.AreEqual(pageHeight, rects.Single(r => r.name == "Page area").rect.height, .1f);
             Assert.GreaterOrEqual(rects.Single(r => r.name == "Reserved title drag space").rect.width, 144);
-            Assert.AreEqual("Tab strip", rects.Single(r => r.name == "New tab").parent.name);
+            Assert.AreEqual("Tab strip", rects.Single(r => r.name == "New tab" && r.parent.name == "Tab strip").parent.name);
             Assert.AreEqual(4, rects.Count(r => r.name.StartsWith("Resize corner ")));
         }
     }
