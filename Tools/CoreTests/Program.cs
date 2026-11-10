@@ -40,6 +40,8 @@ internal static class Program
             await Test(scenario.Name, () => Sync(scenario.Run));
         foreach (var scenario in BrowserChromeTests.Scenarios())
             await Test(scenario.Name, () => Sync(scenario.Run));
+        foreach (var scenario in BrowserFaviconTests.Scenarios())
+            await Test(scenario.Name, () => Sync(scenario.Run));
         foreach (var scenario in BrowserFeatureTests.Scenarios())
             await Test(scenario.Name, () => Sync(scenario.Run));
         foreach (var scenario in BrowserDesktopTests.Scenarios())

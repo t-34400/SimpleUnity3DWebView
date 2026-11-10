@@ -12,7 +12,7 @@ namespace T34400.VRWebView
     /// <summary>One Android WebView, direct native IME and a borrowed GPU surface.
     /// Public operations/Dispose run on the supplied Unity dispatcher owner thread.</summary>
     public sealed class AndroidBrowserBackend : IBrowserBackend, IBrowserHtmlBackend,
-        IBrowserPointerSink, IBrowserScrollSink, IBrowserHoverSink, IBrowserAsyncEditingSink, IBrowserFailureSource, IBrowserNavigationBackend, IBrowserContentBackend
+        IBrowserPointerSink, IBrowserScrollSink, IBrowserHoverSink, IBrowserAsyncEditingSink, IBrowserFailureSource, IBrowserNavigationBackend, IBrowserContentBackend, IBrowserIconSource
     {
         private readonly BrowserDispatcher owner;
         private readonly Action<Action> schedule;
@@ -21,6 +21,9 @@ namespace T34400.VRWebView
         private long pageId, presentationVersion;
         private bool presentationWanted;
         private BrowserPageState pageSignal;
+        private BrowserPageIcon iconSignal;
+        public BrowserPageIcon PageIcon { get; private set; }
+        public event Action<BrowserPageIcon> PageIconChanged;
         private BrowserFindResult findSignal;
         private BrowserContextTarget contextSignal;
         private readonly Dictionary<long, TaskCompletionSource<string>> scripts = new Dictionary<long, TaskCompletionSource<string>>();
@@ -119,6 +122,8 @@ namespace T34400.VRWebView
                 if (handlers != null) foreach (Action<BrowserPageState> handler in handlers.GetInvocationList())
                     try { handler(observed); } catch (Exception error) { Debug.LogException(error); }
             }
+            var icon = Interlocked.Exchange(ref iconSignal, null);
+            if (icon != null) { PageIcon = icon; Notify(PageIconChanged, icon); }
         }
         private static void Notify<T>(Action<T> handlers, T value) {
             if (handlers == null) return;
@@ -345,6 +350,11 @@ namespace T34400.VRWebView
         {
             private readonly AndroidBrowserBackend backend;
             internal Callback(AndroidBrowserBackend backend) : base("com.t34400.vrwebview.BrowserHost$Callback") { this.backend = backend; }
+            [UnityEngine.Scripting.Preserve] public void pageIcon(string address, string png) {
+                if (png == null || png.Length > ((BrowserPageIcon.MaximumBytes + 2) / 3) * 4) return;
+                try { Interlocked.Exchange(ref backend.iconSignal, new BrowserPageIcon(address, Convert.FromBase64String(png))); }
+                catch (ArgumentException) { } catch (FormatException) { }
+            }
             [UnityEngine.Scripting.Preserve] public void pageState(string address, string title, bool back, bool forward, bool loading, int progress, int error) {
                 Interlocked.Exchange(ref backend.pageSignal, new BrowserPageState(address, title, back, forward, loading, progress, error));
             }

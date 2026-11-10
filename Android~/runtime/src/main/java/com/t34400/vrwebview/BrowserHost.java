@@ -39,6 +39,7 @@ public final class BrowserHost {
         void found(long revision, int active, int count, boolean complete);
         void context(String address, boolean image);
         void pageState(String address, String title, boolean back, boolean forward, boolean loading, int progress, int error);
+        void pageIcon(String address, String png);
     }
     private static final Handler UI = new Handler(Looper.getMainLooper());
     private static final Map<Long, Host> HOSTS = new HashMap<>();
@@ -299,6 +300,11 @@ public final class BrowserHost {
                 }
             });
             web.setWebChromeClient(new WebChromeClient() {
+                @Override public void onReceivedIcon(WebView view, android.graphics.Bitmap icon) {
+                    if (closed || !allowed(view.getUrl())) return;
+                    String png = BrowserIcon.encode(icon);
+                    if (png != null) callback.pageIcon(view.getUrl(), png);
+                }
                 @Override public void onReceivedTitle(WebView view, String title) { publishState(); }
                 @Override public void onProgressChanged(WebView view, int value) { progress = value; publishState(); }
                 @Override public void onPermissionRequest(PermissionRequest request) { request.deny(); }

@@ -75,6 +75,7 @@ def main():
             "public static void find(long, long, java.lang.String, long);", "public static void findNext(long, long, boolean);", "public static void clearFind(long, long);",
             "public abstract void evaluated(long, java.lang.String, boolean);", "public abstract void found(long, int, int, boolean);", "public abstract void context(java.lang.String, boolean);",
             "public abstract void pageState(java.lang.String, java.lang.String, boolean, boolean, boolean, int, int);",
+            "public abstract void pageIcon(java.lang.String, java.lang.String);",
             "public static void close(long);", "public static void navigate(long, long, java.lang.String);",
             "public static void loadHtml(long, long, java.lang.String, java.lang.String);",
             "public static void endEditing(long);", "public static void setPaused(long, boolean);",

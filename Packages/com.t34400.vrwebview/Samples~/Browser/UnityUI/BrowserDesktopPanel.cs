@@ -21,6 +21,7 @@ namespace T34400.VRWebView.Samples.Browser
         public bool restorePreviousSession = true;
         public string searchEndpoint = "https://duckduckgo.com/?q=";
         private BrowserLibrary library;
+        internal BrowserFaviconTextures Favicons { get; private set; }
         private BrowserStateStore stateStore;
         private float saveAfter;
         private bool savePending;
@@ -53,6 +54,7 @@ namespace T34400.VRWebView.Samples.Browser
             internal bool InitializationScheduled;
             internal Action<BrowserFindResult> FindHandler;
             internal Action<BrowserContextTarget> ContextHandler;
+            internal Action<BrowserPageIcon> IconHandler;
             internal Entry(BrowserPage page) { Page = page; }
         }
         public void SetStorage(BrowserStateStore value) { if (desktop != null) throw new InvalidOperationException("Set storage before starting"); stateStore = value ?? throw new ArgumentNullException(nameof(value)); }
@@ -65,13 +67,14 @@ namespace T34400.VRWebView.Samples.Browser
             if (stateStore == null) stateStore = new BrowserStateStore(Path.Combine(Application.persistentDataPath, "vrwebview-browser-v1.json"),
                 text => JsonUtility.FromJson<BrowserSavedState>(text), state => JsonUtility.ToJson(state));
             library = new BrowserLibrary(stateStore.Load());
+            Favicons = new BrowserFaviconTextures(Path.Combine(stateStore.DirectoryPath, "vrwebview-favicons-v1"));
             // Existing BS1 scenes serialized the old default (FaceViewer=0).
             if (placementSchemaVersion == 0 && placementMode == BrowserWindowPlacementMode.FaceViewer) placementMode = BrowserWindowPlacementMode.YawOnly;
             placementSchemaVersion = 1;
             if (restorePreviousSession && library.Data.poseVersion == 1) fixedTiltDegrees = library.Data.fixedTiltDegrees;
             fixedTiltDegrees = Mathf.Clamp(fixedTiltDegrees, 0, 10);
             if (!restorePreviousSession || !RestoreWindows()) CreateWindow();
-            if (diagnostics) Debug.Log("[VRWebViewSample] BS1 event=ui_ready version=51 multiWindow=true features=anchored_menus_yaw");
+            if (diagnostics) Debug.Log("[VRWebViewSample] BS1 event=ui_ready version=54 multiWindow=true features=pinned_add_favicons");
         }
         public void CreateWindow() {
             if (closed || desktop == null) return;
@@ -88,6 +91,16 @@ namespace T34400.VRWebView.Samples.Browser
                 var tab = desktop.CreateTab(window); result = tab; var entry = new Entry(pending); entries.Add(tab.Id, entry); pending = null;
                 entry.TextZoom = saved?.textZoom ?? 100; entry.RestorePage = saved;
                 if (saved != null) { entry.LastAddress = saved.address; entry.Draft.Edit(saved.address); }
+                if (entry.Page.Icons != null) {
+                    entry.IconHandler = icon => {
+                        try { schedule(() => {
+                            if (closed || tab.IsClosed || !entries.ContainsKey(tab.Id)) return;
+                            Favicons.Store(icon); Refresh();
+                            if (diagnostics) Debug.Log("[VRWebViewSample] BS1 event=favicon_received tab=" + tab.Id + " bytes=" + icon.CopyPng().Length);
+                        }); } catch (ObjectDisposedException) { }
+                    };
+                    entry.Page.Icons.PageIconChanged += entry.IconHandler;
+                }
                 if (entry.Page.Content != null) {
                     entry.FindHandler = value => { var host = desktop.WindowOf(tab.Id); if (host != null && views.TryGetValue(host.Id, out var view)) view.FindUpdated(tab.Id, value); };
                     entry.ContextHandler = value => { var host = desktop.WindowOf(tab.Id); if (host?.ActiveTabId == tab.Id && views.TryGetValue(host.Id, out var view)) view.ShowContext(value); };
@@ -264,8 +277,9 @@ namespace T34400.VRWebView.Samples.Browser
             } catch (Exception error) { try { schedule(() => Failure(window, error)); } catch (ObjectDisposedException) { } }
         }
         private static void Unsubscribe(Entry entry) {
-            if (entry?.Page.Content == null) return;
-            entry.Page.Content.FindResultChanged -= entry.FindHandler; entry.Page.Content.ContextRequested -= entry.ContextHandler;
+            if (entry?.Page == null) return;
+            if (entry.Page.Icons != null) entry.Page.Icons.PageIconChanged -= entry.IconHandler;
+            if (entry.Page.Content != null) { entry.Page.Content.FindResultChanged -= entry.FindHandler; entry.Page.Content.ContextRequested -= entry.ContextHandler; }
         }
         private BrowserSavedPage SavePage(long id) {
             var tab = desktop.FindTab(id); var entry = GetEntry(id); string url = tab?.PageState.Address;
@@ -401,7 +415,7 @@ namespace T34400.VRWebView.Samples.Browser
             if (closed) return; if (savePending) SaveState(); closed = true; CancelTabDrag();
             foreach (var view in views.Values) if (view != null) view.Unbind();
             if (desktop != null) { desktop.Changed -= Refresh; desktop.Dispose(); }
-            foreach (var entry in entries.Values) Unsubscribe(entry); entries.Clear(); views.Clear();
+            foreach (var entry in entries.Values) Unsubscribe(entry); entries.Clear(); views.Clear(); Favicons?.Dispose();
         }
     }
 }

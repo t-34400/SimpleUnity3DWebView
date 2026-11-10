@@ -18,7 +18,8 @@ namespace T34400.VRWebView.Samples.Browser
         private BrowserAddressInput address;
         private Text message;
         private Button back, forward, reload, go, newTabButton;
-        private RectTransform freeHeader;
+        private RectTransform freeHeader, newTabDock;
+        public bool NewTabDocked => newTabDock != null && newTabDock.gameObject.activeSelf;
         private RectTransform tabs, viewport, pageRect, tabsRowRect, navigationRect;
         private Font font;
         private readonly Dictionary<long, Button> tabButtons = new Dictionary<long, Button>();
@@ -70,6 +71,9 @@ namespace T34400.VRWebView.Samples.Browser
             insertionMarker.GetComponent<Image>().color = Color.cyan; insertionMarker.GetComponent<Image>().raycastTarget = false;
             insertionMarker.anchorMin = insertionMarker.anchorMax = new Vector2(0, .5f); insertionMarker.sizeDelta = new Vector2(4, 48); insertionMarker.gameObject.SetActive(false);
             newTabButton = AddButton(tabs, "New tab", "+", 52, () => application.NewTab(WindowId));
+            newTabDock = (RectTransform)BrowserSampleWidgets.Node(tabRow, "Fixed new tab dock", typeof(LayoutElement)).transform;
+            var dockSize = newTabDock.GetComponent<LayoutElement>(); dockSize.minWidth = dockSize.preferredWidth = 52; dockSize.flexibleWidth = 0;
+            newTabDock.gameObject.SetActive(false);
             var grip = BrowserSampleWidgets.Node(tabRow, "Reserved title drag space", typeof(Image), typeof(LayoutElement), typeof(BrowserWindowDrag));
             grip.GetComponent<Image>().color = BrowserSampleWidgets.Background;
             var gripSize = grip.GetComponent<LayoutElement>(); gripSize.minWidth = gripSize.preferredWidth = 144; gripSize.flexibleWidth = 0;
@@ -165,15 +169,18 @@ namespace T34400.VRWebView.Samples.Browser
         public void Render(BrowserWindow window) {
             if (page == null) return;
             WithdrawIfChanged(window.ActiveTabId);
-            foreach (var pair in tabButtons.ToArray()) if (!window.Tabs.Contains(pair.Key)) { BrowserSampleWidgets.Remove(pair.Value.gameObject); tabButtons.Remove(pair.Key); }
+            bool tabLayoutChanged = false;
+            foreach (var pair in tabButtons.ToArray()) if (!window.Tabs.Contains(pair.Key)) { BrowserSampleWidgets.Remove(pair.Value.gameObject); tabButtons.Remove(pair.Key); tabLayoutChanged = true; }
             int order = 0;
             foreach (long id in window.Tabs) {
                 if (!tabButtons.TryGetValue(id, out var button)) {
+                    tabLayoutChanged = true;
                     button = AddButton(tabs, "Tab " + id, "New tab", 220, () => application.Select(WindowId, id));
                     var inner = button.gameObject.AddComponent<HorizontalLayoutGroup>(); inner.padding = new RectOffset(10, 4, 4, 4); inner.spacing = 4;
                     inner.childControlWidth = inner.childControlHeight = true; inner.childForceExpandHeight = true; inner.childForceExpandWidth = false;
                     var title = button.GetComponentInChildren<Text>(); title.alignment = TextAnchor.MiddleLeft; title.horizontalOverflow = HorizontalWrapMode.Wrap;
                     var titleSize = title.gameObject.AddComponent<LayoutElement>(); titleSize.minWidth = titleSize.preferredWidth = 0; titleSize.flexibleWidth = 1;
+                    var icon = BrowserFaviconView.Add(button.transform, font); icon.transform.SetAsFirstSibling();
                     var close = AddButton(button.transform, "Close tab", "×", 40, () => application.CloseTab(id));
                     close.GetComponent<LayoutElement>().minHeight = 40; close.GetComponent<LayoutElement>().minWidth = 40;
                     close.GetComponent<Image>().color = Color.white;
@@ -188,11 +195,16 @@ namespace T34400.VRWebView.Samples.Browser
                 if (string.IsNullOrWhiteSpace(label) && Uri.TryCreate(string.IsNullOrEmpty(state.Address) ? savedEntry?.LastAddress : state.Address, UriKind.Absolute, out var uri)) label = uri.Host;
                 if (string.IsNullOrWhiteSpace(label)) label = "New tab";
                 if (label.Length > 22) label = label.Substring(0, 21) + "…";
-                button.GetComponentInChildren<Text>().text = (state.IsLoading ? "… " : "") + label;
+                button.transform.Find("Label").GetComponent<Text>().text = (state.IsLoading ? "… " : "") + label;
+                string iconAddress = BrowserLibrary.IsWebAddress(state.Address) ? state.Address : savedEntry?.LastAddress;
+                button.GetComponentInChildren<BrowserFaviconView>().Configure(application, iconAddress);
                 button.GetComponent<Image>().color = window.ActiveTabId == id ? BrowserSampleWidgets.SelectedColor : BrowserSampleWidgets.ButtonColor;
-                button.transform.SetSiblingIndex(order++);
+                if (button.transform.GetSiblingIndex() != order) { button.transform.SetSiblingIndex(order); tabLayoutChanged = true; }
+                order++;
             }
-            newTabButton.transform.SetAsLastSibling();
+            if (!NewTabDocked) newTabButton.transform.SetAsLastSibling();
+            if (tabLayoutChanged) LayoutRebuilder.ForceRebuildLayoutImmediate((RectTransform)transform);
+            UpdateTabDock();
             var active = CurrentTab(); var entry = active != null ? application.GetEntry(active.Id) : null;
             address.interactable = active != null;
             var observed = active?.PageState ?? BrowserPageState.Empty;
@@ -230,7 +242,7 @@ namespace T34400.VRWebView.Samples.Browser
         }
         public void UpdatePresentation() {
             if (pageRect != null && lastWidth == 0) LayoutRebuilder.ForceRebuildLayoutImmediate((RectTransform)transform);
-            UpdateHeaderSpace();
+            UpdateTabDock(); UpdateHeaderSpace();
             if (pageRect == null || !isActiveAndEnabled || !application.isActiveAndEnabled) return;
             Vector2 size = ((RectTransform)transform).rect.size;
             if (size != previousSize) { previousSize = size; resizeAfter = Time.unscaledTime + .15f; }
@@ -241,6 +253,22 @@ namespace T34400.VRWebView.Samples.Browser
             application.GetEntry(bound)?.Page.SetPresentation(true, width, height);
             if (application.diagnostics) Debug.Log("[VRWebViewSample] BS1 event=window_layout window=" + WindowId + " width=" + width + " height=" + height
                 + " tabHeight=" + tabsRowRect.rect.height + " navigationHeight=" + navigationRect.rect.height + " windowHeight=" + ((RectTransform)transform).rect.height);
+        }
+        private void UpdateTabDock() {
+            if (newTabDock == null || viewport.rect.width <= 0) return;
+            float fullWidth = viewport.rect.width + (NewTabDocked ? 60 : 0);
+            bool dock = BrowserTabStripPolicy.ShouldDock(tabButtons.Count, fullWidth);
+            if (dock == NewTabDocked) return;
+            newTabDock.gameObject.SetActive(dock);
+            var rect = (RectTransform)newTabButton.transform; rect.SetParent(dock ? newTabDock : tabs, false);
+            if (dock) {
+                rect.anchorMin = new Vector2(0, 1); rect.anchorMax = Vector2.one; rect.pivot = new Vector2(.5f, 1);
+                rect.anchoredPosition = Vector2.zero; rect.sizeDelta = new Vector2(0, 52);
+            } else rect.SetAsLastSibling();
+            LayoutRebuilder.ForceRebuildLayoutImmediate((RectTransform)transform);
+            tabs.anchoredPosition = new Vector2(Mathf.Clamp(tabs.anchoredPosition.x, -Mathf.Max(0, tabs.rect.width - viewport.rect.width), 0), tabs.anchoredPosition.y);
+            RevealSelected();
+            if (application.diagnostics) Debug.Log("[VRWebViewSample] BS1 event=tab_add_dock window=" + WindowId + " fixed=" + dock);
         }
         private void UpdateHeaderSpace() {
             if (freeHeader == null) return;

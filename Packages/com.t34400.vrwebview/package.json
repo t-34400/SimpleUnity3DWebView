@@ -1,6 +1,6 @@
 {
   "name": "com.t34400.vrwebview",
-  "version": "0.1.0-preview.53",
+  "version": "0.1.0-preview.54",
   "displayName": "VRWebView",
   "description": "Android WebView panels for Unity VR, with native text input and an optional multi-window browser sample.",
   "unity": "6000.4",

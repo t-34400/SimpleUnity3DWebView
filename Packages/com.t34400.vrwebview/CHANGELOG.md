@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.0-preview.54
+
+- Dock the new-tab button outside the scrolling strip when tabs overflow; return it inline when they fit.
+- Display WebView-provided favicons in tabs, saved-page lists and new-tab bookmark shortcuts.
+- Cache bounded page/origin icons independently from browser state and GPU presentation; share reference-counted Unity textures.
+- Add explicit Edit and Delete controls to new-tab bookmarks.
+- Preserve the tested IME compatibility patch and Android window/focus behaviour.
+
 ## 0.1.0-preview.53
 
 - License the project and optional browser sample under Apache-2.0 from this preview.

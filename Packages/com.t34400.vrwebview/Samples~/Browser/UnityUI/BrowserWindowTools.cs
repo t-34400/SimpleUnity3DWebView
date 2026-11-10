@@ -94,13 +94,17 @@ namespace T34400.VRWebView.Samples.Browser
         private Button SavedItem(Transform parent, BrowserSavedPage saved, Action open) {
             var row = Row(parent, "Saved page", 66); var button = Button(row, "Open saved page", "", open);
             BrowserSampleWidgets.Remove(button.GetComponentInChildren<Text>().gameObject);
-            var layout = button.gameObject.AddComponent<VerticalLayoutGroup>(); layout.padding = new RectOffset(12, 12, 5, 5);
-            layout.childControlHeight = layout.childControlWidth = true; layout.childForceExpandHeight = false; layout.childForceExpandWidth = true;
+            var layout = button.gameObject.AddComponent<HorizontalLayoutGroup>(); layout.padding = new RectOffset(10, 10, 5, 5); layout.spacing = 10;
+            layout.childControlHeight = layout.childControlWidth = true; layout.childForceExpandHeight = true; layout.childForceExpandWidth = false;
+            BrowserFaviconView.Add(button.transform, font, 30).Configure(app, saved.address);
+            var labels = BrowserSampleWidgets.Node(button.transform, "Saved labels", typeof(VerticalLayoutGroup), typeof(LayoutElement));
+            BrowserSampleWidgets.FlexibleWidth(labels); var column = labels.GetComponent<VerticalLayoutGroup>();
+            column.childControlHeight = column.childControlWidth = true; column.childForceExpandHeight = false; column.childForceExpandWidth = true;
             string host = Uri.TryCreate(saved.address, UriKind.Absolute, out var uri) ? uri.Host : "";
             string title = string.IsNullOrWhiteSpace(saved.title) ? host : saved.title;
             if (title.Length > 60) title = title.Substring(0, 59) + "…";
-            Label(button.transform, "Saved title", title, 28, 20);
-            Label(button.transform, "Saved domain", host, 22, 16).color = new Color(.65f, .74f, .84f);
+            Label(labels.transform, "Saved title", title, 28, 20);
+            Label(labels.transform, "Saved domain", host, 22, 16).color = new Color(.65f, .74f, .84f);
             button.interactable = Ready;
             return Button(row, "Saved page actions", "⋯", () => ShowSavedActions(saved, "Bookmarks"), 48);
         }
@@ -178,7 +182,18 @@ namespace T34400.VRWebView.Samples.Browser
                         foreach (var saved in pages.Skip(i).Take(2)) {
                             string title = string.IsNullOrWhiteSpace(saved.title) ? new Uri(saved.address).Host : saved.title;
                             if (title.Length > 38) title = title.Substring(0, 37) + "…";
-                            homeButtons.Add(Button(row, "Bookmark shortcut", title, () => app.OpenSavedInCurrent(window.WindowId, saved)));
+                            var card = BrowserSampleWidgets.Node(row, "Bookmark shortcut card", typeof(HorizontalLayoutGroup), typeof(LayoutElement));
+                            BrowserSampleWidgets.FlexibleWidth(card); var cardLayout = card.GetComponent<HorizontalLayoutGroup>(); cardLayout.spacing = 4;
+                            cardLayout.childControlWidth = cardLayout.childControlHeight = true; cardLayout.childForceExpandWidth = false; cardLayout.childForceExpandHeight = true;
+                            var open = Button(card.transform, "Bookmark shortcut", "", () => app.OpenSavedInCurrent(window.WindowId, saved));
+                            BrowserSampleWidgets.Remove(open.GetComponentInChildren<Text>().gameObject);
+                            var openLayout = open.gameObject.AddComponent<HorizontalLayoutGroup>(); openLayout.padding = new RectOffset(8, 6, 4, 4); openLayout.spacing = 6;
+                            openLayout.childControlWidth = openLayout.childControlHeight = true; openLayout.childForceExpandWidth = false; openLayout.childForceExpandHeight = true;
+                            BrowserFaviconView.Add(open.transform, font).Configure(app, saved.address);
+                            Label(open.transform, "Shortcut title", title, 44, 20);
+                            homeButtons.Add(open);
+                            Button(card.transform, "Edit home bookmark", "Edit", () => EditBookmark(saved.address, (RectTransform)card.transform), 54);
+                            Button(card.transform, "Delete home bookmark", "×", () => app.RemoveBookmark(saved.address), 44);
                         }
                     }
                 }

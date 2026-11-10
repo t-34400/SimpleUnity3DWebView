@@ -17,10 +17,13 @@ or a fake default page. Meta Interaction SDK is not required by this sample.
 ## Use
 
 - Enter a URL or search terms in the address bar. Use + for a tab, □+ for a window.
+  When tabs overflow, + stays fixed to the right of the scroll area.
 - Drag tabs to reorder, detach or join windows. Grab empty title-bar space to
   move a window; drag a highlighted corner to resize it.
 - The standard placement rotates horizontally with a fixed tilt. Change the tilt
   in Settings. Recall windows brings them back in front of the viewer.
+- Tabs, bookmarks and history show site icons when available. New-tab bookmark
+  shortcuts include Edit and × (delete) controls.
 - Use ☆/★ to save or edit a bookmark. The menu opens bookmarks, history, text size
   and find. Long-press a page link for open/copy actions.
 
@@ -45,3 +48,16 @@ without the repository's Tools folder, back up the imported sample and update it
 from Package Manager, taking care to preserve or reassign your scene references.
 
 The core runtime does not depend on this sample's UI or storage policy.
+
+## Site icons
+
+Favicons come from Android WebView's received-icon callback, without extra page
+loads or an external icon service. The sample caches small PNGs alongside its
+state directory; icon data is not embedded in the session JSON. Exact page icons
+are preferred, with an origin fallback for saved pages not opened yet. Existing
+bookmarks acquire icons when a corresponding page/site is visited.
+
+The cache keeps up to 256 page/origin entries and 256 shared Unity textures.
+Icons remain optional: missing, invalid or evicted images use a placeholder;
+cache write failures keep new icons in memory. Cached icons can be displayed
+after restarting without initializing hidden/restored tabs.

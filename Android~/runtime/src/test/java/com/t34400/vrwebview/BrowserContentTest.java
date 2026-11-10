@@ -67,6 +67,28 @@ public class BrowserContentTest {
             BrowserHost.close(411); idle();
         }
     }
+    @Test public void receivedIconsUseTheCurrentWebAddressAndStopAfterClose() {
+        try (ActivityController<Activity> activity = Robolectric.buildActivity(Activity.class).setup().visible()) {
+            Result callback = new Result(); BrowserHost.openPage(activity.get(), 412, 128, 128, true, false, callback); idle();
+            WebView web = findWebView(activity.get().getWindow().getDecorView());
+            android.graphics.Bitmap icon = android.graphics.Bitmap.createBitmap(128, 32, android.graphics.Bitmap.Config.ARGB_8888);
+            android.webkit.WebChromeClient client = web.getWebChromeClient();
+            client.onReceivedIcon(web, icon); assertNull(callback.iconPng);
+            web.loadUrl("https://example.org/page"); client.onReceivedIcon(web, icon);
+            assertEquals("https://example.org/page", callback.iconAddress); assertNotNull(callback.iconPng);
+            byte[] png = android.util.Base64.decode(callback.iconPng, android.util.Base64.DEFAULT);
+            assertTrue(png.length <= BrowserIcon.MAX_BYTES);
+            android.graphics.Bitmap decoded = android.graphics.BitmapFactory.decodeByteArray(png, 0, png.length);
+            assertEquals(64, decoded.getWidth()); assertEquals(64, decoded.getHeight()); assertFalse(icon.isRecycled());
+            BrowserHost.close(412); idle(); callback.iconPng = null; client.onReceivedIcon(web, icon); assertNull(callback.iconPng);
+            decoded.recycle(); icon.recycle();
+        }
+    }
+    @Test public void nullAndRecycledIconsAreIgnored() {
+        assertNull(BrowserIcon.encode(null));
+        android.graphics.Bitmap icon = android.graphics.Bitmap.createBitmap(1, 1, android.graphics.Bitmap.Config.ARGB_8888);
+        icon.recycle(); assertNull(BrowserIcon.encode(icon));
+    }
     private static WebView findWebView(android.view.View view) {
         if (view instanceof WebView) return (WebView) view;
         if (view instanceof android.view.ViewGroup) { android.view.ViewGroup group = (android.view.ViewGroup) view;
@@ -75,7 +97,7 @@ public class BrowserContentTest {
     }
     private static void idle() { shadowOf(Looper.getMainLooper()).idle(); }
     private static final class Result implements BrowserHost.Callback {
-        int ready, failed, ok, bad, badScript; String scriptResult;
+        int ready, failed, ok, bad, badScript; String scriptResult, iconAddress, iconPng;
         public void ready() { ready++; }
         public void failed(String code) { failed++; }
         public void completed(long operation, boolean success, String code) { if (success) ok++; else bad++; }
@@ -83,5 +105,6 @@ public class BrowserContentTest {
         public void evaluated(long operation, String result, boolean success) { if (!success) badScript++; else scriptResult = result; }
         public void found(long revision, int active, int count, boolean complete) { }
         public void context(String address, boolean image) { }
+        public void pageIcon(String address, String png) { iconAddress = address; iconPng = png; }
     }
 }

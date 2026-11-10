@@ -10,6 +10,7 @@ namespace T34400.VRWebView.Samples.Browser
         private readonly Func<BrowserSavedState, string> encode;
         public bool IsReadOnly { get; private set; }
         public string Warning { get; private set; }
+        public string DirectoryPath => Path.GetDirectoryName(Path.GetFullPath(path));
         public BrowserStateStore(string path, Func<string, BrowserSavedState> decode, Func<BrowserSavedState, string> encode) {
             this.path = path ?? throw new ArgumentNullException(nameof(path)); this.decode = decode ?? throw new ArgumentNullException(nameof(decode)); this.encode = encode ?? throw new ArgumentNullException(nameof(encode));
         }

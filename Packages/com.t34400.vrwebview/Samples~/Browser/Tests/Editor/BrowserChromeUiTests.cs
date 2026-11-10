@@ -33,6 +33,41 @@ namespace T34400.VRWebView.Samples.Browser.Tests
             Assert.Fail("Owner queue did not settle");
         }
         private Button Button(string name) => view.GetComponentsInChildren<Button>(true).Single(b => b.gameObject.activeInHierarchy && b.name == name);
+        [Test] public void AddTabDocksAtOverflowAndReturnsInlineAfterResizeOrClosing() {
+            Assert.IsFalse(view.NewTabDocked);
+            for (int i = 0; i < 5; i++) panel.NewTab(view.WindowId);
+            LayoutRebuilder.ForceRebuildLayoutImmediate((RectTransform)view.transform); view.UpdatePresentation();
+            Assert.IsTrue(view.NewTabDocked); Assert.AreEqual("Fixed new tab dock", Button("New tab").transform.parent.name);
+            var scroll = view.GetComponentsInChildren<ScrollRect>().Single(r => r.name == "Tab viewport"); scroll.horizontalNormalizedPosition = 0;
+            Assert.AreEqual("Fixed new tab dock", Button("New tab").transform.parent.name);
+            ((RectTransform)view.transform).sizeDelta = new Vector2(2560, 1000);
+            LayoutRebuilder.ForceRebuildLayoutImmediate((RectTransform)view.transform); view.UpdatePresentation(); Assert.IsFalse(view.NewTabDocked);
+            ((RectTransform)view.transform).sizeDelta = new Vector2(800, 1000);
+            LayoutRebuilder.ForceRebuildLayoutImmediate((RectTransform)view.transform); view.UpdatePresentation(); Assert.IsTrue(view.NewTabDocked);
+            foreach (long tab in panel.Model.Windows[0].Tabs.Skip(1).ToArray()) panel.CloseTab(tab);
+            Assert.IsFalse(view.NewTabDocked); Assert.AreEqual("Tab strip", Button("New tab").transform.parent.name);
+        }
+        [Test] public void HomeBookmarksHaveExplicitEditAndDeleteActions() {
+            panel.SaveBookmark("https://example.org/", "Before");
+            Button("Edit home bookmark").onClick.Invoke();
+            var name = view.GetComponentsInChildren<BrowserAddressInput>().Single(i => i.name == "Bookmark name");
+            name.SetTextWithoutNotify("Edited on home"); Button("Save bookmark").onClick.Invoke();
+            Assert.AreEqual("Edited on home", panel.Library.Data.bookmarks.Single().title);
+            Assert.AreEqual(0, root.GetComponent<RestoreTestFactory>().Pages[0].Navigations);
+            Button("Delete home bookmark").onClick.Invoke(); Assert.AreEqual(0, panel.Library.Data.bookmarks.Count);
+        }
+        [Test] public void ReceivedFaviconIsSharedByTabsHistoryAndHomeShortcuts() {
+            panel.EditAddress(view.WindowId, "https://example.org/"); panel.Navigate(view.WindowId); Settle(() => !panel.Model.Tabs[0].IsBusy);
+            var png = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==");
+            root.GetComponent<RestoreTestFactory>().Pages[0].ReceiveIcon(new BrowserPageIcon("https://example.org/", png)); owner.PumpPending();
+            var tabIcon = view.GetComponentsInChildren<RawImage>().Single(i => i.name == "Icon image" && i.texture != null); var texture = tabIcon.texture;
+            panel.SaveBookmark("https://example.org/", "Example"); view.Tools.ShowLibrary("History");
+            Assert.AreSame(texture, view.Tools.Popups.Card.GetComponentsInChildren<RawImage>().Single().texture);
+            view.CloseMenu(); panel.NewTab(view.WindowId); Settle(() => panel.Model.Tabs.Last().State == BrowserState.Ready);
+            var home = view.GetComponentsInChildren<ScrollRect>().Single(r => r.name == "New tab home");
+            Assert.AreSame(texture, home.GetComponentInChildren<RawImage>().texture);
+            Assert.AreSame(texture, tabIcon.texture, "Closing a popup released a texture still used by a tab");
+        }
         [TestCase(800)] [TestCase(1280)]
         public void LongAddressesDoNotCompressButtonsOrChangeTheViewport(int width) {
             var rect = (RectTransform)view.transform; rect.sizeDelta = new Vector2(width, 1000);

@@ -17,8 +17,11 @@ namespace T34400.VRWebView.Samples.Browser.Tests
             return new BrowserPage(backend, surface, connectionLifetime: surface);
         }
     }
-    public sealed class RestoreTestBackend : IBrowserBackend, IBrowserNavigationBackend {
+    public sealed class RestoreTestBackend : IBrowserBackend, IBrowserNavigationBackend, IBrowserIconSource {
         public int Initializations, Navigations;
+        public BrowserPageIcon PageIcon { get; private set; }
+        public event Action<BrowserPageIcon> PageIconChanged;
+        public void ReceiveIcon(BrowserPageIcon value) { PageIcon = value; PageIconChanged?.Invoke(value); }
         public BrowserPageState PageState { get; private set; } = BrowserPageState.Empty;
         public event Action<BrowserPageState> PageStateChanged;
         public Task InitializeAsync(CancellationToken token) { Initializations++; return Task.CompletedTask; }

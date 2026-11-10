@@ -73,3 +73,15 @@ from the page. `BrowserView` borrows surfaces and does not own the page.
 The pure Core contracts do not depend on Meta, Unity UI, bookmarks or filesystem
 storage. The Android implementation and Unity components provide those concrete
 platform/view roles. The optional browser sample is an application on top of them.
+
+## Page icons
+
+Backends can implement optional `IBrowserIconSource`. `AndroidBrowserBackend`
+exposes its latest `PageIcon` and `PageIconChanged` on the Unity owner thread.
+Each `BrowserPageIcon` includes the page address and a copied PNG payload bounded
+to 64 pixels per axis and 32 KiB. Check the address when associating an icon with
+a current page; late page metadata may refer to a previous navigation.
+
+Core defines this metadata capability only. Download/cache policy, default icons
+and Unity texture lifetime belong to the host UI; the Browser sample supplies
+those roles. Observing icons does not allocate a page GPU presentation.
