@@ -9,13 +9,14 @@ using InputSystem = UnityEngine.InputSystem.InputSystem;
 
 namespace T34400.VRWebView
 {
-    /// <summary>BS1 diagnostic rig: one Quest ray drives a group of world-space uGUI Canvases through
+    /// <summary>Quest UI ray adapter: one Quest ray drives a group of world-space uGUI Canvases through
     /// normal EventSystem handlers. Applications may supply their own XR UI module.</summary>
     [DisallowMultipleComponent, RequireComponent(typeof(EventSystem))]
     public sealed class ProbeCanvasInputModule : PointerInputModule
     {
         public Canvas targetCanvas;
         public Camera headCamera;
+        public bool enableDiagnostics = true;
         public ProbePointerMode pointerMode = ProbePointerMode.Auto;
         private readonly ProbeRayInput rayInput = new ProbeRayInput();
         private readonly PointerPressState press = new PointerPressState();
@@ -53,7 +54,7 @@ namespace T34400.VRWebView
         public override bool IsPointerOverGameObject(int pointerId) => pointerId == PointerId && pointer != null && pointer.pointerEnter != null;
         private void OnApplicationFocus(bool focused)
         {
-            Debug.Log("[VRWebViewSample] BS1 event=focus active=" + focused, this);
+            if (enableDiagnostics) Debug.Log("[VRWebViewSample] BS1 event=focus active=" + focused, this);
             if (!focused) { CancelPointer(); visual?.Hide(); }
         }
         private void DeviceChanged(UnityEngine.InputSystem.InputDevice device, UnityEngine.InputSystem.InputDeviceChange change)
@@ -86,7 +87,7 @@ namespace T34400.VRWebView
                 press.ActiveSourceId.HasValue, Time.unscaledTime < feedbackUntil ? (Color?)feedback : null);
             if (Time.unscaledTime >= nextTick) {
                 nextTick = Time.unscaledTime + 1;
-                Debug.Log("[VRWebViewSample] BS1 event=ray tracked=" + tracked + " pressed=" + sample.Pressed
+                if (enableDiagnostics) Debug.Log("[VRWebViewSample] BS1 event=ray tracked=" + tracked + " pressed=" + sample.Pressed
                     + " source=" + sample.Source + " appFocus=" + Application.isFocused + " frames=" + Time.frameCount
                     + " hit=" + Kind(currentHit.gameObject) + " distance=" + currentHit.distance.ToString("F3", System.Globalization.CultureInfo.InvariantCulture), this);
             }
@@ -185,7 +186,7 @@ namespace T34400.VRWebView
             var click = ExecuteEvents.GetEventHandler<IPointerClickHandler>(over);
             bool delivered = pointer.pointerPress != null && pointer.pointerPress == click && pointer.eligibleForClick;
             bool dragging = pointer.pointerDrag != null && pointer.dragging;
-            Debug.Log("[VRWebViewSample] BS1 event=activation press=" + Kind(pointer.pointerPress) + " release=" + Kind(over)
+            if (enableDiagnostics) Debug.Log("[VRWebViewSample] BS1 event=activation press=" + Kind(pointer.pointerPress) + " release=" + Kind(over)
                 + " click=" + delivered + " drag=" + dragging, this);
             if (delivered) ExecuteEvents.Execute(pointer.pointerPress, pointer, ExecuteEvents.pointerClickHandler);
             else if (dragging) ExecuteEvents.ExecuteHierarchy(over, pointer, ExecuteEvents.dropHandler);
@@ -231,7 +232,7 @@ namespace T34400.VRWebView
                 : ExecuteEvents.GetEventHandler<IBrowserSpatialDragHandler>(target) != null ? "spatial" : "other";
         }
         private void TracePointer(string phase, GameObject target) {
-            Debug.Log("[VRWebViewSample] BS1 event=pointer phase=" + phase + " target=" + Kind(target), this);
+            if (enableDiagnostics) Debug.Log("[VRWebViewSample] BS1 event=pointer phase=" + phase + " target=" + Kind(target), this);
         }
         private static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
     }

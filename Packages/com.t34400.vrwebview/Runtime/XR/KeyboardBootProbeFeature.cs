@@ -8,14 +8,14 @@ using UnityEditor.XR.OpenXR.Features;
 namespace T34400.VRWebView
 {
 #if UNITY_EDITOR
-    [OpenXRFeature(UiName = "VRWebView Keyboard Boot Probe", Desc = "Controlled keyboard-overlay boot flag comparison; diagnostic only",
+    [OpenXRFeature(UiName = "VRWebView Keyboard Overlay", Desc = "Enable the Quest system keyboard overlay for Unity text fields",
         Company = "t34400", Version = "0.1.0", FeatureId = Id, OpenxrExtensionStrings = "", BuildTargetGroups = new[] { BuildTargetGroup.Android })]
 #endif
     public sealed class KeyboardBootProbeFeature : OpenXRFeature
     {
         public const string Id = "com.t34400.vrwebview.keyboard-boot-probe";
         public const string BootKey = "xr-keyboard-overlay-enabled";
-        [Tooltip("When this diagnostic feature is enabled, explicitly build the keyboard boot flag as 0 or 1.")]
+        [Tooltip("Enable the system keyboard overlay in this Android build.")]
         public bool keyboardOverlayEnabled;
         protected override bool OnInstanceCreate(ulong instance)
         {

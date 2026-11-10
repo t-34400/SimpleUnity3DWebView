@@ -53,7 +53,7 @@ def main():
     assert stream["r_frame_rate"] == "30/1" and int(stream["nb_read_frames"]) == 240
     assert audio["codec_name"] == "aac" and 7.9 <= float(info["format"]["duration"]) <= 8.1
     subprocess.run([args.ffmpeg, "-hide_banner", "-v", "error", "-xerror", "-i", str(video), "-f", "null", "-"], check=True)
-    aar = ROOT / "Packages/com.t34400.vrwebview/Runtime/Plugins/Android/vrwebview-probe.aar"
+    aar = ROOT / "Development~/com.t34400.vrwebview.diagnostics/Plugins/Android/vrwebview-probe.aar"
     with zipfile.ZipFile(aar) as archive:
         for name in ("vrwebview-gpu-probe.html", "vrwebview-proxy-probe.html", "vrwebview-probe-video.mp4", "vrwebview-probe-video.json"):
             assert archive.read("assets/" + name) == (ASSETS / name).read_bytes()

@@ -8,7 +8,7 @@ NAMESPACE = uuid.UUID("2051a168-107b-49da-a02b-6aba3a35942f")
 
 
 def main():
-    for path in [PACKAGE, *sorted(PACKAGE.rglob("*"))]:
+    for path in [entry for package in (PACKAGE, ROOT / "Development~/com.t34400.vrwebview.diagnostics") if package.exists() for entry in (package, *sorted(package.rglob("*")))]:
         if path.suffix == ".meta":
             continue
         meta = path.with_name(path.name + ".meta")

@@ -38,13 +38,13 @@ def main():
     parser.add_argument("--android-jar", type=Path, required=True)
     parser.add_argument("--jdk-home", type=Path, required=True, help="Classfile backend lambda/metafactory library")
     args = parser.parse_args()
-    aar = ROOT / "Packages/com.t34400.vrwebview/Runtime/Plugins/Android/vrwebview-probe.aar"
+    aar = ROOT / "Development~/com.t34400.vrwebview.diagnostics/Plugins/Android/vrwebview-probe.aar"
     with tempfile.TemporaryDirectory(prefix="vrwebview-host-r8-") as temp:
         work = Path(temp)
         with zipfile.ZipFile(aar) as archive:
             (work / "classes.jar").write_bytes(archive.read("classes.jar"))
             (work / "consumer.pro").write_bytes(archive.read("proguard.txt"))
-        runtime = aar.with_name("vrwebview-runtime.aar")
+        runtime = ROOT / "Packages/com.t34400.vrwebview/Runtime/Plugins/Android/vrwebview-runtime.aar"
         with zipfile.ZipFile(runtime) as archive:
             (work / "runtime.jar").write_bytes(archive.read("classes.jar"))
             with (work / "consumer.pro").open("ab") as rules: rules.write(b"\n" + archive.read("proguard.txt"))

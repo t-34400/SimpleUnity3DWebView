@@ -8,7 +8,7 @@ using UnityEditor.XR.OpenXR.Features;
 namespace T34400.VRWebView
 {
 #if UNITY_EDITOR
-    [OpenXRFeature(UiName = "VRWebView Activity Focus Probe", Desc = "Observe OpenXR session focus for the separate Activity GPU experiment",
+    [OpenXRFeature(UiName = "VRWebView Focus Observer", Desc = "Observe OpenXR session focus; retained for existing project compatibility",
         Company = "t34400", Version = "0.1.0", FeatureId = Id, OpenxrExtensionStrings = "", BuildTargetGroups = new[] { BuildTargetGroup.Android })]
 #endif
     public sealed class ActivityProbeFocusFeature : OpenXRFeature

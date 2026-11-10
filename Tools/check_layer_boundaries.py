@@ -8,7 +8,7 @@ POLICY = {
     'T34400.VRWebView.Browser.Sample': {'T34400.VRWebView.Core'},
 }
 ENGINE_POLICY = {
-    'T34400.VRWebView.Editor': {'T34400.VRWebView.Android', 'T34400.VRWebView.VulkanProbe', 'Unity.XR.OpenXR', 'Unity.XR.OpenXR.Editor', 'T34400.VRWebView.Bootstrap', 'T34400.VRWebView.Unity', 'T34400.VRWebView.UnityUI', 'UnityEngine.UI'},
+    'T34400.VRWebView.Editor': {'T34400.VRWebView.Core', 'T34400.VRWebView.Android', 'T34400.VRWebView.VulkanProbe', 'Unity.XR.OpenXR', 'Unity.XR.OpenXR.Editor', 'T34400.VRWebView.Bootstrap', 'T34400.VRWebView.Unity', 'T34400.VRWebView.UnityUI', 'UnityEngine.UI'},
     'T34400.VRWebView.Rendering': set(),
     'T34400.VRWebView.Android': {'T34400.VRWebView.Core', 'T34400.VRWebView.Presentation', 'T34400.VRWebView.Unity', 'T34400.VRWebView.Rendering'},
     'T34400.VRWebView.Bootstrap': {'T34400.VRWebView.Presentation', 'T34400.VRWebView.Core', 'T34400.VRWebView.Unity', 'T34400.VRWebView.UnityUI', 'T34400.VRWebView.Android'},

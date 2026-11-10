@@ -39,3 +39,18 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
+
+
+## Google GameActivity compatibility artifact
+
+The optional `Editor/GameActivityImeCompat` artifact contains modified Google
+GameActivity 4.4.0 code under Apache-2.0. Its complete license and modification
+notice are included in that directory. VRWebView's added helper code is MIT.
+
+## Android LLVM runtime
+
+The native plugin is built with Android NDK 27.2.12479018 and a static C++ runtime.
+The upstream LLVM/libc++/libc++abi notice bundle is retained in
+[Licenses/Android-LLVM-NOTICE.txt](Licenses/Android-LLVM-NOTICE.txt). This upstream
+bundle also includes notices for toolchain components; it does not change the
+license of VRWebView's own code.

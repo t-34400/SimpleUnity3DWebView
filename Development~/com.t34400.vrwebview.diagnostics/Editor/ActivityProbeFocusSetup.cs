@@ -11,7 +11,7 @@ namespace T34400.VRWebView.Editor
 {
     public static class ActivityProbeFocusSetup
     {
-        [MenuItem("VRWebView/Activity GPU/Enable OpenXR Focus Probe")]
+        [MenuItem("VRWebView/Diagnostics/Activity GPU/Enable OpenXR Focus Probe")]
         public static void Enable()
         {
             FeatureHelpers.RefreshFeatures(BuildTargetGroup.Android);

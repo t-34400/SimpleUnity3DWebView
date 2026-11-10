@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.0-preview.52
+
+- Add English quick starts for standalone web panels and the optional rich browser.
+- Separate historical probe components, Editor commands, research notes and probe AAR into a local development package.
+- Add a consumer WebView scene command and keep sample scene creation independent from probes.
+- Add deterministic UPM tarballs and consumer/development boundary checks.
+- Bundle third-party notices and prepare release/media/license decisions.
+- Keep the preview.51 browser UI and existing Android/IME binary payloads; fresh-project and device validation is pending.
+
 ## 0.1.0-preview.51
 
 - Keep navigation buttons at fixed usable widths when the address is long; clip and scroll field text.

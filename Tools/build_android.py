@@ -48,11 +48,11 @@ def main():
     with tempfile.TemporaryDirectory(prefix="vrwebview-gradle-") as project_cache:
         subprocess.run([*command, "--project-cache-dir", project_cache], cwd=ROOT / "Android~", check=True)
     source = ROOT / "Android~/webview/build/outputs/aar/webview-release.aar"
-    target = ROOT / "Packages/com.t34400.vrwebview/Runtime/Plugins/Android/vrwebview-probe.aar"
+    target = ROOT / "Development~/com.t34400.vrwebview.diagnostics/Plugins/Android/vrwebview-probe.aar"
     target.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(source, target)
     runtime_source = ROOT / "Android~/runtime/build/outputs/aar/runtime-release.aar"
-    runtime_target = target.with_name("vrwebview-runtime.aar")
+    runtime_target = ROOT / "Packages/com.t34400.vrwebview/Runtime/Plugins/Android/vrwebview-runtime.aar"
     shutil.copy2(runtime_source, runtime_target)
     inputs = {}
     for path in sorted((ROOT / "Android~").rglob("*")):

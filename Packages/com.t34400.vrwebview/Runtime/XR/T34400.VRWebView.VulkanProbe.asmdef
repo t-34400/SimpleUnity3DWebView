@@ -3,14 +3,10 @@
   "rootNamespace": "T34400.VRWebView",
   "references": [
     "UnityEngine.UI",
-    "T34400.VRWebView.Core",
     "Unity.InputSystem",
     "Unity.XR.Hands",
     "Unity.XR.OpenXR",
-    "T34400.VRWebView.Rendering",
-    "T34400.VRWebView.Bootstrap",
-    "T34400.VRWebView.Unity",
-    "T34400.VRWebView.UnityUI",
-    "T34400.VRWebView.Android"
+    "T34400.VRWebView.Core",
+    "T34400.VRWebView.UnityUI"
   ]
 }

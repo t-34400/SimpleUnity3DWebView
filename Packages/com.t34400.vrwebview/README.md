@@ -1,16 +1,58 @@
 # VRWebView
 
-Unity内にAndroid WebViewを表示する開発中のパッケージです。Quest 3・Unity 6000.4.5f1・OpenXRを主な検証環境としています。
+Android WebView panels for Unity VR. Embed a single web panel in your app, or
+import the optional browser sample for tabs and movable windows.
 
-- **Core / Runtime**: WebViewの生成、HTTP(S)ナビゲーション、GPU表示、ポインター入力、ネイティブIME、JavaScript実行、文字サイズ、ページ内検索。
-- **任意のBrowserサンプル**: タブと複数ウィンドウ、検索、ブックマーク、履歴、ローカルのセッション・配置復元。
+**Preview:** tested with Quest 3 and Unity 6000.4.5f1. The latest UI and package
+layout still need device and fresh-project checks. Web pages run in Android
+players; the Unity Editor is used for setup.
 
-Package Managerの **Browser UI and Model** をImportし、**VRWebView > Create Rich Browser Sample Scene** で試せます。既存サンプルを更新する場合は[更新・実機確認手順](Documentation~/BrowserChrome.md)を参照してください。
+## Install
 
-[現在の確認状況](Documentation~/CurrentStatus.md) · [APIと設計](Documentation~/BrowserFeatures.md)
+In **Window > Package Manager**, select **Add package from git URL**:
 
-Questの入力にはoverlay keyboard設定が必要です。Unity/GameActivityの既知の入力問題には、バージョン照合付きの[任意の互換修正](Documentation~/GameActivityImeCompatibility.md)を用意しています。
+```text
+https://github.com/t-34400/SimpleUnity3DWebView.git?path=/Packages/com.t34400.vrwebview
+```
 
-ネイティブ全画面動画、ダウンロード/ファイル選択、サイト権限UI、独立したプライベートプロファイルは未対応です。新機能の実機確認と配布パッケージからの検証コード分離は継続中です。
+For a repeatable build, pin the URL to a published release tag or source commit.
+Set up an Android ARM64 / Vulkan / GameActivity project with OpenXR and Meta XR
+Core SDK, then follow the short [Quest setup](Documentation~/GettingStarted.md).
 
-MIT License。互換AAR内のGoogleコードは元のApache-2.0ライセンスを保持します。
+## Use a web panel
+
+1. Select **VRWebView > Create WebView Scene**. No sample import is required.
+2. Set **Initial Url** on the `BrowserController` component.
+3. Put the generated scene first in your active Android Build Profile's Scene
+   List, then **Build And Run** on Quest.
+
+To use your own UI, add `BrowserView` to a `RawImage`, add `BrowserController`, and
+assign its **View** field. Your EventSystem/XR input module supplies pointer
+events. [Embedding and API examples](Documentation~/API.md).
+
+## Use the browser sample
+
+1. In Package Manager, select VRWebView and import **Browser UI and Model** from
+   **Samples**.
+2. Select **VRWebView > Create Rich Browser Sample Scene**.
+3. Add that scene to the active Android Build Profile's Scene List and **Build
+   And Run**.
+
+The sample provides tabs, windows, search, bookmarks, history and saved layouts.
+Its UI and storage policy are separate from the core runtime; you can edit the
+imported copy. [Sample setup and updates](Samples~/Browser/README.md).
+
+## Text input and support
+
+Quest text input needs the system keyboard overlay enabled. For the tested
+Unity/GameActivity combination, the optional **VRWebView > Compatibility >
+GameActivity IME > Enable Patch** fixes Unity text-field synchronization. It is
+version-checked and disabled by default. [Setup and troubleshooting](Documentation~/GettingStarted.md).
+
+Inline video playback is supported. Native fullscreen video, file upload/download,
+site permission UI and independent private profiles are not implemented.
+
+[Changelog](CHANGELOG.md) · [Troubleshooting](Documentation~/Troubleshooting.md)
+
+MIT for VRWebView code. See [LICENSE](LICENSE) and [third-party notices](ThirdPartyNotices.md)
+for bundled components.

@@ -1,0 +1,14 @@
+{
+  "name": "T34400.VRWebView.Diagnostics.Editor",
+  "references": [
+    "UnityEngine.UI",
+    "Unity.XR.OpenXR",
+    "Unity.XR.OpenXR.Editor",
+    "T34400.VRWebView.Diagnostics",
+    "T34400.VRWebView.VulkanProbe",
+    "T34400.VRWebView.Editor"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ]
+}

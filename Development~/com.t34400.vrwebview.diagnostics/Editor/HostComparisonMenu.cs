@@ -14,7 +14,7 @@ namespace T34400.VRWebView.Editor
         internal const string ManifestPath = "Assets/Plugins/Android/AndroidManifest.xml";
         internal static string ExpectedKey => "VRWebView.HostComparison.ExpectedEntry." + Hash128.Compute(Application.dataPath);
 
-        [MenuItem("VRWebView/Create Host Comparison Scene")]
+        [MenuItem("VRWebView/Diagnostics/Create Host Comparison Scene")]
         public static void CreateScene()
         {
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
@@ -28,11 +28,11 @@ namespace T34400.VRWebView.Editor
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(path, true) };
             Debug.Log("Created HC2 host comparison scene. Select Host Comparison > Keyboard Boot > OFF (0) or ON (1) before building; see KeyboardComparison.md.");
         }
-        [MenuItem("VRWebView/Host Comparison/Use GameActivity")]
+        [MenuItem("VRWebView/Diagnostics/Host Comparison/Use GameActivity")]
         public static void UseGameActivity() { SetEntry(true); }
-        [MenuItem("VRWebView/Host Comparison/Use Activity (Experimental)")]
+        [MenuItem("VRWebView/Diagnostics/Host Comparison/Use Activity (Experimental)")]
         public static void UseActivity() { SetEntry(false); }
-        [MenuItem("VRWebView/Host Comparison/Clear Expected Entry Check")]
+        [MenuItem("VRWebView/Diagnostics/Host Comparison/Clear Expected Entry Check")]
         public static void ClearExpected() { EditorPrefs.DeleteKey(ExpectedKey); Debug.Log("Cleared the comparison entry-point expectation; Player Settings and manifest are unchanged."); }
 
         private static void SetEntry(bool game)

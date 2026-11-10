@@ -20,15 +20,15 @@ namespace T34400.VRWebView.Editor
                     || source.IndexOf(End, end + End.Length, StringComparison.Ordinal) >= 0
                     || source.Substring(begin + Begin.Length, end - begin - Begin.Length).Trim() != Apply
                     || Regex.Matches(source, Regex.Escape(Replacement)).Count != 1)
-                    throw new InvalidOperationException("VRWebView IME diagnostic found an incomplete or changed generated integration block.");
+                    throw new InvalidOperationException("VRWebView IME compatibility found an incomplete or changed generated integration block.");
                 source = source.Remove(begin, end + End.Length - begin).Replace(Replacement, Original).TrimEnd('\r', '\n') + "\n";
             } else if (source.IndexOf(Replacement, StringComparison.Ordinal) >= 0) {
-                throw new InvalidOperationException("VRWebView IME diagnostic found an unmarked replacement dependency.");
+                throw new InvalidOperationException("VRWebView IME compatibility found an unmarked replacement dependency.");
             }
             if (!enabled) return source;
             var declarations = Regex.Matches(source, @"\bimplementation\s+['""]androidx\.games:games-activity:([^'""\s]+)['""]");
             if (declarations.Count != 1 || declarations[0].Groups[1].Value != "4.4.0")
-                throw new InvalidOperationException("VRWebView IME diagnostic supports exactly one explicit games-activity:4.4.0 dependency. Disable the diagnostic or review the changed dependency.");
+                throw new InvalidOperationException("VRWebView IME compatibility supports exactly one explicit games-activity:4.4.0 dependency. Disable the compatibility patch or review the changed dependency.");
             var match = declarations[0];
             source = source.Remove(match.Index, match.Length).Insert(match.Index, Replacement);
             return source.TrimEnd('\r', '\n') + "\n" + Begin + "\n" + Apply + "\n" + End + "\n";

@@ -28,7 +28,7 @@ def main():
                         str(ROOT / 'Tools/NativeProbeTests/NativeProbeTests.cpp'), '-o', program], check=True)
         subprocess.run([program], env={**os.environ, 'ASAN_OPTIONS': 'detect_leaks=1'}, check=True)
     package = ROOT / 'Packages/com.t34400.vrwebview'
-    provenance = json.loads((package / 'Runtime/Plugins/Android/vrwebview-probe.build.json').read_text())
+    provenance = json.loads((ROOT / 'Development~/com.t34400.vrwebview.diagnostics/Plugins/Android/vrwebview-probe.build.json').read_text())
     native = provenance['nativeLibrary']
     library = ROOT / native['path']
     assert hashlib.sha256(library.read_bytes()).hexdigest() == native['sha256']
@@ -37,7 +37,7 @@ def main():
     assert 'AArch64' in info
     # The CMake output, Unity P/Invoke name, Java loader name and preloaded ELF
     # must refer to one library, not independent copies of plugin state.
-    load_name = re.search(r'const string Library = "([^"]+)"', (package / 'Runtime/VulkanProbe/VulkanProbeNative.cs').read_text())[1]
+    load_name = re.search(r'const string Library = "([^"]+)"', (package / 'Runtime/Rendering/BrowserGpuNative.cs').read_text())[1]
     java = (ROOT / 'Android~/webview/src/main/java/com/t34400/vrwebview/VulkanProbe.java').read_text()
     assert library.name == 'lib' + load_name + '.so' and load_name.startswith('GfxPlugin')
     assert 'System.loadLibrary("' + load_name + '")' in java

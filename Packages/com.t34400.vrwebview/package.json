@@ -1,8 +1,8 @@
 {
   "name": "com.t34400.vrwebview",
-  "version": "0.1.0-preview.51",
+  "version": "0.1.0-preview.52",
   "displayName": "VRWebView",
-  "description": "Android GPU WebView backend, direct native IME, Unity presentation and optional browser UI samples. Quest integration validation is in progress.",
+  "description": "Android WebView panels for Unity VR, with native text input and an optional multi-window browser sample.",
   "unity": "6000.4",
   "author": {
     "name": "t34400"
@@ -17,13 +17,19 @@
   "samples": [
     {
       "displayName": "Browser UI and Model",
-      "description": "Multi-window browser with search, bookmarks, history, local session restoration and page tools. Use Create Rich Browser Sample Scene after importing for Quest integration tests.",
+      "description": "An optional multi-window VR browser with tabs, bookmarks, history and saved layouts.",
       "path": "Samples~/Browser"
-    },
-    {
-      "displayName": "IME Probe",
-      "description": "Compare host-window and virtual-display WebView input on Android.",
-      "path": "Samples~/ImeProbe"
     }
+  ],
+  "unityRelease": "5f1",
+  "documentationUrl": "https://github.com/t-34400/SimpleUnity3DWebView/blob/main/Packages/com.t34400.vrwebview/Documentation~/GettingStarted.md",
+  "changelogUrl": "https://github.com/t-34400/SimpleUnity3DWebView/blob/main/Packages/com.t34400.vrwebview/CHANGELOG.md",
+  "licensesUrl": "https://github.com/t-34400/SimpleUnity3DWebView/blob/main/Packages/com.t34400.vrwebview/LICENSE",
+  "keywords": [
+    "webview",
+    "vr",
+    "quest",
+    "openxr",
+    "android"
   ]
 }
