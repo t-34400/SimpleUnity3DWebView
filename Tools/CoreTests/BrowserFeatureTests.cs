@@ -73,6 +73,8 @@ internal static class BrowserFeatureTests {
                 var store = Store(); var state = store.Load(); state.bookmarks.Add(new BrowserSavedPage("https://example.org/", "Example"));
                 Check(store.Save(state), "Initial save"); state.history.Add(new BrowserSavedPage("https://example.org/new", "New")); Check(store.Save(state), "Replace");
                 Check(Store().Load().history.Count == 1 && File.Exists(path + ".bak"), "Session roundtrip");
+                var oversized = new BrowserStateStore(path, _ => new BrowserSavedState(), _ => new string('x', 2 * 1024 * 1024 + 1));
+                Check(!oversized.Save(state) && !string.IsNullOrEmpty(oversized.Warning) && Store().Load().history.Count == 1, "Storage limit corrupted existing data or escaped into UI");
                 File.WriteAllText(path, "{\"schema\":99}"); var future = Store(); var recovered = future.Load();
                 Check(future.IsReadOnly && recovered.bookmarks.Count == 1 && recovered.history.Count == 0, "Last-good backup");
                 Check(!future.Save(state) && File.ReadAllText(path).Contains("99"), "Unknown schema overwritten");

@@ -28,7 +28,7 @@ namespace T34400.VRWebView.Samples.Browser
         public bool Save(BrowserSavedState state) {
             if (IsReadOnly) return false;
             string text = encode(BrowserLibrary.Sanitize(state));
-            if (text == null || Encoding.UTF8.GetByteCount(text) > 2 * 1024 * 1024) throw new InvalidDataException("Browser data exceeds limit");
+            if (text == null || Encoding.UTF8.GetByteCount(text) > 2 * 1024 * 1024) { Warning = "Browser data exceeds the storage limit. Remove old history or bookmarks."; return false; }
             string temp = path + ".tmp";
             try {
                 Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path)));
