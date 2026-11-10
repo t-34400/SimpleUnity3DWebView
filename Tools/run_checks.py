@@ -40,6 +40,7 @@ def main():
             if subprocess.run([*syntax, str(fixture)], capture_output=True).returncode != 1:
                 raise ValueError("Conditional invalid C# syntax was accepted: " + symbol)
         subprocess.run([sys.executable, str(ROOT / "Tools/export_unitypackage.py"), "--output", str(Path(temp) / "VRWebView.unitypackage")], check=True)
+    subprocess.run([sys.executable, str(ROOT / "Tools/check_gameactivity_compat.py")], check=True)
     ids = set()
     for path in [PACKAGE, *PACKAGE.rglob("*")]:
         if path.suffix == ".meta":

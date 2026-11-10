@@ -98,3 +98,8 @@ python3 -m zipfile -c "${vrwebview_logs}.zip" "$vrwebview_logs"
 入力文字列・URL・文字列hashはログへ出さない。終了後の比較用文字列はメモリ内の診断snapshotに限り、次の編集や破棄時に解放する。フィールド・keyboard・label・compositionへのsetterは追加しない。
 
 fieldとkeyboardのデータが違えば、Unityの取得値からuGUIへ渡す経路を追う。データが一致してlabelだけ違えば表示処理を追う。両者が整合してもシステムキーボードの表示と違うなら、Android入力接続・IMEとの間を次に確認する。この診断だけでシステムキーボード内の実際の文字列を読めるわけではない。
+
+
+## preview.47の次の診断
+
+P46のUnity値は一致した一方、システムキーボード内の欄は古いままと利用者が報告した。次は[GameActivity IME互換修正](GameActivityImeCompatibility.md)で既存U2を再利用し、全文取得・通知の効果を確認する。

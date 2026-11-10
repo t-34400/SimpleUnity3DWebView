@@ -1,0 +1,30 @@
+// Diagnostic integration only. The original module is resolved for a hash check,
+// never added alongside the replacement on the compile/runtime classpath.
+import java.security.MessageDigest
+
+def vrwebviewOriginal = configurations.create('vrwebviewGameImeOriginal') {
+    canBeResolved = true
+    canBeConsumed = false
+    transitive = false
+}
+dependencies.add(vrwebviewOriginal.name, 'androidx.games:games-activity:4.4.0')
+
+tasks.register('verifyVRWebViewGameActivityIme') {
+    doLast {
+        def source = vrwebviewOriginal.singleFile
+        def sha = MessageDigest.getInstance('SHA-256').digest(source.bytes).encodeHex().toString()
+        if (sha != '3a8b0887ac55a0a6ab56021ced7353a250539eac811278b74bccd8a5b678d9c9') {
+            throw new GradleException('VRWebView IME diagnostic requires the exact verified Google games-activity 4.4.0 AAR. Disable the diagnostic override or review the new dependency.')
+        }
+        logger.lifecycle('VRWebView IME diagnostic: verified original Google 4.4.0; using the single patched connection implementation')
+    }
+}
+tasks.named('preBuild').configure { dependsOn('verifyVRWebViewGameActivityIme') }
+
+configurations.matching { it.name.endsWith('CompileClasspath') || it.name.endsWith('RuntimeClasspath') }.configureEach {
+    resolutionStrategy.eachDependency { details ->
+        if (details.requested.group == 'androidx.games' && details.requested.name == 'games-activity') {
+            throw new GradleException('VRWebView IME diagnostic found an additional Google games-activity dependency. Refusing duplicate original/patched classes; inspect the dependency graph.')
+        }
+    }
+}

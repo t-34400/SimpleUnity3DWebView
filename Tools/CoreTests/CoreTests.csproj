@@ -14,6 +14,8 @@
     <Compile Include="../../Packages/com.t34400.vrwebview/Runtime/VulkanProbe/HostTrialTiming.cs" />
     <Compile Include="../../Packages/com.t34400.vrwebview/Runtime/VulkanProbe/GpuRetirementLedger.cs" />
     <Compile Include="../../Packages/com.t34400.vrwebview/Runtime/VulkanProbe/UnityImeShowGate.cs" />
+    <Compile Include="../../Packages/com.t34400.vrwebview/Editor/GameActivityImeBuildPlan.cs" />
+    <Compile Include="GameActivityImeBuildTests.cs" />
     <Compile Include="UnityImeShowGateTests.cs" />
     <Compile Include="GpuRetirementTests.cs" />
     <Compile Include="UpperLayerTests.cs" />

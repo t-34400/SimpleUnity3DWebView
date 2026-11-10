@@ -1,3 +1,5 @@
+preview.47: GameActivity4.4.0の既存接続へ全文抽出・監視通知を補う[診断用互換修正](GameActivityImeCompatibility.md)を追加。post processで厳密な依存照合とAAR差替えを行い、既定は無効。U2をそのまま使用する。Questでの修正効果・製品適用は未確認。
+
 # 現在の状態と整理フェーズ
 
 更新: 2026-11-09 JST。preview.35のWF1で、利用者がIME入力と入力終了後の動画操作の成功を確認した（E15）。この構成の基本ループは確認済み。preview.36では同じ方式を使う製品用Android backend、共有render pump、BrowserController/BrowserView、Browser sample factoryを接続した。preview.37までのRT1基本動作は利用者が確認した（E16）。hoverはpreview.38で追加し、利用者が実機動作を確認した（E17）。preview.39ではIME回避策のversion完全一致条件を外し、同じproviderの更新後も保持する。preview.40ではリッチサンプル用BS1シーン生成・uGUI入力接続・採取を追加した。次の入口は[BS1手順](RichBrowserSample.md)。実Editor/Questは未確認で、旧比較試験の総当たりへ戻らない。

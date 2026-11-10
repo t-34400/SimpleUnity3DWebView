@@ -592,5 +592,35 @@ if mode=='hold':
         self.assertEqual([json.loads(x) for x in self.calls.read_text().splitlines()], [['get-state']])
 
 
+
+class GameActivityCompatTests(unittest.TestCase):
+    def values(self):
+        return ['11-10 11:00:00.000 123 124 I Unity: [VRWebViewUnityInput] U1 event=ready stock=True webview=False valueProbe=1',
+                '11-10 11:00:00.000 123 124 I Unity: [VRWebViewUnityInput] U2 event=ready stock=True maxExtraShows=1',
+                '11-10 11:00:00.000 123 124 I Unity: [VRWebViewUnityInput] U2 event=armed attempt=1 ',
+                '11-10 11:00:00.000 123 124 I Unity: [VRWebViewUnityInput] U2 event=show_result issued=True accepted=True',
+                '11-10 11:00:00.000 123 124 I Unity: [VRWebViewUnityInput] U1 event=values phase=closed keyboardSource=end_snapshot keyboardStatus=Done stable=True fieldEqualsKeyboard=True']
+
+    def test_compat_marker_and_notifications_do_not_prove_keyboard_mirror_visibility(self):
+        rows = ['11-10 10:59:59.000 123 124 I VRWebViewGameIme: event=connection_patch revision=1 sameConnection=true google=4.4.0',
+                *self.values(),
+                '11-10 11:00:00.000 123 124 I VRWebViewGameIme: event=extract_request monitor=true length=3',
+                '11-10 11:00:00.000 123 124 I VRWebViewGameIme: event=extract_update length=4']
+        r=probe.analyze(rows, 'unity-input-compat')
+        self.assertEqual(r['issues'], [])
+        self.assertEqual(r['unity_compat_extract_requests'], 1)
+        self.assertEqual(r['unity_compat_extract_updates'], 1)
+        self.assertEqual(r['system_keyboard_text'], 'requires_user_observation')
+
+    def test_other_process_cannot_establish_the_patch_was_loaded(self):
+        r=probe.analyze(self.values()+['11-10 11:00:00.000 456 457 I VRWebViewGameIme: event=connection_patch revision=1 sameConnection=true'], 'unity-input-compat')
+        self.assertIn('expected_gameactivity_compat_patch_missing',r['issues'])
+
+    def test_absent_extract_request_is_a_diagnostic_result_not_assumed_success_or_failure(self):
+        r=probe.analyze(self.values()+['11-10 11:00:00.000 123 124 I VRWebViewGameIme: event=connection_patch revision=1 sameConnection=true'], 'unity-input-compat')
+        self.assertEqual(r['issues'], [])
+        self.assertIn('ime_did_not_request_extracted_text_during_capture',r['unity_compat_notes'])
+
+
 if __name__ == '__main__':
     unittest.main()
