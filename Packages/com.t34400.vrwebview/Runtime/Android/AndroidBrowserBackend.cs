@@ -311,6 +311,9 @@ namespace T34400.VRWebView
                 ApplySampling(texture);
                 if (!texture.Create()) throw new InvalidOperationException("Browser target allocation failed");
                 Graphics.Blit(Texture2D.blackTexture, texture);
+                // A target created after this frame's pump still needs valid lower levels
+                // before it can be published. Subsequent frames regenerate after native copies.
+                if (mipmaps) texture.GenerateMips();
                 id = BrowserGpuNative.VrCreate(width, height, texture.GetNativeTexturePtr());
                 if (id == 0) throw new InvalidOperationException(BrowserGpuNative.Status(0));
                 pump.RegisterMipTarget(id, texture);
