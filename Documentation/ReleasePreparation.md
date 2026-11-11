@@ -1,80 +1,83 @@
 # VRWebView 3 release preparation
 
-Candidate: **3.0.0-preview.1**, planned source tag **v3.0.0-preview.1**.
-No v3 tag, GitHub rename or Release has been confirmed. The maintainer has
-uploaded the reviewed demo: <https://youtu.be/1guUxsETxzc>.
+Release version: **3.0.0**. Source tag: **v3.0.0**. Publish a regular GitHub
+release with the prerelease option disabled.
+
+The renamed repository is **t-34400/VRWebView**; the old GitHub URL redirects to
+it. Keep `com.t34400.vrwebview` and `T34400.VRWebView`. Keep the local Windows
+project folder name: the opt-in IME preference is keyed by project path.
 
 The maintainer confirmed fresh-project installation of the core package and
-optional Browser sample, then reviewed the locally rendered video with narration
-and the selected Advertime music. YouTube playback after HD processing and the
-final tagged Git UPM URL remain publication checks.
-
-The current repository is `t-34400/SimpleUnity3DWebView`; the agreed public name
-is **t-34400/VRWebView**, retaining existing history, issues and tags. Keep
-`com.t34400.vrwebview` and `T34400.VRWebView`. Keep the local Windows project
-folder name during validation: the opt-in IME preference is keyed by project path.
+optional Browser sample, and reviewed the locally rendered demo with narration
+and Advertime music. The uploaded demo is <https://youtu.be/1guUxsETxzc>.
+The final source tag, tagged Git installation and GitHub Release have not yet
+been confirmed. Check YouTube playback after HD processing before making it public.
 
 ## Deliverables
 
 - Primary: Git UPM package in `Packages/com.t34400.vrwebview`.
-- Secondary: deterministic consumer `.tgz` and its SHA-256 inventory.
+- Secondary: `com.t34400.vrwebview-3.0.0.tgz` and its SHA-256 inventory.
 - Optional: editable Browser UI and Model sample, imported via Package Manager.
-- Development probes, research and recording assets stay in
-  `Development~/com.t34400.vrwebview.diagnostics`, outside the consumer tarball.
-- Demo video: YouTube link, with an actual Quest capture as README hero.
-  Do not add raw MP4 recordings to Git history.
+- Maintainer probes and research remain in
+  `Development~/com.t34400.vrwebview.diagnostics`, outside the consumer archive.
+- The README links to the actual Quest demo. Do not add raw recordings or music
+  files to Git history.
 
-The package changelog is the public release-history source. Internal development
-preview notes remain in the development package's `DevelopmentChangelog.md`.
-Historical v1/v2 tags and their MIT grants are unchanged. Current project code is
-Apache-2.0; the existing GameActivity helper/tools and upstream components keep
-their own terms. Preserve LICENSE, NOTICE and ThirdPartyNotices.md.
+The package changelog is the public release-history source. Historical development
+notes remain in the development package's `DevelopmentChangelog.md`. Historical
+v1/v2 tags and their MIT grants are unchanged. Current project code is Apache-2.0;
+the existing GameActivity helper/tools and upstream components keep their own
+terms. Preserve LICENSE, NOTICE and ThirdPartyNotices.md.
 
-## Prepare and check
+## Check and build the distribution
+
+After applying the release patch, run from the source project:
 
 ```bash
 python3 Tools/check_distribution.py
-python3 Tools/build_upm.py --output /mnt/c/Users/tmiyoshi/Downloads/com.t34400.vrwebview-3.0.0-preview.1.tgz
+python3 Tools/build_upm.py --output /mnt/c/Users/tmiyoshi/Downloads/com.t34400.vrwebview-3.0.0.tgz
 ```
 
 The archive excludes Assets, ProjectSettings, local caches and diagnostics. Its
-manifest records every file's hash. Rebuilding unchanged input gives identical
-bytes. Run the [clean consumer check](ConsumerCheck.md) before recording; then
-use [Recording.md](Recording.md). No repeated historical IME probe matrix is
-required for this documentation/repackaging change.
+`.manifest.json` records its SHA-256 and every file hash. Rebuilding unchanged
+input gives identical bytes. Publish the archive together with the inventory
+generated from those same local files.
 
-Quest 3 development evidence covers page IME, Unity address-field synchronization,
-inline video, browser controls and Standard/Reduce shimmer. The maintainer
-reported reduced shimmer with some softness; keep Standard default. GPU cost
-and the angled-view option have not been characterized. Fresh consumer
-installation has been confirmed by the maintainer. The shipped demo uses an
-actual Browser sample recording; a separate core-only recording is not required.
-Audio-output comparison remains deferred; do not make it a new release gate.
+The core and Browser installation check has already been reported successful.
+This metadata/documentation change does not require rerunning the historical
+IME probe matrix or recording the demo again. Quest 3 evidence covers native
+page input, Unity address-field synchronization, inline video, browser controls
+and Standard/Reduce shimmer. Keep Standard as the default. GPU cost and the
+angled-view option have not been characterized. Audio-output comparison remains
+deferred and is not a new release gate.
 
-## Publication order
+## Remaining publication steps
 
-1. Assistant prepares candidate source/docs, clean-install archive, recording
-   page/shot list and proxy tooling.
-2. Maintainer applies and checks Core only, then Core + Browser in a new project.
-   Assistant fixes any install blockers; settle the version used for recording.
-3. Maintainer records originals, keeps them locally, shares proxies + manifest.
-4. Assistant proposes second-based cuts/captions and a proxy rough cut.
-5. Maintainer reviews; assistant supplies the original-resolution rendering
-   script, subtitle file and hero/thumbnail extraction commands.
-6. Maintainer renders originals locally and checks final media.
-7. Maintainer renames the existing repository to VRWebView, uploads the reviewed
-   video as unlisted and shares its actual URL.
-8. Assistant inserts reviewed captures/video and changes current repository URLs
-   to the actual renamed repository, without changing historical source links.
-9. Maintainer pushes that final source, tags it `v3.0.0-preview.1`, checks that the
-   exact tagged UPM URL resolves, and publishes the prerelease/video.
-10. Assistant verifies live links, versions and release assets.
+1. Maintainer applies the final release patch to the source project and checks
+   the resulting source diff. Preserve unrelated local Unity changes.
+2. Build the consumer archive and inventory with the commands above. Push the
+   final applied source commit to `t-34400/VRWebView`.
+3. Tag that source commit `v3.0.0` and push the tag. Never tag an
+   ai-patch-exchange job commit as a source release.
+4. Confirm the exact tagged Git UPM URL resolves in Package Manager. This checks
+   the public source/tag packaging; it does not require repeating the completed
+   device tests.
+5. Create the regular GitHub Release from `v3.0.0`. Copy
+   [ReleaseNotes-v3.md](ReleaseNotes-v3.md) as its body and attach the locally
+   generated `.tgz` and `.manifest.json`. Leave **Set as a pre-release** unchecked.
+6. Make the reviewed YouTube demo public and update its description to the
+   renamed GitHub URL. Verify the live source, release, asset and video links.
 
-Never use an ai-patch-exchange job commit as a source repository tag.
-The tag must point to the final applied source commit. Release asset hashes must
-be regenerated if the package changes before tagging.
+The final Git installation URL, usable after tag publication, is:
 
-## Public copy and media slots
+```text
+https://github.com/t-34400/VRWebView.git?path=/Packages/com.t34400.vrwebview#v3.0.0
+```
+
+Do not move an already published tag to a different commit. Regenerate release
+assets and their inventory if package files change before tagging.
+
+## Public copy and media
 
 About:
 
@@ -82,27 +85,11 @@ About:
 
 Topics: `unity`, `webview`, `meta-quest`, `openxr`, `android`, `vr`, `upm`.
 
-Prepared final Git URL (activate only once rename + tag exist):
+The README's linked YouTube thumbnail is the demo entry point. An additional hero
+image should be a clear actual Quest capture. Social preview is a separate
+1280x640 composition with the product name and real capture. Do not fabricate
+interface images.
 
-```text
-https://github.com/t-34400/VRWebView.git?path=/Packages/com.t34400.vrwebview#v3.0.0-preview.1
-```
-
-After rename, update the current README Git URL and package.json's documentation,
-changelog and license URLs. The working URLs are intentionally retained until
-then. At publication replace the README's candidate/pending wording with the
-actual installation result. Do not publish a dangling future tag as a usable URL.
-
-Hero: one clear, stable Quest capture, actual interface, no personal pages.
-Extract it from an original take. Store the approved image as
-`Documentation/Media/hero.webp`; add a linked video thumbnail only after its URL
-exists. Social preview is a separate 1280×640 composition with product name and
-real capture. A wordmark is optional, not a substitute for the actual interface.
-No fabricated placeholder image is needed.
-
-Keep badges to about three: Apache-2.0, Quest 3 tested, and latest release
-(including prereleases) once v3 is published. Add a CI badge only after a real
-source-repository workflow exists; do not present headless checks as device tests.
-
-Use [ReleaseNotes-v3.md](ReleaseNotes-v3.md) for the GitHub prerelease body, then
-fill in actual install results and SHA-256. An optional demo APK is not a blocker.
+Keep badges minimal: Apache-2.0, Quest 3 tested and latest release once the tag
+and Release exist. Add a CI badge only after a real source-repository workflow
+exists. An optional demo APK is not a release requirement.

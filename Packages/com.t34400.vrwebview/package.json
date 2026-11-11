@@ -1,6 +1,6 @@
 {
   "name": "com.t34400.vrwebview",
-  "version": "3.0.0-preview.1",
+  "version": "3.0.0",
   "displayName": "VRWebView",
   "description": "Android WebView panels for Unity VR, with native text input and an optional multi-window browser sample.",
   "unity": "6000.4",
@@ -22,9 +22,9 @@
     }
   ],
   "unityRelease": "5f1",
-  "documentationUrl": "https://github.com/t-34400/SimpleUnity3DWebView/blob/main/Packages/com.t34400.vrwebview/Documentation~/GettingStarted.md",
-  "changelogUrl": "https://github.com/t-34400/SimpleUnity3DWebView/blob/main/Packages/com.t34400.vrwebview/CHANGELOG.md",
-  "licensesUrl": "https://github.com/t-34400/SimpleUnity3DWebView/blob/main/Packages/com.t34400.vrwebview/LICENSE",
+  "documentationUrl": "https://github.com/t-34400/VRWebView/blob/main/Packages/com.t34400.vrwebview/Documentation~/GettingStarted.md",
+  "changelogUrl": "https://github.com/t-34400/VRWebView/blob/main/Packages/com.t34400.vrwebview/CHANGELOG.md",
+  "licensesUrl": "https://github.com/t-34400/VRWebView/blob/main/Packages/com.t34400.vrwebview/LICENSE",
   "keywords": [
     "webview",
     "vr",

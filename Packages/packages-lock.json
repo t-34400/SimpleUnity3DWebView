@@ -41,7 +41,7 @@
       "depth": 0,
       "source": "local",
       "dependencies": {
-        "com.t34400.vrwebview": "0.1.0-preview.53"
+        "com.t34400.vrwebview": "3.0.0"
       }
     },
     "com.unity.collab-proxy": {

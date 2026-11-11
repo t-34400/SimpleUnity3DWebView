@@ -15,13 +15,13 @@ After applying the release-preparation patch, run from the existing source tree:
 
 ```bash
 cd /mnt/c/source/Unity/SimpleUnity3DWebView
-python3 Tools/build_upm.py --output /mnt/c/Users/tmiyoshi/Downloads/com.t34400.vrwebview-3.0.0-preview.1.tgz
+python3 Tools/build_upm.py --output /mnt/c/Users/tmiyoshi/Downloads/com.t34400.vrwebview-3.0.0.tgz
 ```
 
 ## Core only
 
 1. In the new project, open Package Manager, **Install package from tarball**,
-   and select the generated `.tgz`. Confirm version `3.0.0-preview.1`.
+   and select the generated `.tgz`. Confirm version `3.0.0`.
 2. Follow [Quest setup](../Packages/com.t34400.vrwebview/Documentation~/GettingStarted.md):
    Meta XR Core SDK 207.0.1, Android OpenXR/Meta Quest support, ARM64,
    GameActivity, Vulkan, New Input System, and hand input features if using hands.

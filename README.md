@@ -8,7 +8,7 @@ multi-window browser sample.
 [Watch the 50-second demo](https://youtu.be/1guUxsETxzc): multilingual text input,
 inline video, tabs and movable windows in the optional browser sample.
 
-**3.0 preview.** Developed and tested on **Quest 3 / Unity 6000.4.5f1**, with Meta
+**3.0.0.** Developed and tested on **Quest 3 / Unity 6000.4.5f1**, with Meta
 XR Core SDK 207.0.1 and OpenXR 1.16.1. Pages run in Android players; there is no
 Editor browser. The maintainer has confirmed fresh-project installation of the
 core package and the optional Browser sample.
@@ -18,12 +18,11 @@ core package and the optional Browser sample.
 In **Window > Package Manager**, select **Add package from git URL**:
 
 ```text
-https://github.com/t-34400/SimpleUnity3DWebView.git?path=/Packages/com.t34400.vrwebview
+https://github.com/t-34400/VRWebView.git?path=/Packages/com.t34400.vrwebview
 ```
 
-This is the current repository URL. The planned name is **VRWebView**; the rename
-and `v3.0.0-preview.1` tag are not published yet. Pin a source commit for repeatable
-builds, or use the consumer `.tgz` supplied for installation checks.
+For repeatable builds, append a released tag or source commit using `#`.
+You can also install the consumer `.tgz` via Package Manager.
 
 Set up an Android **ARM64 / Vulkan / GameActivity** project with OpenXR and Meta
 XR Core SDK. Follow [Quest setup](Packages/com.t34400.vrwebview/Documentation~/GettingStarted.md), including

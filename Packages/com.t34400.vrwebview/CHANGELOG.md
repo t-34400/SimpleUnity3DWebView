@@ -1,9 +1,9 @@
 # Changelog
 
-## 3.0.0-preview.1 — Unreleased
+## 3.0.0
 
 A new architecture for Unity on Meta Quest, replacing SimpleUnity3DWebView v2.
-This is a preview with breaking API and scene changes; see the
+This release introduces breaking API and scene changes; see the
 [v2 migration guide](Documentation~/Migration-v3.md).
 
 - Install the core as a Git UPM package. Import the optional Browser UI and Model
@@ -24,10 +24,11 @@ This is a preview with breaking API and scene changes; see the
 
 Tested during development on Quest 3 with Unity 6000.4.5f1, Meta XR Core SDK
 207.0.1 and OpenXR 1.16.1. Page IME, Unity address-field synchronization, browser
-controls and Standard/Reduce shimmer have device evidence. Fresh-project
-installation checks are still pending. Filtered rendering can soften text;
+controls and Standard/Reduce shimmer have device evidence. The maintainer
+confirmed fresh-project installation of the core and optional Browser sample.
+Filtered rendering can soften text;
 GPU cost and the angled-view option have not been characterized on device.
 
 Not implemented: native fullscreen video, file upload/download, site permission
 UI, independent private profiles or Editor web rendering. Other headsets and
-Unity/provider versions need validation. No public v3 tag has been created yet.
+Unity/provider versions need validation.
