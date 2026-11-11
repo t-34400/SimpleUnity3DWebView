@@ -21,8 +21,11 @@ their original license grants.
 
 Development baseline: Quest 3, Unity 6000.4.5f1, Meta XR Core SDK 207.0.1,
 OpenXR 1.16.1, Android ARM64/GameActivity/Vulkan. Other dependency versions and
-headsets require validation. Fresh Core-only/Core+Browser install results must
-be filled in before publication.
+headsets require validation. The maintainer confirmed fresh-project installation
+of the core package and optional Browser sample. The final tagged Git UPM URL
+remains a publication check.
+
+[Watch the Browser sample demo](https://youtu.be/1guUxsETxzc).
 
 Limitations: no Editor web rendering, native fullscreen video, upload/download,
 site permission UI or independent private profiles. Filtered rendering can soften

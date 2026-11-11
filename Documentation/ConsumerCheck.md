@@ -1,5 +1,9 @@
 # Clean consumer installation check
 
+The maintainer has confirmed fresh-project installation of both the core package
+and the optional Browser sample. The steps below document that check; resolution
+of the final immutable Git tag remains a separate publication check.
+
 Use one **new Unity 6000.4.5f1 project**, with Android Build Support installed.
 Check it first without samples, then import the browser. The existing development
 project remains available for filming. This check validates distribution; it

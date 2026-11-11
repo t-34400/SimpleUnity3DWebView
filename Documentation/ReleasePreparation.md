@@ -1,7 +1,13 @@
 # VRWebView 3 release preparation
 
 Candidate: **3.0.0-preview.1**, planned source tag **v3.0.0-preview.1**.
-No v3 tag, GitHub rename, Release or YouTube upload has been performed.
+No v3 tag, GitHub rename or Release has been confirmed. The maintainer has
+uploaded the reviewed demo: <https://youtu.be/1guUxsETxzc>.
+
+The maintainer confirmed fresh-project installation of the core package and
+optional Browser sample, then reviewed the locally rendered video with narration
+and the selected Advertime music. YouTube playback after HD processing and the
+final tagged Git UPM URL remain publication checks.
 
 The current repository is `t-34400/SimpleUnity3DWebView`; the agreed public name
 is **t-34400/VRWebView**, retaining existing history, issues and tags. Keep
@@ -40,8 +46,9 @@ required for this documentation/repackaging change.
 Quest 3 development evidence covers page IME, Unity address-field synchronization,
 inline video, browser controls and Standard/Reduce shimmer. The maintainer
 reported reduced shimmer with some softness; keep Standard default. GPU cost
-and the angled-view option have not been characterized. Fresh consumer install
-and the new recording scene remain unverified until executed in Unity/Quest.
+and the angled-view option have not been characterized. Fresh consumer
+installation has been confirmed by the maintainer. The shipped demo uses an
+actual Browser sample recording; a separate core-only recording is not required.
 Audio-output comparison remains deferred; do not make it a new release gate.
 
 ## Publication order

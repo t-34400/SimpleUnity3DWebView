@@ -3,9 +3,15 @@
 WebView panels for Unity on Meta Quest, with native text input and an optional
 multi-window browser sample.
 
+[![Watch the VRWebView demo on Meta Quest](https://img.youtube.com/vi/1guUxsETxzc/hqdefault.jpg)](https://youtu.be/1guUxsETxzc)
+
+[Watch the 50-second demo](https://youtu.be/1guUxsETxzc): multilingual text input,
+inline video, tabs and movable windows in the optional browser sample.
+
 **3.0 preview.** Developed and tested on **Quest 3 / Unity 6000.4.5f1**, with Meta
 XR Core SDK 207.0.1 and OpenXR 1.16.1. Pages run in Android players; there is no
-Editor browser. Fresh-project installation checks are still pending.
+Editor browser. The maintainer has confirmed fresh-project installation of the
+core package and the optional Browser sample.
 
 ## Install
 
